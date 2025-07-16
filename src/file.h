@@ -11,6 +11,8 @@
 
 #include "core.h"
 
+extern const size_t WORD_BUFFER_SIZE;
+
 // --------------------------------------
 // FILE I/O ABSTRACTION LAYER
 //
