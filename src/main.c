@@ -53,7 +53,7 @@ enum TOKEN {
 int main(const int argc, const char **argv) {
   const struct Args args = parse_args(argc, argv);
   const char *filename = args.filename;
-  FileReader fr = filereader_init_from_string("Testing\n1231    23\n  sdf");
+  FileReader fr = filereader_init(filename);
 
   if (!fr) {
     fprintf(stderr, "File %s not found. Error: %s\n", filename,
@@ -66,7 +66,7 @@ int main(const int argc, const char **argv) {
     printf("%s\n", word);
   }
 
-  filereader_destroy(fr);
+  filereader_destroy(&fr);
 
   return EXIT_SUCCESS;
 }

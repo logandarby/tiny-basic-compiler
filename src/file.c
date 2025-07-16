@@ -1,5 +1,7 @@
 #include "file.h"
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 const size_t INIT_FILE_LINE_BUFFER = 1024;
@@ -7,7 +9,7 @@ const size_t WORD_BUFFER_SIZE = 1024;
 const char *WHITESPACE = " \t\n\r\f\v";
 
 typedef struct FileReaderHandle {
-  FILE *file;
+  FileIO *io; // File I/O abstraction layer
   const char *filename;
   char *line_buffer; // Dynamically allocated
   size_t current_line_length;
@@ -15,23 +17,99 @@ typedef struct FileReaderHandle {
   char *current_word; // Dynamically allocated copy
   size_t line_buffer_size;
   enum FR_ERROR error; // Internal error state
-  // Holds a copy of the input string when the reader is backed by an in-memory
-  // buffer created via fmemopen. This is freed during destruction. NULL when
-  // reading from an actual file.
-  char *string_buffer;
 } FileReaderHandle;
+
+// --------------------------------------
+// FILE I/O ABSTRACTION IMPLEMENTATIONS
+// --------------------------------------
+
+// Standard stdio wrappers
+static ssize_t _stdio_getline(char **lineptr, size_t *n, void *stream) {
+  return getline(lineptr, n, (FILE *)stream);
+}
+
+static int _stdio_feof(void *stream) { return feof((FILE *)stream); }
+
+static int _stdio_fclose(void *stream) { return fclose((FILE *)stream); }
+
+FileIO *fileio_create_stdio(FILE *stream, const char *label) {
+  if (!stream || !label) {
+    return NULL;
+  }
+
+  FileIO *io = (FileIO *)xmalloc(sizeof(FileIO));
+  io->stream = stream;
+  io->label = label;
+  io->getline = _stdio_getline;
+  io->feof = _stdio_feof;
+  io->fclose = _stdio_fclose;
+  io->cleanup = NULL;
+  io->cleanup_data = NULL;
+  return io;
+}
+
+// Custom cleanup function for string-based streams
+static void _string_cleanup(void *cleanup_data) {
+  free(cleanup_data); // Free the allocated string buffer
+}
+
+FileIO *fileio_create_from_string(const char *input, const char *label) {
+  if (!input || !label) {
+    return NULL;
+  }
+
+  // Make a private, mutable copy because fmemopen expects a writeable buffer
+  const size_t len = strlen(input);
+  char *buffer = (char *)xmalloc(len + 1);
+  memcpy(buffer, input, len + 1);
+
+  FILE *stream = fmemopen(buffer, len + 1, "r");
+  if (!stream) {
+    free(buffer);
+    return NULL;
+  }
+
+  FileIO *io = fileio_create_stdio(stream, label);
+  if (!io) {
+    fclose(stream);
+    free(buffer);
+    return NULL;
+  }
+
+  // Set up custom cleanup to free the string buffer
+  io->cleanup = _string_cleanup;
+  io->cleanup_data = buffer;
+  return io;
+}
+
+void fileio_destroy(FileIO *io) {
+  if (!io) {
+    return;
+  }
+  if (io->fclose && io->stream) {
+    io->fclose(io->stream);
+  }
+  if (io->cleanup && io->cleanup_data) {
+    io->cleanup(io->cleanup_data);
+  }
+  free(io);
+}
+
+// --------------------------------------
+// FILE READER IMPLEMENTATIONS
+// --------------------------------------
 
 bool _filereader_is_eof(const FileReader fr) {
   if (!fr) {
     return true;
   }
-  return feof(fr->file);
+  return fr->io->feof(fr->io->stream);
 }
 
 void _filereader_debug_print(const FileReader fr) {
   return;
   printf("FileReader: %p\n", fr);
-  printf("File: %s\n", fr->filename);
+  printf("File: %s\n", fr->io->label);
   printf("Line buffer: %s\n", fr->line_buffer);
   printf("Current word: %s\n", fr->current_word);
   printf("Current word ptr: %p\n", fr->current_word_ptr);
@@ -51,12 +129,11 @@ void _read_next_line(FileReader fr) {
     return;
   }
   const ssize_t bytes_read =
-      getline(&fr->line_buffer, &fr->line_buffer_size, fr->file);
-  if (bytes_read == -1 && !feof(fr->file)) {
+      fr->io->getline(&fr->line_buffer, &fr->line_buffer_size, fr->io->stream);
+  if (bytes_read == -1 && !fr->io->feof(fr->io->stream)) {
     fr->error = FR_ERR_CANT_READ;
     fprintf(stderr, "CRITICAL: Could not read next line of file: %s\n",
             strerror(errno));
-    exit(EXIT_FAILURE);
     return;
   } else if (bytes_read == -1) {
     fr->current_line_length = 0;
@@ -73,8 +150,15 @@ FileReader filereader_init(const char *filename) {
   if (!fptr) {
     return NULL;
   }
+
+  FileIO *io = fileio_create_stdio(fptr, filename);
+  if (!io) {
+    fclose(fptr);
+    return NULL;
+  }
+
   FileReaderHandle fr = {
-      .file = fptr,
+      .io = io,
       .filename = filename,
       .line_buffer = (char *)xcalloc(1, INIT_FILE_LINE_BUFFER),
       .current_word = (char *)xcalloc(1, WORD_BUFFER_SIZE),
@@ -82,7 +166,6 @@ FileReader filereader_init(const char *filename) {
       .current_word_ptr = NULL,
       .current_line_length = 0,
       .line_buffer_size = INIT_FILE_LINE_BUFFER,
-      .string_buffer = NULL,
   };
   FileReader return_val = (FileReader)xmalloc(sizeof(FileReaderHandle));
   memcpy(return_val, &fr, sizeof(FileReaderHandle));
@@ -95,7 +178,7 @@ bool filereader_has_word(const FileReader fr) {
   if (!fr || fr->error) {
     return false;
   }
-  return !feof(fr->file) ||
+  return !fr->io->feof(fr->io->stream) ||
          (fr->current_word_ptr != NULL && *fr->current_word_ptr != '\0');
 }
 
@@ -107,8 +190,10 @@ enum FR_ERROR filereader_get_error(FileReader fr) {
 }
 
 const char *filereader_read_next_word(FileReader fr) {
+  if (!fr) {
+    return NULL;
+  }
   while (true) {
-    _filereader_debug_print(fr);
     if (!filereader_has_word(fr)) {
       return NULL;
     }
@@ -139,56 +224,55 @@ const char *filereader_read_next_word(FileReader fr) {
   }
 }
 
-void filereader_destroy(FileReader fr) {
-  if (!fr) {
+void filereader_destroy(FileReader *fr) {
+  if (!fr || !*fr) {
     return;
   }
-  if (fr->line_buffer) {
-    free(fr->line_buffer);
+
+  FileReader handle = *fr;
+
+  if (handle->line_buffer) {
+    free(handle->line_buffer);
   }
-  if (fr->current_word) {
-    free(fr->current_word);
+  if (handle->current_word) {
+    free(handle->current_word);
   }
-  if (fr->string_buffer) {
-    // Close the FILE* before freeing the backing buffer to avoid undefined
-    // behaviour with fmemopen.
-    fclose(fr->file);
-    free(fr->string_buffer);
-  } else {
-    fclose(fr->file);
+  if (handle->io) {
+    fileio_destroy(handle->io);
   }
-  free(fr);
+  free(handle);
+
+  // Set the original pointer to NULL to prevent double-free
+  *fr = NULL;
 }
 
-// --------------------------------------
-// PUBLIC API: Initialize from in-memory string
-// --------------------------------------
 FileReader filereader_init_from_string(const char *input) {
   if (!input) {
     return NULL;
   }
 
-  // Make a private, mutable copy because fmemopen expects a writeable buffer
-  const size_t len = strlen(input);
-  char *buffer = (char *)xmalloc(len + 1);
-  memcpy(buffer, input, len + 1);
+  FileIO *io = fileio_create_from_string(input, "<memory>");
+  if (!io) {
+    return NULL;
+  }
 
-  FILE *stream = fmemopen(buffer, len + 1, "r");
-  if (!stream) {
-    free(buffer);
+  return filereader_init_from_fileio(io);
+}
+
+FileReader filereader_init_from_fileio(FileIO *io) {
+  if (!io) {
     return NULL;
   }
 
   FileReaderHandle fr = {
-      .file = stream,
-      .filename = "<memory>",
+      .io = io,
+      .filename = io->label,
       .line_buffer = (char *)xcalloc(1, INIT_FILE_LINE_BUFFER),
       .current_word = (char *)xcalloc(1, WORD_BUFFER_SIZE),
       .error = FR_ERR_NONE,
       .current_word_ptr = NULL,
       .current_line_length = 0,
       .line_buffer_size = INIT_FILE_LINE_BUFFER,
-      .string_buffer = buffer,
   };
 
   FileReader return_val = (FileReader)xmalloc(sizeof(FileReaderHandle));
