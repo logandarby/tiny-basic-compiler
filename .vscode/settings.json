@@ -1,0 +1,9 @@
+{
+  "makefile.launchConfigurations": [
+    {
+      "cwd": "/home/logandarbz/projects/tiny-basic-compiler/builds/debug",
+      "binaryPath": "/home/logandarbz/projects/tiny-basic-compiler/builds/debug/teeny-debug",
+      "binaryArgs": []
+    }
+  ]
+}

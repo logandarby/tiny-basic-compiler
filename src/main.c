@@ -8,7 +8,6 @@
 // measure.
 // -------------------------------------
 
-#include "core.h"
 #include "args.h"
 #include "file.h"
 
@@ -51,15 +50,19 @@ enum TOKEN {
   TOKEN_ENDWHILE,
 };
 
-
 int main(const int argc, const char **argv) {
   const struct Args args = parse_args(argc, argv);
-  const char* filename = args.filename;
-  FileReader fr = filereader_init(filename);
+  const char *filename = args.filename;
+  FileReader fr = filereader_init_from_string("Testing\n1231    23\n  sdf");
 
-  while (!filereader_is_eof(fr)) {
-    filereader_seek_word(fr);
-    const char* word = filereader_get_current_word(fr);
+  if (!fr) {
+    fprintf(stderr, "File %s not found. Error: %s\n", filename,
+            strerror(errno));
+    return EXIT_FAILURE;
+  }
+
+  const char *word;
+  while ((word = filereader_read_next_word(fr))) {
     printf("%s\n", word);
   }
 
