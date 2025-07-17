@@ -3,10 +3,8 @@
 // --------------------------------------
 // FILE READING UTILITY
 //
-// Utility class for the Lexer to read files word by word
+// Utility class for the Lexer to read files line by line
 // in an efficient manner
-//
-// Ignores spaces and tabs, but not newlines
 // --------------------------------------
 
 #include "core.h"

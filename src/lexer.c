@@ -197,64 +197,10 @@ typedef struct {
   char current_string_delim; // Stores the string delimiter
 } LexerState;
 
-// Parses a string token using character-by-character reading
-// Returns true if a complete string was parsed, false if EOF reached
-// bool _lexer_parse_string(FileReader fr, TokenArray ta, LexerState *state) {
-//   return false;
-//   // if (state->state != LEXER_STATE_PARSING_STRING) {
-//   //   return false;
-//   // }
-
-//   // Find the opening delimiter by reading characters until we find it
-//   char c;
-//   // while ((c = filereader_read_char(fr)) != '\0') {
-//   //   printf("buh %c\n", c);
-//   //   if (c == state->current_string_delim) {
-//   //     break; // Found opening delimiter
-//   //   }
-//   //   if (!_is_string_delim(c) && c != ' ' && c != '\t') {
-//   //     // Found non-whitespace, non-delimiter character before string start
-//   //     // This shouldn't happen in normal parsing
-//   //     return false;
-//   //   }
-//   // }
-
-//   // if (c != state->current_string_delim) {
-//   //   return false; // Didn't find opening delimiter
-//   // }
-
-//   // // Use a simple buffer to collect string content
-//   // char string_buffer[WORD_BUFFER_SIZE];
-//   // size_t string_pos = 0;
-
-//   // while ((c = filereader_read_char(fr)) != '\0') {
-//   //   if (c == state->current_string_delim) {
-//   //     // Found closing delimiter - complete the string token
-//   //     token_array_push(ta, TOKEN_STRING, string_buffer, string_pos);
-//   //     state->state = LEXER_STATE_NORMAL;
-//   //     state->current_string_delim = '\0';
-//   //     return true;
-//   //   }
-
-//   //   // Add character to string buffer (preserve all characters including
-//   //   // whitespace)
-//   //   if (string_pos < WORD_BUFFER_SIZE - 1) {
-//   //     string_buffer[string_pos++] = c;
-//   //     string_buffer[string_pos] = '\0';
-//   //   } else {
-//   //     // String too long - could add error handling here
-//   //     return false;
-//   //   }
-//   // }
-
-//   // // Reached EOF without closing delimiter - could be an error
-//   // return false;
-// }
-
 // Parses tokens from the line, and adds them to the TokenArray
 void _lexer_parse_line(const char *const line, const size_t max_line_length,
                        TokenArray ta) {
-
+  // FSM State
   LexerState state = {
       .current_string_delim = '\0',
       .state = LEXER_STATE_NORMAL,

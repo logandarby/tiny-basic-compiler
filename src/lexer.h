@@ -35,7 +35,6 @@ enum TOKEN {
   // Literals
   TOKEN_STRING = LITERAL_START,
   TOKEN_NUMBER,
-  TOKEN_ENDOFFILE,
   TOKEN_IDENT,
   // Internal Keywords
   TOKEN_LABEL = KEYWORD_START,

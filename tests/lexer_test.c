@@ -1513,6 +1513,20 @@ Test(lexer, malformed_string_endquote_2) {
   token_array_destroy(&ta);
 }
 
+Test(lexer, malformed_string_endquote_3) {
+  TokenArray ta = parse_string("\"testing");
+  const enum TOKEN expected[] = {TOKEN_UNKNOWN};
+  assert_tokens_equal(ta, expected, array_size(expected));
+  token_array_destroy(&ta);
+}
+
+Test(lexer, malformed_string_endquote_4) {
+  TokenArray ta = parse_string("\"testing\n");
+  const enum TOKEN expected[] = {TOKEN_UNKNOWN};
+  assert_tokens_equal(ta, expected, array_size(expected));
+  token_array_destroy(&ta);
+}
+
 Test(lexer, strings_different_delimiter) {
   TokenArray ta = parse_string("test 'this is a \"string\"' test");
   const enum TOKEN expected[] = {TOKEN_IDENT, TOKEN_STRING, TOKEN_IDENT};
