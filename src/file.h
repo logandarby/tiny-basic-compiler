@@ -89,6 +89,22 @@ const char *filereader_read_next_word(FileReader fr);
 // Returns a pointer to the current word. Does not modify the struct
 const char *filereader_get_current_word(const FileReader fr);
 
+// Raw character access for string parsing
+// Returns the current character at the reader's position, or '\0' if EOF
+char filereader_peek_char(const FileReader fr);
+
+// Advances the reader position by one character and returns the character
+// Returns '\0' if EOF is reached
+char filereader_read_char(FileReader fr);
+
+// Gets the current position within the current line (0-based)
+size_t filereader_get_position(const FileReader fr);
+
+// Returns pointer to the current line buffer and remaining characters from
+// current position Used for efficient string parsing. Returns NULL if no line
+// is loaded.
+const char *filereader_get_line_from_position(const FileReader fr);
+
 // Frees and closes any files associated with the file reader
 // Sets the pointer to NULL to prevent double-free
 void filereader_destroy(FileReader *fr);

@@ -259,6 +259,64 @@ FileReader filereader_init_from_string(const char *input) {
   return filereader_init_from_fileio(io);
 }
 
+char filereader_peek_char(const FileReader fr) {
+  if (!fr || fr->error) {
+    return '\0';
+  }
+
+  // If we don't have a current line or we're at the end, try to read next line
+  if (!fr->current_word_ptr || *fr->current_word_ptr == '\0') {
+    if (_filereader_is_eof(fr)) {
+      return '\0';
+    }
+    // We're at end of current line but not EOF, so there's a newline
+    if (fr->current_word_ptr && fr->current_line_length > 0) {
+      return '\n';
+    }
+  }
+
+  return fr->current_word_ptr ? *fr->current_word_ptr : '\0';
+}
+
+char filereader_read_char(FileReader fr) {
+  if (!fr || fr->error) {
+    return '\0';
+  }
+
+  char current_char = filereader_peek_char(fr);
+
+  if (current_char == '\0') {
+    return '\0';
+  }
+
+  if (current_char == '\n' || !fr->current_word_ptr ||
+      *fr->current_word_ptr == '\0') {
+    // We're at end of line, advance to next line
+    _read_next_line(fr);
+    return current_char;
+  }
+
+  // Advance position within current line
+  fr->current_word_ptr++;
+  return current_char;
+}
+
+size_t filereader_get_position(const FileReader fr) {
+  if (!fr || !fr->line_buffer || !fr->current_word_ptr) {
+    return 0;
+  }
+
+  return (size_t)(fr->current_word_ptr - fr->line_buffer);
+}
+
+const char *filereader_get_line_from_position(const FileReader fr) {
+  if (!fr || !fr->current_word_ptr) {
+    return NULL;
+  }
+
+  return fr->current_word_ptr;
+}
+
 FileReader filereader_init_from_fileio(FileIO *io) {
   if (!io) {
     return NULL;
@@ -280,4 +338,8 @@ FileReader filereader_init_from_fileio(FileIO *io) {
   _read_next_line(return_val);
   _filereader_debug_print(return_val);
   return return_val;
+}
+
+const char *filereader_get_current_word(FileReader fr) {
+  return fr->current_word_ptr;
 }

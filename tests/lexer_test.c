@@ -12,12 +12,42 @@ static TokenArray parse_string(const char *input) {
   return ta;
 }
 
+// Helper function to print token array for debugging
+static void dump_token_array(TokenArray ta, const char *label) {
+  printf("%s (%zu tokens):\n", label, token_array_length(ta));
+  for (size_t i = 0; i < token_array_length(ta); i++) {
+    Token token = token_array_at(ta, i);
+    printf("  [%zu]: type=%d", i, token.type);
+    if (token.text) {
+      printf(", text=\"%s\"", token.text);
+    }
+    printf("\n");
+  }
+}
+
+// Helper function to print expected token array for debugging
+static void dump_expected_tokens(enum TOKEN *expected, size_t expected_count,
+                                 const char *label) {
+  printf("%s (%zu tokens):\n", label, expected_count);
+  for (size_t i = 0; i < expected_count; i++) {
+    printf("  [%zu]: type=%d\n", i, expected[i]);
+  }
+}
+
 // Helper function to check if token array contains expected tokens
 static void assert_tokens_equal(TokenArray ta, enum TOKEN *expected,
                                 size_t expected_count) {
-  cr_assert_eq(token_array_length(ta), expected_count,
-               "Expected %zu tokens, got %zu", expected_count,
-               token_array_length(ta));
+  size_t actual_count = token_array_length(ta);
+
+  if (actual_count != expected_count) {
+    printf("\nToken count mismatch - dumping arrays for debugging:\n");
+    dump_expected_tokens(expected, expected_count, "Expected tokens");
+    dump_token_array(ta, "Actual tokens");
+    printf("\n");
+  }
+
+  cr_assert_eq(actual_count, expected_count, "Expected %zu tokens, got %zu",
+               expected_count, actual_count);
 
   for (size_t i = 0; i < expected_count; i++) {
     enum TOKEN actual = token_array_at(ta, i).type;
@@ -1323,4 +1353,635 @@ Test(lexer, maximum_length_sequences) {
   enum TOKEN expected2[] = {TOKEN_NUMBER};
   assert_tokens_equal(ta2, expected2, 1);
   token_array_destroy(&ta2);
+}
+
+// =========================
+// STRING TOKENIZATION TESTS
+// =========================
+
+Test(lexer, basic_string_parsing) {
+  TokenArray ta = parse_string("\"hello\" \"world\" \"test\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, empty_string) {
+  TokenArray ta = parse_string("\"\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, single_character_strings) {
+  TokenArray ta = parse_string("\"a\" \"b\" \"c\" \"1\" \"!\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING,
+                           TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_whitespace_inside) {
+  TokenArray ta = parse_string("\"hello world\" \"  spaces  \" \"\\ttab\\n\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_special_characters) {
+  TokenArray ta = parse_string("\"!@#$%^&*()\" \"+=<>{}[]\" \".,;:?\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_numbers_inside) {
+  TokenArray ta = parse_string("\"123\" \"abc123def\" \"0000\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_operators_inside) {
+  TokenArray ta = parse_string("\"x + y\" \"a >= b\" \"c && d\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_keywords_inside) {
+  TokenArray ta =
+      parse_string("\"IF THEN ELSE\" \"WHILE REPEAT\" \"PRINT INPUT\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, long_strings) {
+  TokenArray ta =
+      parse_string("\"this is a very long string that contains many words and "
+                   "should still be tokenized as a single string token\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_external_whitespace) {
+  TokenArray ta =
+      parse_string("  \"hello\"   \"world\"\t\t\"test\"\n\n\"end\"  ");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING,
+                           TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// STRING TEXT DATA TESTS
+// =========================
+
+Test(lexer, basic_string_text_data) {
+  TokenArray ta = parse_string("\"hello\" \"world\" \"test\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  const char *expected_texts[] = {"hello", "world", "test"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, empty_string_text_data) {
+  TokenArray ta = parse_string("\"\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING};
+  const char *expected_texts[] = {""};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, single_character_strings_text_data) {
+  TokenArray ta = parse_string("\"a\" \"b\" \"c\" \"1\" \"!\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING,
+                                 TOKEN_STRING, TOKEN_STRING};
+  const char *expected_texts[] = {"a", "b", "c", "1", "!"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_whitespace_text_data) {
+  TokenArray ta = parse_string("\"hello world\" \"  spaces  \"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_STRING};
+  const char *expected_texts[] = {"hello world", "  spaces  "};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_special_characters_text_data) {
+  TokenArray ta = parse_string("\"!@#$%^&*()\" \"+=<>{}[]\" \".,;:?\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  const char *expected_texts[] = {"!@#$%^&*()", "+=<>{}[]", ".,;:?"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_numbers_text_data) {
+  TokenArray ta = parse_string("\"123\" \"abc123def\" \"0000\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  const char *expected_texts[] = {"123", "abc123def", "0000"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_operators_text_data) {
+  TokenArray ta = parse_string("\"x + y\" \"a >= b\" \"c && d\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  const char *expected_texts[] = {"x + y", "a >= b", "c && d"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_keywords_text_data) {
+  TokenArray ta =
+      parse_string("\"IF THEN ELSE\" \"WHILE REPEAT\" \"PRINT INPUT\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_STRING, TOKEN_STRING};
+  const char *expected_texts[] = {"IF THEN ELSE", "WHILE REPEAT",
+                                  "PRINT INPUT"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, long_strings_text_data) {
+  TokenArray ta =
+      parse_string("\"this is a very long string that contains many words\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING};
+  const char *expected_texts[] = {
+      "this is a very long string that contains many words"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 1);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// STRINGS MIXED WITH OTHER TOKENS
+// =========================
+
+Test(lexer, strings_with_numbers) {
+  TokenArray ta = parse_string("\"hello\" 123 \"world\" 456");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_NUMBER, TOKEN_STRING,
+                           TOKEN_NUMBER};
+  assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_identifiers) {
+  TokenArray ta = parse_string("\"hello\" var1 \"world\" var2");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_IDENT, TOKEN_STRING,
+                           TOKEN_IDENT};
+  assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_keywords) {
+  TokenArray ta = parse_string("\"message\" PRINT \"value\" LET x");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_PRINT, TOKEN_STRING, TOKEN_LET,
+                           TOKEN_IDENT};
+  assert_tokens_equal(ta, expected, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_operators) {
+  TokenArray ta = parse_string("\"result\" = x + \"suffix\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_EQ, TOKEN_IDENT, TOKEN_PLUS,
+                           TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_in_print_statement) {
+  TokenArray ta = parse_string("PRINT \"Hello, World!\"");
+
+  enum TOKEN expected[] = {TOKEN_PRINT, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_in_assignment) {
+  TokenArray ta = parse_string("LET message = \"Hello\"");
+
+  enum TOKEN expected[] = {TOKEN_LET, TOKEN_IDENT, TOKEN_EQ, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_in_conditional) {
+  TokenArray ta = parse_string("IF name == \"admin\" THEN PRINT \"Welcome\"");
+
+  enum TOKEN expected[] = {TOKEN_IF,   TOKEN_IDENT, TOKEN_EQEQ,  TOKEN_STRING,
+                           TOKEN_THEN, TOKEN_PRINT, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 7);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, multiple_strings_in_expression) {
+  TokenArray ta = parse_string("result = \"Hello\" + \" \" + \"World\"");
+
+  enum TOKEN expected[] = {TOKEN_IDENT,  TOKEN_EQ,   TOKEN_STRING, TOKEN_PLUS,
+                           TOKEN_STRING, TOKEN_PLUS, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 7);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// STRING MIXED TOKEN TEXT DATA TESTS
+// =========================
+
+Test(lexer, strings_with_numbers_text_data_1) {
+  TokenArray ta = parse_string("\"hello\" 123 \"world\" 456");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_NUMBER, TOKEN_STRING,
+                                 TOKEN_NUMBER};
+  const char *expected_texts[] = {"hello", "123", "world", "456"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_identifiers_text_data) {
+  TokenArray ta = parse_string("\"hello\" var1 \"world\" var2");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_IDENT, TOKEN_STRING,
+                                 TOKEN_IDENT};
+  const char *expected_texts[] = {"hello", "var1", "world", "var2"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_keywords_text_data_1) {
+  TokenArray ta = parse_string("\"message\" PRINT \"value\" LET x");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_PRINT, TOKEN_STRING,
+                                 TOKEN_LET, TOKEN_IDENT};
+  const char *expected_texts[] = {"message", NULL, "value", NULL, "x"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_with_operators_text_data_1) {
+  TokenArray ta = parse_string("\"result\" = x + \"suffix\"");
+
+  enum TOKEN expected_types[] = {TOKEN_STRING, TOKEN_EQ, TOKEN_IDENT,
+                                 TOKEN_PLUS, TOKEN_STRING};
+  const char *expected_texts[] = {"result", NULL, "x", NULL, "suffix"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_in_print_statement_text_data) {
+  TokenArray ta = parse_string("PRINT \"Hello, World!\"");
+
+  enum TOKEN expected_types[] = {TOKEN_PRINT, TOKEN_STRING};
+  const char *expected_texts[] = {NULL, "Hello, World!"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_in_assignment_text_data) {
+  TokenArray ta = parse_string("LET message = \"Hello\"");
+
+  enum TOKEN expected_types[] = {TOKEN_LET, TOKEN_IDENT, TOKEN_EQ,
+                                 TOKEN_STRING};
+  const char *expected_texts[] = {NULL, "message", NULL, "Hello"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_in_conditional_text_data) {
+  TokenArray ta = parse_string("IF name == \"admin\" THEN PRINT \"Welcome\"");
+
+  enum TOKEN expected_types[] = {TOKEN_IF,     TOKEN_IDENT, TOKEN_EQEQ,
+                                 TOKEN_STRING, TOKEN_THEN,  TOKEN_PRINT,
+                                 TOKEN_STRING};
+  const char *expected_texts[] = {NULL, "name", NULL,     "admin",
+                                  NULL, NULL,   "Welcome"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 7);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, multiple_strings_in_expression_text_data) {
+  TokenArray ta = parse_string("result = \"Hello\" + \" \" + \"World\"");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_EQ,     TOKEN_STRING,
+                                 TOKEN_PLUS,  TOKEN_STRING, TOKEN_PLUS,
+                                 TOKEN_STRING};
+  const char *expected_texts[] = {"result", NULL, "Hello", NULL,
+                                  " ",      NULL, "World"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 7);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// STRING EDGE CASES AND ERROR HANDLING
+// =========================
+
+Test(lexer, unclosed_string) {
+  TokenArray ta = parse_string("\"unclosed string");
+
+  // Should produce a TOKEN_UNKNOWN for malformed string
+  enum TOKEN expected[] = {TOKEN_UNKNOWN};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_with_only_opening_quote) {
+  TokenArray ta = parse_string("\"");
+
+  enum TOKEN expected[] = {TOKEN_UNKNOWN};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, multiple_unclosed_strings) {
+  TokenArray ta = parse_string("\"first unclosed \"second unclosed");
+
+  // Should produce TOKEN_UNKNOWN tokens for malformed strings
+  enum TOKEN expected[] = {TOKEN_UNKNOWN, TOKEN_UNKNOWN};
+  assert_tokens_equal(ta, expected, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_followed_by_unclosed_string) {
+  TokenArray ta = parse_string("\"valid\" \"unclosed");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_UNKNOWN};
+  assert_tokens_equal(ta, expected, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, escaped_quotes_in_string) {
+  // Test how the lexer handles escaped quotes (if supported)
+  TokenArray ta = parse_string("\"text with \\\"quotes\\\" inside\"");
+
+  // This behavior depends on lexer implementation
+  // If escape sequences are supported, should be TOKEN_STRING
+  // If not supported, might be multiple tokens or TOKEN_UNKNOWN
+  cr_assert_geq(token_array_length(ta), 1, "Should produce at least one token");
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, adjacent_strings_no_whitespace) {
+  TokenArray ta = parse_string("\"first\"\"second\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_containing_quotes_without_escape) {
+  // String containing unescaped quote should end prematurely
+  TokenArray ta = parse_string("\"hello\"world\"");
+
+  // Behavior depends on implementation - might produce multiple tokens
+  cr_assert_geq(token_array_length(ta), 1, "Should produce at least one token");
+  cr_assert_eq(token_array_at(ta, 0).type, TOKEN_STRING,
+               "First token should be string");
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, very_long_string) {
+  // Test with a very long string to check buffer handling
+  char long_string[1000];
+  strcpy(long_string, "\"");
+  for (int i = 1; i < 998; i++) {
+    long_string[i] = 'a';
+  }
+  long_string[998] = '"';
+  long_string[999] = '\0';
+
+  TokenArray ta = parse_string(long_string);
+
+  enum TOKEN expected[] = {TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_with_newlines_inside) {
+  TokenArray ta = parse_string("\"line1\nline2\nline3\"");
+
+  // Behavior depends on whether multiline strings are supported
+  cr_assert_geq(token_array_length(ta), 1, "Should produce at least one token");
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_with_tabs_inside) {
+  TokenArray ta = parse_string("\"text\twith\ttabs\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, empty_quotes_with_space) {
+  TokenArray ta = parse_string("\" \"");
+
+  enum TOKEN expected[] = {TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_containing_numbers_and_operators) {
+  TokenArray ta = parse_string("\"value = 42 + 10\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// STRING NEGATIVE FLOW TESTS
+// =========================
+
+Test(lexer, unmatched_quotes_mixed_with_tokens) {
+  TokenArray ta = parse_string("LET x = \"unclosed IF y > 0");
+
+  // Should handle gracefully - exact behavior depends on implementation
+  cr_assert_geq(token_array_length(ta), 3, "Should tokenize valid parts");
+  cr_assert_eq(token_array_at(ta, 0).type, TOKEN_LET,
+               "First token should be LET");
+  cr_assert_eq(token_array_at(ta, 1).type, TOKEN_IDENT,
+               "Second token should be identifier");
+  cr_assert_eq(token_array_at(ta, 2).type, TOKEN_EQ,
+               "Third token should be equals");
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, quote_without_string_content) {
+  TokenArray ta = parse_string("\"\" + \"\"");
+
+  enum TOKEN expected[] = {TOKEN_STRING, TOKEN_PLUS, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, malformed_string_recovery) {
+  TokenArray ta = parse_string("\"bad PRINT \"good\"");
+
+  // Test that lexer can recover and continue parsing after malformed string
+  cr_assert_geq(token_array_length(ta), 1, "Should produce tokens");
+
+  // Should find the valid string "good" even after malformed input
+  bool found_good_string = false;
+  for (size_t i = 0; i < token_array_length(ta); i++) {
+    Token token = token_array_at(ta, i);
+    if (token.type == TOKEN_STRING && token.text &&
+        strcmp(token.text, "good") == 0) {
+      found_good_string = true;
+      break;
+    }
+  }
+  cr_assert(found_good_string,
+            "Should recover and find valid string after malformed input");
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_boundary_with_operators) {
+  TokenArray ta = parse_string("x+\"hello\"-y");
+
+  enum TOKEN expected[] = {TOKEN_IDENT, TOKEN_PLUS, TOKEN_STRING, TOKEN_MINUS,
+                           TOKEN_IDENT};
+  assert_tokens_equal(ta, expected, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_boundary_with_keywords) {
+  TokenArray ta = parse_string("IF\"condition\"THEN");
+
+  enum TOKEN expected[] = {TOKEN_IF, TOKEN_STRING, TOKEN_THEN};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// COMPREHENSIVE STRING TESTS
+// =========================
+
+Test(lexer, realistic_string_usage) {
+  TokenArray ta =
+      parse_string("PRINT \"Enter a number:\" INPUT x IF x > 0 THEN PRINT "
+                   "\"Positive\" ELSE PRINT \"Non-positive\" ENDIF");
+
+  enum TOKEN expected[] = {
+      TOKEN_PRINT,  TOKEN_STRING, TOKEN_INPUT,  TOKEN_IDENT,  TOKEN_IF,
+      TOKEN_IDENT,  TOKEN_GT,     TOKEN_NUMBER, TOKEN_THEN,   TOKEN_PRINT,
+      TOKEN_STRING, TOKEN_ELSE,   TOKEN_PRINT,  TOKEN_STRING, TOKEN_ENDIF};
+  assert_tokens_equal(ta, expected, 15);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, string_concatenation_expression) {
+  TokenArray ta = parse_string("result = \"Hello \" + name + \" !\"");
+
+  enum TOKEN expected[] = {TOKEN_IDENT, TOKEN_EQ,   TOKEN_STRING, TOKEN_PLUS,
+                           TOKEN_IDENT, TOKEN_PLUS, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 7);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, strings_in_complex_program) {
+  TokenArray ta = parse_string("LET greeting = \"Hello\"\n"
+                               "WHILE count < 3\n"
+                               "REPEAT\n"
+                               "  PRINT greeting + \" World \" + count\n"
+                               "  LET count = count + 1\n"
+                               "ENDWHILE");
+
+  // Should correctly tokenize the entire program including strings
+  cr_assert_geq(token_array_length(ta), 20,
+                "Should produce many tokens for complex program");
+
+  // Verify some key tokens exist
+  bool found_hello = false, found_world = false;
+  for (size_t i = 0; i < token_array_length(ta); i++) {
+    Token token = token_array_at(ta, i);
+    if (token.type == TOKEN_STRING && token.text) {
+      if (strcmp(token.text, "Hello") == 0)
+        found_hello = true;
+      if (strcmp(token.text, " World ") == 0)
+        found_world = true;
+    }
+  }
+  cr_assert(found_hello, "Should find Hello string");
+  cr_assert(found_world, "Should find World string");
+
+  token_array_destroy(&ta);
 }
