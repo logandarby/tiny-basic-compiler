@@ -97,6 +97,10 @@ bool _is_alpha_char(const char c) {
 
 bool _is_numeric_char(const char c) { return (c >= '0' && c <= '9'); }
 
+bool _is_alpha_numeric_char(const char c) {
+  return _is_alpha_char(c) || _is_numeric_char(c);
+}
+
 // Custom function to compare string slice with exact token match
 bool _string_slice_equals(const char *str_slice, const size_t str_length,
                           const char *token_str) {
@@ -159,7 +163,8 @@ void _lexer_parse_word(const char *const word, TokenArray ta) {
       continue;
     }
     if (_is_alpha_char(word[pos])) {
-      const size_t word_length = strspn_callback(word + pos, _is_alpha_char);
+      const size_t word_length =
+          strspn_callback(word + pos, _is_alpha_numeric_char);
       const enum TOKEN token =
           _get_token(word + pos, word_length, KEYWORD_MAP,
                      array_size(KEYWORD_MAP), KEYWORD_START);
@@ -173,6 +178,9 @@ void _lexer_parse_word(const char *const word, TokenArray ta) {
 }
 
 TokenArray lexer_parse(FileReader filereader) {
+  if (!filereader) {
+    return NULL;
+  }
   TokenArray ta = token_array_init();
   const char *word;
   while ((word = filereader_read_next_word(filereader)) != NULL) {
