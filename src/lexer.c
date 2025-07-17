@@ -12,7 +12,7 @@ const unsigned int CAPACITY_MULTIPLIER = 2;
 
 Token token_create(enum TOKEN type, const char *text, size_t length) {
   Token t = {.type = type, .text = NULL};
-  if (text && length > 0) {
+  if (text) {
     t.text = xmalloc(length + 1);
     strncpy(t.text, text, length);
     t.text[length] = '\0';
@@ -255,10 +255,10 @@ typedef struct {
 void _lexer_parse_line(const char *const line, const size_t max_line_length,
                        TokenArray ta) {
 
-  // LexerState state = {
-  //     .current_string_delim = '\0',
-  //     .state = LEXER_STATE_NORMAL,
-  // };
+  LexerState state = {
+      .current_string_delim = '\0',
+      .state = LEXER_STATE_NORMAL,
+  };
   const size_t line_length = strnlen(line, max_line_length);
   if (line_length == 0) {
     return;
@@ -270,6 +270,27 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
     if (pos == line_length) {
       return;
     }
+    // If in string state, look for next delimiter
+    if (state.state == LEXER_STATE_PARSING_STRING) {
+      // Skip first delimiter
+      pos++;
+      const char delimiter_check[2] = {state.current_string_delim, '\0'};
+      const size_t string_length = strcspn(line + pos, delimiter_check);
+      // If it reached the end of line, it didn't find the delimiter, so the
+      // token is unknown
+      if (pos + string_length == line_length) {
+        token_array_push_simple(ta, TOKEN_UNKNOWN);
+      } else {
+        token_array_push(ta, TOKEN_STRING, line + pos, string_length);
+        // advance past the last string delimiter
+        pos++;
+      }
+      // Return state back
+      state.state = LEXER_STATE_NORMAL;
+      state.current_string_delim = '\0';
+      pos += string_length;
+      continue;
+    }
     // Eat Whitespace
     if (_is_whitespace_char(line[pos])) {
       const size_t whitespace_len = strspn(line + pos, WHITESPACE_CHARS);
@@ -277,11 +298,11 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
       continue;
     }
     // Check for start of a string, and set state to a string
-    // if (_is_string_delim(line[pos])) {
-    //   state->current_string_delim = line[pos];
-    //   state->state = LEXER_STATE_PARSING_STRING;
-    //   return; // Exit word parsing, let main loop handle string parsing
-    // }
+    if (_is_string_delim(line[pos])) {
+      state.current_string_delim = line[pos];
+      state.state = LEXER_STATE_PARSING_STRING;
+      continue; // Exit word parsing, let main loop handle string parsing
+    }
     // Check for an operation (single or double char)
     if (_is_operator_char(line[pos])) {
       const size_t operator_length = strspn(line + pos, OPERATOR_CHARS);
