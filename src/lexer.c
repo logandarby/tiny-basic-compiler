@@ -136,6 +136,11 @@ const char *const OPERATOR_MAP[] = {
 
 const char *OPERATOR_CHARS = "+-*/><=!&|";
 const char *STRING_DELIMS = "'\"";
+const char *WHITESPACE_CHARS = " \t\n\r\f\v";
+
+bool _is_whitespace_char(const char c) {
+  return strchr(WHITESPACE_CHARS, c) != NULL;
+}
 
 bool _is_operator_char(const char c) {
   return strchr(OPERATOR_CHARS, c) != NULL;
@@ -194,106 +199,120 @@ typedef struct {
 
 // Parses a string token using character-by-character reading
 // Returns true if a complete string was parsed, false if EOF reached
-bool _lexer_parse_string(FileReader fr, TokenArray ta, LexerState *state) {
-  if (state->state != LEXER_STATE_PARSING_STRING) {
-    return false;
-  }
+// bool _lexer_parse_string(FileReader fr, TokenArray ta, LexerState *state) {
+//   return false;
+//   // if (state->state != LEXER_STATE_PARSING_STRING) {
+//   //   return false;
+//   // }
 
-  // Find the opening delimiter by reading characters until we find it
-  char c;
-  while ((c = filereader_read_char(fr)) != '\0') {
-    printf("buh %c\n", c);
-    if (c == state->current_string_delim) {
-      break; // Found opening delimiter
-    }
-    if (!_is_string_delim(c) && c != ' ' && c != '\t') {
-      // Found non-whitespace, non-delimiter character before string start
-      // This shouldn't happen in normal parsing
-      return false;
-    }
-  }
+//   // Find the opening delimiter by reading characters until we find it
+//   char c;
+//   // while ((c = filereader_read_char(fr)) != '\0') {
+//   //   printf("buh %c\n", c);
+//   //   if (c == state->current_string_delim) {
+//   //     break; // Found opening delimiter
+//   //   }
+//   //   if (!_is_string_delim(c) && c != ' ' && c != '\t') {
+//   //     // Found non-whitespace, non-delimiter character before string start
+//   //     // This shouldn't happen in normal parsing
+//   //     return false;
+//   //   }
+//   // }
 
-  if (c != state->current_string_delim) {
-    return false; // Didn't find opening delimiter
-  }
+//   // if (c != state->current_string_delim) {
+//   //   return false; // Didn't find opening delimiter
+//   // }
 
-  // Use a simple buffer to collect string content
-  char string_buffer[WORD_BUFFER_SIZE];
-  size_t string_pos = 0;
+//   // // Use a simple buffer to collect string content
+//   // char string_buffer[WORD_BUFFER_SIZE];
+//   // size_t string_pos = 0;
 
-  while ((c = filereader_read_char(fr)) != '\0') {
-    if (c == state->current_string_delim) {
-      // Found closing delimiter - complete the string token
-      token_array_push(ta, TOKEN_STRING, string_buffer, string_pos);
-      state->state = LEXER_STATE_NORMAL;
-      state->current_string_delim = '\0';
-      return true;
-    }
+//   // while ((c = filereader_read_char(fr)) != '\0') {
+//   //   if (c == state->current_string_delim) {
+//   //     // Found closing delimiter - complete the string token
+//   //     token_array_push(ta, TOKEN_STRING, string_buffer, string_pos);
+//   //     state->state = LEXER_STATE_NORMAL;
+//   //     state->current_string_delim = '\0';
+//   //     return true;
+//   //   }
 
-    // Add character to string buffer (preserve all characters including
-    // whitespace)
-    if (string_pos < WORD_BUFFER_SIZE - 1) {
-      string_buffer[string_pos++] = c;
-      string_buffer[string_pos] = '\0';
-    } else {
-      // String too long - could add error handling here
-      return false;
-    }
-  }
+//   //   // Add character to string buffer (preserve all characters including
+//   //   // whitespace)
+//   //   if (string_pos < WORD_BUFFER_SIZE - 1) {
+//   //     string_buffer[string_pos++] = c;
+//   //     string_buffer[string_pos] = '\0';
+//   //   } else {
+//   //     // String too long - could add error handling here
+//   //     return false;
+//   //   }
+//   // }
 
-  // Reached EOF without closing delimiter - could be an error
-  return false;
-}
+//   // // Reached EOF without closing delimiter - could be an error
+//   // return false;
+// }
 
-// Parses tokens from the word, and adds them to the TokenArray
-void _lexer_parse_word(const char *const word, TokenArray ta,
-                       LexerState *state) {
-  const size_t word_len = strnlen(word, WORD_BUFFER_SIZE);
-  if (word_len == 0) {
+// Parses tokens from the line, and adds them to the TokenArray
+void _lexer_parse_line(const char *const line, const size_t max_line_length,
+                       TokenArray ta) {
+
+  // LexerState state = {
+  //     .current_string_delim = '\0',
+  //     .state = LEXER_STATE_NORMAL,
+  // };
+  const size_t line_length = strnlen(line, max_line_length);
+  if (line_length == 0) {
     return;
   }
   size_t pos = 0;
+  // FSM For line
   while (true) {
-    if (pos == word_len) {
+    // End of line reached
+    if (pos == line_length) {
       return;
     }
-    // Check for start of a string, and set state to a string
-    if (_is_string_delim(word[pos])) {
-      state->current_string_delim = word[pos];
-      state->state = LEXER_STATE_PARSING_STRING;
-      return; // Exit word parsing, let main loop handle string parsing
+    // Eat Whitespace
+    if (_is_whitespace_char(line[pos])) {
+      const size_t whitespace_len = strspn(line + pos, WHITESPACE_CHARS);
+      pos += whitespace_len;
+      continue;
     }
+    // Check for start of a string, and set state to a string
+    // if (_is_string_delim(line[pos])) {
+    //   state->current_string_delim = line[pos];
+    //   state->state = LEXER_STATE_PARSING_STRING;
+    //   return; // Exit word parsing, let main loop handle string parsing
+    // }
     // Check for an operation (single or double char)
-    if (_is_operator_char(word[pos])) {
-      const size_t operator_length = strspn(word + pos, OPERATOR_CHARS);
+    if (_is_operator_char(line[pos])) {
+      const size_t operator_length = strspn(line + pos, OPERATOR_CHARS);
       const enum TOKEN token =
-          _get_token(word + pos, operator_length, OPERATOR_MAP,
+          _get_token(line + pos, operator_length, OPERATOR_MAP,
                      array_size(OPERATOR_MAP), OPERATOR_START);
       token_array_push_simple(ta, token);
       pos += operator_length;
       continue;
     }
     // Check for a number
-    if (_is_numeric_char(word[pos])) {
+    if (_is_numeric_char(line[pos])) {
       const size_t number_length =
-          strspn_callback(word + pos, _is_numeric_char);
-      token_array_push(ta, TOKEN_NUMBER, word + pos, number_length);
+          strspn_callback(line + pos, _is_numeric_char);
+      token_array_push(ta, TOKEN_NUMBER, line + pos, number_length);
       pos += number_length;
       continue;
     }
     // Check for an identifier or keyword
-    if (_is_alpha_char(word[pos])) {
+    if (_is_alpha_char(line[pos])) {
       const size_t word_length =
-          strspn_callback(word + pos, _is_alpha_numeric_char);
+          strspn_callback(line + pos, _is_alpha_numeric_char);
       const enum TOKEN token =
-          _get_token(word + pos, word_length, KEYWORD_MAP,
+          _get_token(line + pos, word_length, KEYWORD_MAP,
                      array_size(KEYWORD_MAP), KEYWORD_START);
       if (token != TOKEN_UNKNOWN) {
         // It's a keyword
         token_array_push_simple(ta, token);
       } else {
         // It's an identifier
-        token_array_push(ta, TOKEN_IDENT, word + pos, word_length);
+        token_array_push(ta, TOKEN_IDENT, line + pos, word_length);
       }
       pos += word_length;
       continue;
@@ -307,29 +326,15 @@ TokenArray lexer_parse(FileReader filereader) {
   if (!filereader) {
     return NULL;
   }
-  LexerState state = {
-      .current_string_delim = '\0',
-      .state = LEXER_STATE_NORMAL,
-  };
   TokenArray ta = token_array_init();
 
   while (true) {
-    if (state.state == LEXER_STATE_PARSING_STRING) {
-      printf("Parsing %s\n", filereader_get_current_word(filereader));
-      // Use character-based parsing for strings
-      if (!_lexer_parse_string(filereader, ta, &state)) {
-        // String parsing failed (EOF or error)
-        printf("DONE! %s\n", filereader_get_current_word(filereader));
-        break;
-      }
-    } else {
-      // Use word-based parsing for normal tokens
-      const char *word = filereader_read_next_word(filereader);
-      if (!word) {
-        break; // EOF reached
-      }
-      _lexer_parse_word(word, ta, &state);
+    // Use word-based parsing for normal tokens
+    const char *line = filereader_read_next_line(filereader);
+    if (!line) {
+      break; // EOF reached
     }
+    _lexer_parse_line(line, filereader_get_linebuffer_length(filereader), ta);
   }
   return ta;
 }

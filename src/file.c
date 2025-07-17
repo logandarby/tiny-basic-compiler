@@ -5,16 +5,12 @@
 #include <string.h>
 
 const size_t INIT_FILE_LINE_BUFFER = 1024;
-const size_t WORD_BUFFER_SIZE = 1024;
-const char *WHITESPACE = " \t\n\r\f\v";
 
 typedef struct FileReaderHandle {
   FileIO *io; // File I/O abstraction layer
   const char *filename;
   char *line_buffer; // Dynamically allocated
   size_t current_line_length;
-  char *current_word_ptr;
-  char *current_word; // Dynamically allocated copy
   size_t line_buffer_size;
   enum FR_ERROR error; // Internal error state
 } FileReaderHandle;
@@ -111,8 +107,6 @@ void _filereader_debug_print(const FileReader fr) {
   printf("FileReader: %p\n", fr);
   printf("File: %s\n", fr->io->label);
   printf("Line buffer: %s\n", fr->line_buffer);
-  printf("Current word: %s\n", fr->current_word);
-  printf("Current word ptr: %p\n", fr->current_word_ptr);
   printf("Current line length: %zu\n", fr->current_line_length);
   printf("Line buffer size: %zu\n", fr->line_buffer_size);
   printf("Error: %d\n", fr->error);
@@ -122,11 +116,11 @@ void _filereader_debug_print(const FileReader fr) {
 // Reads the next line into the line buffer, and sets the
 // current word pointer to the start of the newline
 // If the file reaches the EOF, then both these are set to NULL
-void _read_next_line(FileReader fr) {
+bool _read_next_line(FileReader fr) {
   if (_filereader_is_eof(fr)) {
-    fr->current_word_ptr = NULL;
+    fr->line_buffer[0] = '\0';
     fr->current_line_length = 0;
-    return;
+    return false;
   }
   const ssize_t bytes_read =
       fr->io->getline(&fr->line_buffer, &fr->line_buffer_size, fr->io->stream);
@@ -134,15 +128,15 @@ void _read_next_line(FileReader fr) {
     fr->error = FR_ERR_CANT_READ;
     fprintf(stderr, "CRITICAL: Could not read next line of file: %s\n",
             strerror(errno));
-    return;
+    return false;
   } else if (bytes_read == -1) {
+    fr->line_buffer[0] = '\0';
     fr->current_line_length = 0;
-    fr->current_word_ptr = NULL;
-    return;
+    return true;
   }
   fr->current_line_length =
       bytes_read == -1 ? strlen(fr->line_buffer) : (size_t)bytes_read;
-  fr->current_word_ptr = fr->line_buffer;
+  return true;
 }
 
 FileReader filereader_init(const char *filename) {
@@ -161,25 +155,14 @@ FileReader filereader_init(const char *filename) {
       .io = io,
       .filename = filename,
       .line_buffer = (char *)xcalloc(1, INIT_FILE_LINE_BUFFER),
-      .current_word = (char *)xcalloc(1, WORD_BUFFER_SIZE),
       .error = FR_ERR_NONE,
-      .current_word_ptr = NULL,
       .current_line_length = 0,
       .line_buffer_size = INIT_FILE_LINE_BUFFER,
   };
   FileReader return_val = (FileReader)xmalloc(sizeof(FileReaderHandle));
   memcpy(return_val, &fr, sizeof(FileReaderHandle));
-  _read_next_line(return_val);
   _filereader_debug_print(return_val);
   return return_val;
-}
-
-bool filereader_has_word(const FileReader fr) {
-  if (!fr || fr->error) {
-    return false;
-  }
-  return !fr->io->feof(fr->io->stream) ||
-         (fr->current_word_ptr != NULL && *fr->current_word_ptr != '\0');
 }
 
 enum FR_ERROR filereader_get_error(FileReader fr) {
@@ -189,39 +172,17 @@ enum FR_ERROR filereader_get_error(FileReader fr) {
   return fr->error;
 }
 
-const char *filereader_read_next_word(FileReader fr) {
+const char *filereader_read_next_line(FileReader fr) {
   if (!fr) {
     return NULL;
   }
-  while (true) {
-    if (!filereader_has_word(fr)) {
-      return NULL;
-    }
-    if (fr->current_word_ptr == NULL || *fr->current_word_ptr == '\0' ||
-        *fr->current_word_ptr == '\n') {
-      _read_next_line(fr);
-      continue;
-    }
-    // Skip Initial Whitespace
-    const size_t whitespace_len = strspn(fr->current_word_ptr, WHITESPACE);
-    fr->current_word_ptr += whitespace_len;
-    // If reaches end of line, continue
-    if (*fr->current_word_ptr == '\0' || *fr->current_word_ptr == '\n') {
-      _read_next_line(fr);
-      continue;
-    }
-    // Find the length of the word, copy into buffer, and seek the current word
-    // ptr
-    const size_t word_len = strcspn(fr->current_word_ptr, WHITESPACE);
-    if (word_len + 1 > WORD_BUFFER_SIZE) {
-      fr->error = FR_ERR_WORD_TOO_BIG;
-      return NULL;
-    }
-    strncpy(fr->current_word, fr->current_word_ptr, word_len);
-    fr->current_word[word_len] = '\0';
-    fr->current_word_ptr += word_len;
-    return fr->current_word;
+
+  const bool success = _read_next_line(fr);
+  if (!success) {
+    return NULL;
   }
+
+  return fr->line_buffer;
 }
 
 void filereader_destroy(FileReader *fr) {
@@ -233,9 +194,6 @@ void filereader_destroy(FileReader *fr) {
 
   if (handle->line_buffer) {
     free(handle->line_buffer);
-  }
-  if (handle->current_word) {
-    free(handle->current_word);
   }
   if (handle->io) {
     fileio_destroy(handle->io);
@@ -259,64 +217,6 @@ FileReader filereader_init_from_string(const char *input) {
   return filereader_init_from_fileio(io);
 }
 
-char filereader_peek_char(const FileReader fr) {
-  if (!fr || fr->error) {
-    return '\0';
-  }
-
-  // If we don't have a current line or we're at the end, try to read next line
-  if (!fr->current_word_ptr || *fr->current_word_ptr == '\0') {
-    if (_filereader_is_eof(fr)) {
-      return '\0';
-    }
-    // We're at end of current line but not EOF, so there's a newline
-    if (fr->current_word_ptr && fr->current_line_length > 0) {
-      return '\n';
-    }
-  }
-
-  return fr->current_word_ptr ? *fr->current_word_ptr : '\0';
-}
-
-char filereader_read_char(FileReader fr) {
-  if (!fr || fr->error) {
-    return '\0';
-  }
-
-  char current_char = filereader_peek_char(fr);
-
-  if (current_char == '\0') {
-    return '\0';
-  }
-
-  if (current_char == '\n' || !fr->current_word_ptr ||
-      *fr->current_word_ptr == '\0') {
-    // We're at end of line, advance to next line
-    _read_next_line(fr);
-    return current_char;
-  }
-
-  // Advance position within current line
-  fr->current_word_ptr++;
-  return current_char;
-}
-
-size_t filereader_get_position(const FileReader fr) {
-  if (!fr || !fr->line_buffer || !fr->current_word_ptr) {
-    return 0;
-  }
-
-  return (size_t)(fr->current_word_ptr - fr->line_buffer);
-}
-
-const char *filereader_get_line_from_position(const FileReader fr) {
-  if (!fr || !fr->current_word_ptr) {
-    return NULL;
-  }
-
-  return fr->current_word_ptr;
-}
-
 FileReader filereader_init_from_fileio(FileIO *io) {
   if (!io) {
     return NULL;
@@ -326,20 +226,21 @@ FileReader filereader_init_from_fileio(FileIO *io) {
       .io = io,
       .filename = io->label,
       .line_buffer = (char *)xcalloc(1, INIT_FILE_LINE_BUFFER),
-      .current_word = (char *)xcalloc(1, WORD_BUFFER_SIZE),
       .error = FR_ERR_NONE,
-      .current_word_ptr = NULL,
       .current_line_length = 0,
       .line_buffer_size = INIT_FILE_LINE_BUFFER,
   };
 
   FileReader return_val = (FileReader)xmalloc(sizeof(FileReaderHandle));
   memcpy(return_val, &fr, sizeof(FileReaderHandle));
-  _read_next_line(return_val);
   _filereader_debug_print(return_val);
   return return_val;
 }
 
-const char *filereader_get_current_word(FileReader fr) {
-  return fr->current_word_ptr;
+const char *filereader_get_current_line(FileReader fr) {
+  return fr->line_buffer;
+}
+
+size_t filereader_get_linebuffer_length(const FileReader fr) {
+  return fr->line_buffer_size;
 }

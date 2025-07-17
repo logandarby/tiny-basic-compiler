@@ -11,8 +11,6 @@
 
 #include "core.h"
 
-extern const size_t WORD_BUFFER_SIZE;
-
 // --------------------------------------
 // FILE I/O ABSTRACTION LAYER
 //
@@ -83,27 +81,13 @@ FileReader filereader_init_from_fileio(FileIO *io);
 // Returns the current error state
 enum FR_ERROR filereader_get_error(const FileReader fr);
 
-// Reads the next word of the file. If the file hits the EOF, returns NULL
-const char *filereader_read_next_word(FileReader fr);
+// Reads the next line of the file. If the file hits the EOF, returns NULL
+const char *filereader_read_next_line(FileReader fr);
 
-// Returns a pointer to the current word. Does not modify the struct
-const char *filereader_get_current_word(const FileReader fr);
+// Returns a pointer to the current line. Does not modify the struct
+const char *filereader_get_current_line(const FileReader fr);
 
-// Raw character access for string parsing
-// Returns the current character at the reader's position, or '\0' if EOF
-char filereader_peek_char(const FileReader fr);
-
-// Advances the reader position by one character and returns the character
-// Returns '\0' if EOF is reached
-char filereader_read_char(FileReader fr);
-
-// Gets the current position within the current line (0-based)
-size_t filereader_get_position(const FileReader fr);
-
-// Returns pointer to the current line buffer and remaining characters from
-// current position Used for efficient string parsing. Returns NULL if no line
-// is loaded.
-const char *filereader_get_line_from_position(const FileReader fr);
+size_t filereader_get_linebuffer_length(const FileReader fr);
 
 // Frees and closes any files associated with the file reader
 // Sets the pointer to NULL to prevent double-free
