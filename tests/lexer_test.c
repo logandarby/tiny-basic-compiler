@@ -20,9 +20,62 @@ static void assert_tokens_equal(TokenArray ta, enum TOKEN *expected,
                token_array_length(ta));
 
   for (size_t i = 0; i < expected_count; i++) {
-    enum TOKEN actual = token_array_at(ta, i);
+    enum TOKEN actual = token_array_at(ta, i).type;
     cr_assert_eq(actual, expected[i], "Token %zu: expected %d, got %d", i,
                  expected[i], actual);
+  }
+}
+
+// Helper function to check token text data
+// static void assert_token_text_equal(TokenArray ta, size_t index,
+//                                     const char *expected_text) {
+//   cr_assert_lt(index, token_array_length(ta), "Token index %zu out of
+//   bounds",
+//                index);
+
+//   Token token = token_array_at(ta, index);
+
+//   if (expected_text == NULL) {
+//     cr_assert_null(token.text, "Token %zu: expected NULL text, got '%s'",
+//     index,
+//                    token.text ? token.text : "NULL");
+//   } else {
+//     cr_assert_not_null(token.text, "Token %zu: expected text '%s', got NULL",
+//                        index, expected_text);
+//     cr_assert_str_eq(token.text, expected_text,
+//                      "Token %zu: expected text '%s', got '%s'", index,
+//                      expected_text, token.text);
+//   }
+// }
+
+// Helper function to check both token types and text data
+static void assert_tokens_and_text_equal(TokenArray ta,
+                                         enum TOKEN *expected_types,
+                                         const char **expected_texts,
+                                         size_t expected_count) {
+  cr_assert_eq(token_array_length(ta), expected_count,
+               "Expected %zu tokens, got %zu", expected_count,
+               token_array_length(ta));
+
+  for (size_t i = 0; i < expected_count; i++) {
+    Token token = token_array_at(ta, i);
+
+    // Check token type
+    cr_assert_eq(token.type, expected_types[i],
+                 "Token %zu: expected type %d, got %d", i, expected_types[i],
+                 token.type);
+
+    // Check token text
+    if (expected_texts[i] == NULL) {
+      cr_assert_null(token.text, "Token %zu: expected NULL text, got '%s'", i,
+                     token.text ? token.text : "NULL");
+    } else {
+      cr_assert_not_null(token.text, "Token %zu: expected text '%s', got NULL",
+                         i, expected_texts[i]);
+      cr_assert_str_eq(token.text, expected_texts[i],
+                       "Token %zu: expected text '%s', got '%s'", i,
+                       expected_texts[i], token.text);
+    }
   }
 }
 
@@ -53,6 +106,65 @@ Test(lexer, single_char_logic_operators) {
 
   enum TOKEN expected[] = {TOKEN_NOT};
   assert_tokens_equal(ta, expected, 1);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// OPERATOR TEXT DATA TESTS
+// =========================
+
+Test(lexer, single_char_arithmetic_operators_text) {
+  TokenArray ta = parse_string("+ - * /");
+
+  enum TOKEN expected_types[] = {TOKEN_PLUS, TOKEN_MINUS, TOKEN_MULT,
+                                 TOKEN_DIV};
+  const char *expected_texts[] = {NULL, NULL, NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, single_char_comparison_operators_text) {
+  TokenArray ta = parse_string("> < =");
+
+  enum TOKEN expected_types[] = {TOKEN_GT, TOKEN_LT, TOKEN_EQ};
+  const char *expected_texts[] = {NULL, NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, double_char_comparison_operators_text) {
+  TokenArray ta = parse_string(">= <= == !=");
+
+  enum TOKEN expected_types[] = {TOKEN_GTE, TOKEN_LTE, TOKEN_EQEQ, TOKEN_NOTEQ};
+  const char *expected_texts[] = {NULL, NULL, NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, double_char_logic_operators_text) {
+  TokenArray ta = parse_string("&& ||");
+
+  enum TOKEN expected_types[] = {TOKEN_AND, TOKEN_OR};
+  const char *expected_texts[] = {NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, all_operators_text_null) {
+  TokenArray ta = parse_string("+ - * / > < >= <= = == != ! && ||");
+
+  enum TOKEN expected_types[] = {
+      TOKEN_PLUS,  TOKEN_MINUS, TOKEN_MULT, TOKEN_DIV, TOKEN_GT,
+      TOKEN_LT,    TOKEN_GTE,   TOKEN_LTE,  TOKEN_EQ,  TOKEN_EQEQ,
+      TOKEN_NOTEQ, TOKEN_NOT,   TOKEN_AND,  TOKEN_OR};
+  const char *expected_texts[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 14);
 
   token_array_destroy(&ta);
 }
@@ -133,7 +245,7 @@ Test(lexer, three_char_operators_rejected) {
     cr_assert_eq(token_array_length(ta), 1,
                  "3-char operator '%s' should produce exactly 1 token",
                  three_char_ops[i]);
-    cr_assert_eq(token_array_at(ta, 0), TOKEN_UNKNOWN,
+    cr_assert_eq(token_array_at(ta, 0).type, TOKEN_UNKNOWN,
                  "3-char operator '%s' should be TOKEN_UNKNOWN",
                  three_char_ops[i]);
 
@@ -382,12 +494,12 @@ Test(lexer, token_array_operations) {
   cr_assert_eq(token_array_length(ta), 0, "New TokenArray should be empty");
   cr_assert(token_array_is_empty(ta), "New TokenArray should report as empty");
 
-  token_array_push(ta, TOKEN_PLUS);
+  token_array_push_simple(ta, TOKEN_PLUS);
   cr_assert_eq(token_array_length(ta), 1,
                "TokenArray should have 1 element after push");
   cr_assert(!token_array_is_empty(ta),
             "TokenArray should not be empty after push");
-  cr_assert_eq(token_array_at(ta, 0), TOKEN_PLUS,
+  cr_assert_eq(token_array_at(ta, 0).type, TOKEN_PLUS,
                "First element should be TOKEN_PLUS");
 
   token_array_destroy(&ta);
@@ -460,6 +572,64 @@ Test(lexer, zero_variations) {
 }
 
 // =========================
+// NUMBER TEXT DATA TESTS
+// =========================
+
+Test(lexer, single_digit_number_text) {
+  TokenArray ta = parse_string("0 1 5 9");
+
+  enum TOKEN expected_types[] = {TOKEN_NUMBER, TOKEN_NUMBER, TOKEN_NUMBER,
+                                 TOKEN_NUMBER};
+  const char *expected_texts[] = {"0", "1", "5", "9"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, multi_digit_number_text) {
+  TokenArray ta = parse_string("12 123 1234 12345");
+
+  enum TOKEN expected_types[] = {TOKEN_NUMBER, TOKEN_NUMBER, TOKEN_NUMBER,
+                                 TOKEN_NUMBER};
+  const char *expected_texts[] = {"12", "123", "1234", "12345"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, numbers_with_leading_zeros_text) {
+  TokenArray ta = parse_string("01 001 0123 00000");
+
+  enum TOKEN expected_types[] = {TOKEN_NUMBER, TOKEN_NUMBER, TOKEN_NUMBER,
+                                 TOKEN_NUMBER};
+  const char *expected_texts[] = {"01", "001", "0123", "00000"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, large_numbers_text) {
+  TokenArray ta = parse_string("999999999 1234567890 987654321");
+
+  enum TOKEN expected_types[] = {TOKEN_NUMBER, TOKEN_NUMBER, TOKEN_NUMBER};
+  const char *expected_texts[] = {"999999999", "1234567890", "987654321"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, zero_variations_text) {
+  TokenArray ta = parse_string("0 00 000 0000");
+
+  enum TOKEN expected_types[] = {TOKEN_NUMBER, TOKEN_NUMBER, TOKEN_NUMBER,
+                                 TOKEN_NUMBER};
+  const char *expected_texts[] = {"0", "00", "000", "0000"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
 // IDENTIFIER TOKENIZATION TESTS
 // =========================
 
@@ -510,6 +680,71 @@ Test(lexer, identifiers_with_whitespace) {
 
   enum TOKEN expected[] = {TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT};
   assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// IDENTIFIER TEXT DATA TESTS
+// =========================
+
+Test(lexer, single_letter_identifiers_text) {
+  TokenArray ta = parse_string("a b c x y z A B C X Y Z");
+
+  enum TOKEN expected_types[12];
+  const char *expected_texts[] = {"a", "b", "c", "x", "y", "z",
+                                  "A", "B", "C", "X", "Y", "Z"};
+  for (int i = 0; i < 12; i++) {
+    expected_types[i] = TOKEN_IDENT;
+  }
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 12);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, multi_letter_identifiers_text) {
+  TokenArray ta = parse_string("abc xyz hello world variable temp");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT,
+                                 TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT};
+  const char *expected_texts[] = {"abc",   "xyz",      "hello",
+                                  "world", "variable", "temp"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 6);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, mixed_case_identifiers_text) {
+  TokenArray ta = parse_string("Abc XyZ HeLLo WoRlD VaRiAbLe");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT,
+                                 TOKEN_IDENT, TOKEN_IDENT};
+  const char *expected_texts[] = {"Abc", "XyZ", "HeLLo", "WoRlD", "VaRiAbLe"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, long_identifiers_text) {
+  TokenArray ta = parse_string(
+      "verylongidentifiername ANOTHERLONGIDENTIFIER mixedCaseVeryLongName");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT};
+  const char *expected_texts[] = {"verylongidentifiername",
+                                  "ANOTHERLONGIDENTIFIER",
+                                  "mixedCaseVeryLongName"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, identifiers_with_whitespace_text) {
+  TokenArray ta = parse_string("  var1   var2\t\tvar3\n\nvar4  ");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT,
+                                 TOKEN_IDENT};
+  const char *expected_texts[] = {"var1", "var2", "var3", "var4"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
 
   token_array_destroy(&ta);
 }
@@ -606,15 +841,77 @@ Test(lexer, loop_keywords) {
 }
 
 // =========================
+// KEYWORD TEXT DATA TESTS
+// =========================
+
+Test(lexer, all_keywords_text_null) {
+  TokenArray ta = parse_string(
+      "LABEL GOTO PRINT INPUT LET IF THEN ELSE ENDIF WHILE REPEAT ENDWHILE");
+
+  enum TOKEN expected_types[] = {TOKEN_LABEL, TOKEN_GOTO,   TOKEN_PRINT,
+                                 TOKEN_INPUT, TOKEN_LET,    TOKEN_IF,
+                                 TOKEN_THEN,  TOKEN_ELSE,   TOKEN_ENDIF,
+                                 TOKEN_WHILE, TOKEN_REPEAT, TOKEN_ENDWHILE};
+  const char *expected_texts[] = {NULL, NULL, NULL, NULL, NULL, NULL,
+                                  NULL, NULL, NULL, NULL, NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 12);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, control_flow_keywords_text) {
+  TokenArray ta = parse_string("IF THEN ELSE ENDIF WHILE ENDWHILE");
+
+  enum TOKEN expected_types[] = {TOKEN_IF,    TOKEN_THEN,  TOKEN_ELSE,
+                                 TOKEN_ENDIF, TOKEN_WHILE, TOKEN_ENDWHILE};
+  const char *expected_texts[] = {NULL, NULL, NULL, NULL, NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 6);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, io_keywords_text) {
+  TokenArray ta = parse_string("PRINT INPUT");
+
+  enum TOKEN expected_types[] = {TOKEN_PRINT, TOKEN_INPUT};
+  const char *expected_texts[] = {NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, assignment_keywords_text) {
+  TokenArray ta = parse_string("LET");
+
+  enum TOKEN expected_types[] = {TOKEN_LET};
+  const char *expected_texts[] = {NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, jump_keywords_text) {
+  TokenArray ta = parse_string("LABEL GOTO");
+
+  enum TOKEN expected_types[] = {TOKEN_LABEL, TOKEN_GOTO};
+  const char *expected_texts[] = {NULL, NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 2);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
 // MIXED TOKEN TYPE TESTS
 // =========================
 
 Test(lexer, keywords_with_operators) {
   TokenArray ta = parse_string("IF x > 10 THEN PRINT x ENDIF");
 
-  enum TOKEN expected[] = {TOKEN_IF,   TOKEN_IDENT, TOKEN_GT,    TOKEN_NUMBER,
-                           TOKEN_THEN, TOKEN_PRINT, TOKEN_IDENT, TOKEN_ENDIF};
-  assert_tokens_equal(ta, expected, 8);
+  enum TOKEN expected_types[] = {TOKEN_IF,     TOKEN_IDENT, TOKEN_GT,
+                                 TOKEN_NUMBER, TOKEN_THEN,  TOKEN_PRINT,
+                                 TOKEN_IDENT,  TOKEN_ENDIF};
+  const char *expected_texts[] = {NULL, "x", NULL, "10", NULL, NULL, "x", NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 8);
 
   token_array_destroy(&ta);
 }
@@ -622,9 +919,10 @@ Test(lexer, keywords_with_operators) {
 Test(lexer, assignment_statement) {
   TokenArray ta = parse_string("LET x = 42 + y");
 
-  enum TOKEN expected[] = {TOKEN_LET,    TOKEN_IDENT, TOKEN_EQ,
-                           TOKEN_NUMBER, TOKEN_PLUS,  TOKEN_IDENT};
-  assert_tokens_equal(ta, expected, 6);
+  enum TOKEN expected_types[] = {TOKEN_LET,    TOKEN_IDENT, TOKEN_EQ,
+                                 TOKEN_NUMBER, TOKEN_PLUS,  TOKEN_IDENT};
+  const char *expected_texts[] = {NULL, "x", NULL, "42", NULL, "y"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 6);
 
   token_array_destroy(&ta);
 }
@@ -632,8 +930,10 @@ Test(lexer, assignment_statement) {
 Test(lexer, loop_with_condition) {
   TokenArray ta = parse_string("WHILE i <= 100");
 
-  enum TOKEN expected[] = {TOKEN_WHILE, TOKEN_IDENT, TOKEN_LTE, TOKEN_NUMBER};
-  assert_tokens_equal(ta, expected, 4);
+  enum TOKEN expected_types[] = {TOKEN_WHILE, TOKEN_IDENT, TOKEN_LTE,
+                                 TOKEN_NUMBER};
+  const char *expected_texts[] = {NULL, "i", NULL, "100"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 4);
 
   token_array_destroy(&ta);
 }
@@ -641,10 +941,13 @@ Test(lexer, loop_with_condition) {
 Test(lexer, complex_expression) {
   TokenArray ta = parse_string("result = a + b * c - d / e");
 
-  enum TOKEN expected[] = {TOKEN_IDENT, TOKEN_EQ,   TOKEN_IDENT, TOKEN_PLUS,
-                           TOKEN_IDENT, TOKEN_MULT, TOKEN_IDENT, TOKEN_MINUS,
-                           TOKEN_IDENT, TOKEN_DIV,  TOKEN_IDENT};
-  assert_tokens_equal(ta, expected, 11);
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_EQ,    TOKEN_IDENT,
+                                 TOKEN_PLUS,  TOKEN_IDENT, TOKEN_MULT,
+                                 TOKEN_IDENT, TOKEN_MINUS, TOKEN_IDENT,
+                                 TOKEN_DIV,   TOKEN_IDENT};
+  const char *expected_texts[] = {"result", NULL, "a", NULL, "b", NULL,
+                                  "c",      NULL, "d", NULL, "e"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 11);
 
   token_array_destroy(&ta);
 }
@@ -846,6 +1149,135 @@ Test(lexer, alternating_token_types) {
 
   token_array_destroy(&ta);
 }
+
+// =========================
+// MIXED TOKEN TEXT DATA TESTS
+// =========================
+
+Test(lexer, assignment_statement_text) {
+  TokenArray ta = parse_string("LET x = 42 + y");
+
+  enum TOKEN expected_types[] = {TOKEN_LET,    TOKEN_IDENT, TOKEN_EQ,
+                                 TOKEN_NUMBER, TOKEN_PLUS,  TOKEN_IDENT};
+  const char *expected_texts[] = {NULL, "x", NULL, "42", NULL, "y"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 6);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, complex_expression_text) {
+  TokenArray ta = parse_string("result = a + b * c - d / e");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_EQ,    TOKEN_IDENT,
+                                 TOKEN_PLUS,  TOKEN_IDENT, TOKEN_MULT,
+                                 TOKEN_IDENT, TOKEN_MINUS, TOKEN_IDENT,
+                                 TOKEN_DIV,   TOKEN_IDENT};
+  const char *expected_texts[] = {"result", NULL, "a", NULL, "b", NULL,
+                                  "c",      NULL, "d", NULL, "e"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 11);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, conditional_with_logical_operators_text) {
+  TokenArray ta = parse_string("IF x >= min && x <= max");
+
+  enum TOKEN expected_types[] = {TOKEN_IF,    TOKEN_IDENT, TOKEN_GTE,
+                                 TOKEN_IDENT, TOKEN_AND,   TOKEN_IDENT,
+                                 TOKEN_LTE,   TOKEN_IDENT};
+  const char *expected_texts[] = {NULL, "x", NULL, "min",
+                                  NULL, "x", NULL, "max"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 8);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, numbers_and_identifiers_mixed_text) {
+  TokenArray ta = parse_string("var1 123 var2 456 var3");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT, TOKEN_NUMBER, TOKEN_IDENT,
+                                 TOKEN_NUMBER, TOKEN_IDENT};
+  const char *expected_texts[] = {"var1", "123", "var2", "456", "var3"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, realistic_program_fragment_text) {
+  TokenArray ta = parse_string("LET counter = 0 WHILE counter < limit");
+
+  enum TOKEN expected_types[] = {TOKEN_LET,    TOKEN_IDENT, TOKEN_EQ,
+                                 TOKEN_NUMBER, TOKEN_WHILE, TOKEN_IDENT,
+                                 TOKEN_LT,     TOKEN_IDENT};
+  const char *expected_texts[] = {NULL, "counter", NULL, "0",
+                                  NULL, "counter", NULL, "limit"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 8);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, if_statement_fragment_text) {
+  TokenArray ta = parse_string("IF x > 0 THEN PRINT positive ENDIF");
+
+  enum TOKEN expected_types[] = {TOKEN_IF,     TOKEN_IDENT, TOKEN_GT,
+                                 TOKEN_NUMBER, TOKEN_THEN,  TOKEN_PRINT,
+                                 TOKEN_IDENT,  TOKEN_ENDIF};
+  const char *expected_texts[] = {NULL, "x",  NULL,       "0",
+                                  NULL, NULL, "positive", NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 8);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, input_output_fragment_text) {
+  TokenArray ta = parse_string("INPUT x PRINT x + 1");
+
+  enum TOKEN expected_types[] = {TOKEN_INPUT, TOKEN_IDENT, TOKEN_PRINT,
+                                 TOKEN_IDENT, TOKEN_PLUS,  TOKEN_NUMBER};
+  const char *expected_texts[] = {NULL, "x", NULL, "x", NULL, "1"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 6);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, very_long_identifier_text) {
+  TokenArray ta = parse_string(
+      "verylongidentifiernamethatgoesonfarlongerthanmostpeoplewouldexpect");
+
+  enum TOKEN expected_types[] = {TOKEN_IDENT};
+  const char *expected_texts[] = {
+      "verylongidentifiernamethatgoesonfarlongerthanmostpeoplewouldexpect"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, very_long_number_text) {
+  TokenArray ta =
+      parse_string("12345678901234567890123456789012345678901234567890");
+
+  enum TOKEN expected_types[] = {TOKEN_NUMBER};
+  const char *expected_texts[] = {
+      "12345678901234567890123456789012345678901234567890"};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 1);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, adjacent_tokens_no_whitespace_text) {
+  TokenArray ta = parse_string("IF x>10THEN");
+
+  enum TOKEN expected_types[] = {TOKEN_IF, TOKEN_IDENT, TOKEN_GT, TOKEN_NUMBER,
+                                 TOKEN_THEN};
+  const char *expected_texts[] = {NULL, "x", NULL, "10", NULL};
+  assert_tokens_and_text_equal(ta, expected_types, expected_texts, 5);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// COMPLEX NESTED STRUCTURE TESTS
+// =========================
 
 Test(lexer, complex_nested_structure) {
   TokenArray ta = parse_string("IF x > 0 THEN WHILE y < 10 REPEAT LET z = x * "

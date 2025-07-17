@@ -7,36 +7,81 @@ const size_t INIT_CAPACITY = 512;
 const unsigned int CAPACITY_MULTIPLIER = 2;
 
 // ------------------------------------
+// Tokens Implementation
+// ------------------------------------
+
+Token token_create(enum TOKEN type, const char *text, size_t length) {
+  Token t = {.type = type, .text = NULL};
+  if (text && length > 0) {
+    t.text = xmalloc(length + 1);
+    strncpy(t.text, text, length);
+    t.text[length] = '\0';
+  }
+  return t;
+}
+
+Token token_create_simple(enum TOKEN type) {
+  Token t = {.type = type, .text = NULL};
+  return t;
+}
+
+bool token_is_number(const Token token) { return token.type == TOKEN_NUMBER; }
+bool token_is_string(const Token token) { return token.type == TOKEN_STRING; }
+bool token_is_identifier(const Token token) {
+  return token.type == TOKEN_IDENT;
+}
+bool token_is_keyword(const Token token) { return token.type >= KEYWORD_START; }
+bool token_is_operator(const Token token) {
+  return token.type >= OPERATOR_START && token.type <= LITERAL_START;
+}
+
+// Destroys any allocated data associated with the Token
+void token_destroy(Token token) {
+  if (token.text) {
+    free(token.text);
+  }
+}
+
+// ------------------------------------
 // Token Array Implementation
 // ------------------------------------
 
 struct TokenArrayHandle {
-  enum TOKEN *head;
+  Token *head;
   size_t size;     // # of elements stored
   size_t capacity; // Total Capacity
 };
 
 void _resize_token_array(TokenArray ta, const size_t new_size) {
-  ta->head = xrealloc(ta->head, new_size * sizeof(enum TOKEN));
+  ta->head = xrealloc(ta->head, new_size * sizeof(Token));
   ta->capacity = new_size;
 }
 
 TokenArray token_array_init(void) {
   struct TokenArrayHandle ta = {
-      .head = xmalloc(sizeof(enum TOKEN) * INIT_CAPACITY),
+      .head = xmalloc(sizeof(Token) * INIT_CAPACITY),
       .size = 0,
       .capacity = INIT_CAPACITY,
   };
   TokenArray return_val = xmalloc(sizeof(struct TokenArrayHandle));
-  memccpy(return_val, &ta, 1, sizeof(struct TokenArrayHandle));
+  memcpy(return_val, &ta, sizeof(struct TokenArrayHandle));
   return return_val;
 }
 
-void token_array_push(TokenArray ta, enum TOKEN token) {
+void token_array_push_simple(TokenArray ta, enum TOKEN token_type) {
   if (ta->size == ta->capacity) {
     _resize_token_array(ta, ta->capacity * CAPACITY_MULTIPLIER);
   }
-  ta->head[ta->size] = token;
+  ta->head[ta->size] = token_create_simple(token_type);
+  ta->size++;
+}
+
+void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
+                      size_t length) {
+  if (ta->size == ta->capacity) {
+    _resize_token_array(ta, ta->capacity * CAPACITY_MULTIPLIER);
+  }
+  ta->head[ta->size] = token_create(token_type, text, length);
   ta->size++;
 }
 
@@ -46,7 +91,7 @@ size_t token_array_capacity(const TokenArray ta) { return ta->capacity; }
 
 bool token_array_is_empty(const TokenArray ta) { return ta->size == 0; }
 
-enum TOKEN token_array_at(const TokenArray ta, const size_t i) {
+Token token_array_at(const TokenArray ta, const size_t i) {
   return ta->head[i];
 }
 
@@ -56,6 +101,10 @@ void token_array_destroy(TokenArray *ta_ptr) {
   }
   TokenArray ta = *ta_ptr;
   if (ta->head) {
+    // Destroy all tokens before freeing the array
+    for (size_t i = 0; i < ta->size; i++) {
+      token_destroy(ta->head[i]);
+    }
     free(ta->head);
   }
   free(ta);
@@ -150,7 +199,7 @@ void _lexer_parse_word(const char *const word, TokenArray ta) {
       const enum TOKEN token =
           _get_token(word + pos, operator_length, OPERATOR_MAP,
                      array_size(OPERATOR_MAP), OPERATOR_START);
-      token_array_push(ta, token);
+      token_array_push_simple(ta, token);
       pos += operator_length;
       continue;
     }
@@ -158,7 +207,7 @@ void _lexer_parse_word(const char *const word, TokenArray ta) {
     if (_is_numeric_char(word[pos])) {
       const size_t number_length =
           strspn_callback(word + pos, _is_numeric_char);
-      token_array_push(ta, TOKEN_NUMBER);
+      token_array_push(ta, TOKEN_NUMBER, word + pos, number_length);
       pos += number_length;
       continue;
     }
@@ -168,7 +217,13 @@ void _lexer_parse_word(const char *const word, TokenArray ta) {
       const enum TOKEN token =
           _get_token(word + pos, word_length, KEYWORD_MAP,
                      array_size(KEYWORD_MAP), KEYWORD_START);
-      token_array_push(ta, token ? token : TOKEN_IDENT);
+      if (token != TOKEN_UNKNOWN) {
+        // It's a keyword
+        token_array_push_simple(ta, token);
+      } else {
+        // It's an identifier
+        token_array_push(ta, TOKEN_IDENT, word + pos, word_length);
+      }
       pos += word_length;
       continue;
     }

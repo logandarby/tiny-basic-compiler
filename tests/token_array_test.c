@@ -31,12 +31,12 @@ Test(token_array, initial_capacity) {
 Test(token_array, single_push) {
   TokenArray ta = token_array_init();
 
-  token_array_push(ta, TOKEN_PLUS);
+  token_array_push_simple(ta, TOKEN_PLUS);
 
   cr_assert_eq(token_array_length(ta), 1, "Length should be 1 after one push");
   cr_assert_eq(token_array_capacity(ta), 512, "Capacity should remain 512");
   cr_assert(!token_array_is_empty(ta), "Array should not be empty after push");
-  cr_assert_eq(token_array_at(ta, 0), TOKEN_PLUS,
+  cr_assert_eq(token_array_at(ta, 0).type, TOKEN_PLUS,
                "First element should be TOKEN_PLUS");
 
   token_array_destroy(&ta);
@@ -47,7 +47,7 @@ Test(token_array, multiple_pushes_within_capacity) {
 
   // Add elements without exceeding initial capacity
   for (int i = 0; i < 100; i++) {
-    token_array_push(ta, TOKEN_PLUS);
+    token_array_push_simple(ta, TOKEN_PLUS);
   }
 
   cr_assert_eq(token_array_length(ta), 100, "Length should be 100");
@@ -55,8 +55,8 @@ Test(token_array, multiple_pushes_within_capacity) {
 
   // Verify all elements
   for (size_t i = 0; i < 100; i++) {
-    cr_assert_eq(token_array_at(ta, i), TOKEN_PLUS,
-                 "Element %d should be TOKEN_PLUS", i);
+    cr_assert_eq(token_array_at(ta, i).type, TOKEN_PLUS,
+                 "Element %ld should be TOKEN_PLUS", i);
   }
 
   token_array_destroy(&ta);
@@ -71,14 +71,14 @@ Test(token_array, resize_at_capacity_boundary) {
 
   // Fill exactly to initial capacity
   for (size_t i = 0; i < 512; i++) {
-    token_array_push(ta, TOKEN_MINUS);
+    token_array_push_simple(ta, TOKEN_MINUS);
   }
 
   cr_assert_eq(token_array_length(ta), 512, "Length should be 512");
   cr_assert_eq(token_array_capacity(ta), 512, "Capacity should still be 512");
 
   // This push should trigger resize
-  token_array_push(ta, TOKEN_MULT);
+  token_array_push_simple(ta, TOKEN_MULT);
 
   cr_assert_eq(token_array_length(ta), 513,
                "Length should be 513 after resize");
@@ -87,10 +87,10 @@ Test(token_array, resize_at_capacity_boundary) {
 
   // Verify all elements are intact
   for (size_t i = 0; i < 512; i++) {
-    cr_assert_eq(token_array_at(ta, i), TOKEN_MINUS,
+    cr_assert_eq(token_array_at(ta, i).type, TOKEN_MINUS,
                  "Element %zu should be TOKEN_MINUS", i);
   }
-  cr_assert_eq(token_array_at(ta, 512), TOKEN_MULT,
+  cr_assert_eq(token_array_at(ta, 512).type, TOKEN_MULT,
                "Last element should be TOKEN_MULT");
 
   token_array_destroy(&ta);
@@ -105,7 +105,7 @@ Test(token_array, multiple_resizes) {
   for (size_t i = 0; i < target_size; i++) {
     enum TOKEN token =
         (enum TOKEN)(TOKEN_PLUS + (i % 4)); // Cycle through some tokens
-    token_array_push(ta, token);
+    token_array_push_simple(ta, token);
   }
 
   cr_assert_eq(token_array_length(ta), target_size,
@@ -118,7 +118,7 @@ Test(token_array, multiple_resizes) {
   // Verify elements are intact after multiple resizes
   for (size_t i = 0; i < target_size; i++) {
     enum TOKEN expected = (enum TOKEN)(TOKEN_PLUS + (i % 4));
-    cr_assert_eq(token_array_at(ta, i), expected,
+    cr_assert_eq(token_array_at(ta, i).type, expected,
                  "Element %zu should be correct after resizes", i);
   }
 
@@ -137,7 +137,7 @@ Test(token_array, resize_sequence_validation) {
                expected_capacities[capacity_index]);
 
   for (size_t i = 1; i <= 4096; i++) {
-    token_array_push(ta, TOKEN_DIV);
+    token_array_push_simple(ta, TOKEN_DIV);
 
     // Check if we've hit a resize boundary
     if (i == expected_capacities[capacity_index]) {
@@ -145,7 +145,7 @@ Test(token_array, resize_sequence_validation) {
       if (capacity_index <
           sizeof(expected_capacities) / sizeof(expected_capacities[0])) {
         // Next push should trigger resize
-        token_array_push(ta, TOKEN_GT);
+        token_array_push_simple(ta, TOKEN_GT);
         i++;
         cr_assert_eq(token_array_capacity(ta),
                      expected_capacities[capacity_index],
@@ -169,7 +169,7 @@ Test(token_array, large_scale_operations) {
 
   // Add many elements
   for (size_t i = 0; i < large_size; i++) {
-    token_array_push(
+    token_array_push_simple(
         ta,
         (enum TOKEN)(TOKEN_PLUS + (i % 14))); // Cycle through operator tokens
   }
@@ -182,7 +182,7 @@ Test(token_array, large_scale_operations) {
   // Verify all elements
   for (size_t i = 0; i < large_size; i++) {
     enum TOKEN expected = (enum TOKEN)(TOKEN_PLUS + (i % 14));
-    cr_assert_eq(token_array_at(ta, i), expected,
+    cr_assert_eq(token_array_at(ta, i).type, expected,
                  "Element %zu should be correct", i);
   }
 
@@ -196,11 +196,11 @@ Test(token_array, alternating_token_stress) {
   const size_t iterations = 1000;
 
   for (size_t i = 0; i < iterations; i++) {
-    token_array_push(ta, TOKEN_PLUS);
-    token_array_push(ta, TOKEN_UNKNOWN);
-    token_array_push(ta, TOKEN_NUMBER);
-    token_array_push(ta, TOKEN_IDENT);
-    token_array_push(ta, TOKEN_IF);
+    token_array_push_simple(ta, TOKEN_PLUS);
+    token_array_push_simple(ta, TOKEN_UNKNOWN);
+    token_array_push_simple(ta, TOKEN_NUMBER);
+    token_array_push_simple(ta, TOKEN_IDENT);
+    token_array_push_simple(ta, TOKEN_IF);
   }
 
   cr_assert_eq(token_array_length(ta), iterations * 5, "Length should be %zu",
@@ -208,15 +208,15 @@ Test(token_array, alternating_token_stress) {
 
   // Verify the alternating pattern
   for (size_t i = 0; i < iterations; i++) {
-    cr_assert_eq(token_array_at(ta, i * 5 + 0), TOKEN_PLUS,
+    cr_assert_eq(token_array_at(ta, i * 5 + 0).type, TOKEN_PLUS,
                  "Pattern verification failed at %zu", i);
-    cr_assert_eq(token_array_at(ta, i * 5 + 1), TOKEN_UNKNOWN,
+    cr_assert_eq(token_array_at(ta, i * 5 + 1).type, TOKEN_UNKNOWN,
                  "Pattern verification failed at %zu", i);
-    cr_assert_eq(token_array_at(ta, i * 5 + 2), TOKEN_NUMBER,
+    cr_assert_eq(token_array_at(ta, i * 5 + 2).type, TOKEN_NUMBER,
                  "Pattern verification failed at %zu", i);
-    cr_assert_eq(token_array_at(ta, i * 5 + 3), TOKEN_IDENT,
+    cr_assert_eq(token_array_at(ta, i * 5 + 3).type, TOKEN_IDENT,
                  "Pattern verification failed at %zu", i);
-    cr_assert_eq(token_array_at(ta, i * 5 + 4), TOKEN_IF,
+    cr_assert_eq(token_array_at(ta, i * 5 + 4).type, TOKEN_IF,
                  "Pattern verification failed at %zu", i);
   }
 
@@ -232,14 +232,14 @@ Test(token_array, immediate_resize_trigger) {
 
   // Fill to exactly initial capacity
   for (size_t i = 0; i < 512; i++) {
-    token_array_push(ta, TOKEN_LET);
+    token_array_push_simple(ta, TOKEN_LET);
   }
 
   size_t capacity_before = token_array_capacity(ta);
   cr_assert_eq(capacity_before, 512, "Should be at capacity limit");
 
   // One more push should double capacity
-  token_array_push(ta, TOKEN_GOTO);
+  token_array_push_simple(ta, TOKEN_GOTO);
 
   size_t capacity_after = token_array_capacity(ta);
   cr_assert_eq(capacity_after, 1024, "Capacity should double");
@@ -253,7 +253,7 @@ Test(token_array, single_element_to_resize) {
 
   // Add exactly enough elements to trigger one resize
   for (size_t i = 0; i <= 512; i++) { // 513 elements total
-    token_array_push(ta, TOKEN_PRINT);
+    token_array_push_simple(ta, TOKEN_PRINT);
   }
 
   cr_assert_eq(token_array_length(ta), 513, "Should have 513 elements");
@@ -277,7 +277,7 @@ Test(token_array, exact_power_of_two_boundaries) {
 
     // Fill to exact boundary
     for (size_t i = 0; i < target; i++) {
-      token_array_push(ta, TOKEN_WHILE);
+      token_array_push_simple(ta, TOKEN_WHILE);
     }
 
     cr_assert_eq(token_array_length(ta), target,
@@ -286,7 +286,7 @@ Test(token_array, exact_power_of_two_boundaries) {
                  "Capacity should be exactly %zu", target);
 
     // One more should trigger resize
-    token_array_push(ta, TOKEN_ENDWHILE);
+    token_array_push_simple(ta, TOKEN_ENDWHILE);
     cr_assert_eq(token_array_capacity(ta), target * 2, "Should double to %zu",
                  target * 2);
   }
@@ -301,7 +301,7 @@ Test(token_array, exact_power_of_two_boundaries) {
 Test(token_array, destroy_and_null_check) {
   TokenArray ta = token_array_init();
 
-  token_array_push(ta, TOKEN_REPEAT);
+  token_array_push_simple(ta, TOKEN_REPEAT);
   cr_assert_not_null(ta, "TokenArray should not be null before destroy");
 
   token_array_destroy(&ta);
@@ -331,7 +331,7 @@ Test(token_array, repeated_create_destroy) {
 
     // Add some elements
     for (int j = 0; j < 10; j++) {
-      token_array_push(ta, TOKEN_INPUT);
+      token_array_push_simple(ta, TOKEN_INPUT);
     }
 
     cr_assert_eq(token_array_length(ta), 10, "Should have 10 elements");
@@ -356,23 +356,23 @@ Test(token_array, data_integrity_across_resizes) {
   for (size_t i = 0; i < pattern_size; i++) {
     pattern[i] =
         (enum TOKEN)(TOKEN_PLUS + (i % 20)); // Use first 20 token types
-    token_array_push(ta, pattern[i]);
+    token_array_push_simple(ta, pattern[i]);
   }
 
   // Add more elements to force multiple resizes
   for (size_t i = 0; i < 2000; i++) {
-    token_array_push(ta, TOKEN_UNKNOWN);
+    token_array_push_simple(ta, TOKEN_UNKNOWN);
   }
 
   // Verify original pattern is intact
   for (size_t i = 0; i < pattern_size; i++) {
-    cr_assert_eq(token_array_at(ta, i), pattern[i],
+    cr_assert_eq(token_array_at(ta, i).type, pattern[i],
                  "Pattern element %zu should be preserved across resizes", i);
   }
 
   // Verify the added elements
   for (size_t i = pattern_size; i < pattern_size + 2000; i++) {
-    cr_assert_eq(token_array_at(ta, i), TOKEN_UNKNOWN,
+    cr_assert_eq(token_array_at(ta, i).type, TOKEN_UNKNOWN,
                  "Added element %zu should be TOKEN_UNKNOWN", i);
   }
 
@@ -386,7 +386,7 @@ Test(token_array, capacity_never_shrinks) {
 
   // Force a resize
   for (size_t i = 0; i <= initial_capacity; i++) {
-    token_array_push(ta, TOKEN_ELSE);
+    token_array_push_simple(ta, TOKEN_ELSE);
   }
 
   size_t after_resize = token_array_capacity(ta);
@@ -411,7 +411,7 @@ Test(token_array, amortized_growth_pattern) {
 
   // Add elements and track capacity changes
   for (size_t i = 0; i < 5000; i++) {
-    token_array_push(ta, TOKEN_THEN);
+    token_array_push_simple(ta, TOKEN_THEN);
 
     size_t current_capacity = token_array_capacity(ta);
     if (current_capacity > previous_capacity) {

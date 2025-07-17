@@ -36,7 +36,6 @@ enum TOKEN {
   TOKEN_STRING = LITERAL_START,
   TOKEN_NUMBER,
   TOKEN_ENDOFFILE,
-  TOKEN_NEWLINE,
   TOKEN_IDENT,
   // Internal Keywords
   TOKEN_LABEL = KEYWORD_START,
@@ -53,6 +52,28 @@ enum TOKEN {
   TOKEN_ENDWHILE,
 };
 
+typedef struct {
+  enum TOKEN type;
+  char *text; // Optionally stores the actual text for this token (numbers,
+              // identifiers, strings, etc.)
+} Token;
+
+// ------------------------------------
+// TOKEN Struct API
+// ------------------------------------
+
+Token token_create(enum TOKEN type, const char *text, size_t length);
+Token token_create_simple(enum TOKEN type);
+
+bool token_is_number(const Token token);
+bool token_is_string(const Token token);
+bool token_is_identifier(const Token token);
+bool token_is_keyword(const Token token);
+bool token_is_operator(const Token token);
+
+// Destroys any allocated data associated with the Token
+void token_destroy(Token token);
+
 // ------------------------------------
 // TOKEN ARRAY UTIL
 // Dynamic array for storing tokens
@@ -62,7 +83,11 @@ typedef struct TokenArrayHandle *TokenArray;
 
 TokenArray token_array_init(void);
 
-void token_array_push(TokenArray ta, enum TOKEN token);
+// Push a token with text content
+void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
+                      size_t length);
+// Push a simple token (operators, keywords, etc.) with no text content
+void token_array_push_simple(TokenArray ta, enum TOKEN token_type);
 
 // Returns the length of the TokenArray
 size_t token_array_length(const TokenArray ta);
@@ -74,9 +99,9 @@ size_t token_array_capacity(const TokenArray ta);
 bool token_array_is_empty(const TokenArray ta);
 
 // Returns token at a location
-enum TOKEN token_array_at(const TokenArray ta, size_t index);
+Token token_array_at(const TokenArray ta, size_t index);
 
-// Destroys a TokenArray and sets the pointer to NULL
+// Destroys a TokenArray, all the tokens within it, and sets the pointer to NULL
 void token_array_destroy(TokenArray *ta);
 
 // ------------------------------------
