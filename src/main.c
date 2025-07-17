@@ -10,7 +10,6 @@
 
 #include "args.h"
 #include "file.h"
-#include "lexer.h"
 
 int main(const int argc, const char **argv) {
   const struct Args args = parse_args(argc, argv);
@@ -23,9 +22,9 @@ int main(const int argc, const char **argv) {
     return EXIT_FAILURE;
   }
 
-  const char *word;
-  while ((word = filereader_read_next_word(fr))) {
-    printf("%s\n", word);
+  const char *line;
+  while ((line = filereader_read_next_line(fr))) {
+    printf("%s\n", line);
   }
 
   filereader_destroy(&fr);

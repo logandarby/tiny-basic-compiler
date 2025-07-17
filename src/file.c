@@ -1,5 +1,5 @@
 #include "file.h"
-#include <errno.h>
+#include "dz_debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,14 +103,15 @@ bool _filereader_is_eof(const FileReader fr) {
 }
 
 void _filereader_debug_print(const FileReader fr) {
+  DZ_INFO("FileReader: %p\n", fr);
+  DZ_INFO("File: %s\n", fr->io->label);
+  DZ_INFO("Line buffer: %s\n", fr->line_buffer);
+  DZ_INFO("Current line length: %zu\n", fr->current_line_length);
+  DZ_INFO("Line buffer size: %zu\n", fr->line_buffer_size);
+  DZ_INFO("Error: %d\n", fr->error);
+  DZ_INFO("Is EOF: %s\n", _filereader_is_eof(fr) ? "true" : "false");
+  UNUSED(fr);
   return;
-  printf("FileReader: %p\n", fr);
-  printf("File: %s\n", fr->io->label);
-  printf("Line buffer: %s\n", fr->line_buffer);
-  printf("Current line length: %zu\n", fr->current_line_length);
-  printf("Line buffer size: %zu\n", fr->line_buffer_size);
-  printf("Error: %d\n", fr->error);
-  printf("Is EOF: %s\n", _filereader_is_eof(fr) ? "true" : "false");
 }
 
 // Reads the next line into the line buffer, and sets the
@@ -126,8 +127,7 @@ bool _read_next_line(FileReader fr) {
       fr->io->getline(&fr->line_buffer, &fr->line_buffer_size, fr->io->stream);
   if (bytes_read == -1 && !fr->io->feof(fr->io->stream)) {
     fr->error = FR_ERR_CANT_READ;
-    fprintf(stderr, "CRITICAL: Could not read next line of file: %s\n",
-            strerror(errno));
+    DZ_ERRORNO("CRITICAL: Could not read next line of file: %s\n");
     return false;
   } else if (bytes_read == -1) {
     fr->line_buffer[0] = '\0';

@@ -57,11 +57,14 @@ typedef struct {
               // identifiers, strings, etc.)
 } Token;
 
+typedef struct TokenArrayHandle *TokenArray;
+
 // ------------------------------------
 // TOKEN Struct API
 // ------------------------------------
 
-Token token_create(enum TOKEN type, const char *text, size_t length);
+Token token_create(TokenArray ta, enum TOKEN type, const char *text,
+                   size_t length);
 Token token_create_simple(enum TOKEN type);
 
 bool token_is_number(const Token token);
@@ -77,8 +80,6 @@ void token_destroy(Token token);
 // TOKEN ARRAY UTIL
 // Dynamic array for storing tokens
 // ------------------------------------
-
-typedef struct TokenArrayHandle *TokenArray;
 
 TokenArray token_array_init(void);
 

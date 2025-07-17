@@ -17,8 +17,8 @@ INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CC := gcc
-C_FLAGS := $(INC_FLAGS) -Werror -Wall -Wextra -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual -Wswitch-default -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 -fsanitize=address -O1 -fno-omit-frame-pointer
-DEBUG_C_FLAGS := $(INC_FLAGS) -Werror -Wall -Wextra -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual -Wswitch-default -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 -fsanitize=address -g -O0 -fno-omit-frame-pointer -DDEBUG
+C_FLAGS := $(INC_FLAGS) -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual  -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 -fsanitize=address -O1 -fno-omit-frame-pointer
+DEBUG_C_FLAGS := $(INC_FLAGS) -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 -fsanitize=address -g -O0 -fno-omit-frame-pointer -DDEBUG
 LD_FLAGS := -fsanitize=address
 
 

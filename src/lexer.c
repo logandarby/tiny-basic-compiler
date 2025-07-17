@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "arena.h"
 #include "core.h"
 #include "file.h"
 #include "string_util.h"
@@ -8,16 +9,22 @@
 const size_t INIT_CAPACITY = 512;
 const unsigned int CAPACITY_MULTIPLIER = 2;
 
+struct TokenArrayHandle {
+  Token *head;
+  size_t size;     // # of elements stored
+  size_t capacity; // Total Capacity
+  Arena arena;     // Arena allocator for strings
+};
+
 // ------------------------------------
 // Tokens Implementation
 // ------------------------------------
 
-Token token_create(enum TOKEN type, const char *text, size_t length) {
+Token token_create(TokenArray ta, enum TOKEN type, const char *text,
+                   size_t length) {
   Token t = {.type = type, .text = NULL};
   if (text) {
-    t.text = xmalloc(length + 1);
-    strncpy(t.text, text, length);
-    t.text[length] = '\0';
+    t.text = arena_allocate_string(&ta->arena, text, text + length);
   }
   return t;
 }
@@ -38,21 +45,11 @@ bool token_is_operator(const Token token) {
 }
 
 // Destroys any allocated data associated with the Token
-void token_destroy(Token token) {
-  if (token.text) {
-    free(token.text);
-  }
-}
+void token_destroy(Token token) { UNUSED(token); }
 
 // ------------------------------------
 // Token Array Implementation
 // ------------------------------------
-
-struct TokenArrayHandle {
-  Token *head;
-  size_t size;     // # of elements stored
-  size_t capacity; // Total Capacity
-};
 
 void _resize_token_array(TokenArray ta, const size_t new_size) {
   ta->head = xrealloc(ta->head, new_size * sizeof(Token));
@@ -83,7 +80,7 @@ void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
   if (ta->size == ta->capacity) {
     _resize_token_array(ta, ta->capacity * CAPACITY_MULTIPLIER);
   }
-  ta->head[ta->size] = token_create(token_type, text, length);
+  ta->head[ta->size] = token_create(ta, token_type, text, length);
   ta->size++;
 }
 
@@ -115,9 +112,7 @@ void token_array_destroy(TokenArray *ta_ptr) {
   TokenArray ta = *ta_ptr;
   if (ta->head) {
     // Destroy all tokens before freeing the array
-    for (size_t i = 0; i < ta->size; i++) {
-      token_destroy(ta->head[i]);
-    }
+    arena_destroy(&ta->arena);
     free(ta->head);
   }
   free(ta);
