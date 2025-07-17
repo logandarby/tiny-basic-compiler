@@ -1835,10 +1835,10 @@ Test(lexer, escaped_quotes_in_string) {
   // Test how the lexer handles escaped quotes (if supported)
   TokenArray ta = parse_string("\"text with \\\"quotes\\\" inside\"");
 
-  // This behavior depends on lexer implementation
-  // If escape sequences are supported, should be TOKEN_STRING
-  // If not supported, might be multiple tokens or TOKEN_UNKNOWN
-  cr_assert_geq(token_array_length(ta), 1, "Should produce at least one token");
+  const enum TOKEN expected[] = {TOKEN_STRING};
+  const char *expected_text[] = {"text with \"quotes\" inside"};
+  assert_tokens_and_text_equal(ta, expected, expected_text,
+                               array_size(expected));
 
   token_array_destroy(&ta);
 }

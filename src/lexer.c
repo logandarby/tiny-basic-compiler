@@ -1,6 +1,8 @@
 #include "lexer.h"
 #include "core.h"
 #include "file.h"
+#include "string_util.h"
+#include <assert.h>
 #include <string.h>
 
 const size_t INIT_CAPACITY = 512;
@@ -85,6 +87,17 @@ void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
   ta->size++;
 }
 
+void token_array_clean_and_push_string(TokenArray ta, const char *text,
+                                       const size_t length) {
+
+  // Push the string
+  token_array_push(ta, TOKEN_STRING, text, length);
+  // Clean the string -- match for pattern {escape_character}{delmiter}
+  Token *current_token = &ta->head[ta->size - 1];
+  char *token_text = current_token->text;
+  string_clean_escape_sequences(token_text, NULL);
+}
+
 size_t token_array_length(const TokenArray ta) { return ta->size; }
 
 size_t token_array_capacity(const TokenArray ta) { return ta->capacity; }
@@ -137,6 +150,7 @@ const char *const OPERATOR_MAP[] = {
 const char *OPERATOR_CHARS = "+-*/><=!&|";
 const char *STRING_DELIMS = "'\"";
 const char *WHITESPACE_CHARS = " \t\n\r\f\v";
+const char ESCAPE_CHAR = '\\';
 
 bool _is_whitespace_char(const char c) {
   return strchr(WHITESPACE_CHARS, c) != NULL;
@@ -211,23 +225,38 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
   }
   size_t pos = 0;
   // FSM For line
-  while (true) {
-    // End of line reached
-    if (pos == line_length) {
-      return;
-    }
+  while (pos < line_length) {
     // If in string state, look for next delimiter
     if (state.state == LEXER_STATE_PARSING_STRING) {
       // Skip first delimiter
       pos++;
       const char delimiter_check[2] = {state.current_string_delim, '\0'};
-      const size_t string_length = strcspn(line + pos, delimiter_check);
+      size_t string_start = pos;
+      size_t current_pos = pos;
+      while (current_pos < line_length) {
+        current_pos += strcspn(line + current_pos, delimiter_check);
+        if (current_pos == line_length) {
+          // Unterminated string
+          break;
+        }
+        // Check if the delimiter is escaped
+        if (current_pos > string_start &&
+            line[current_pos - 1] == ESCAPE_CHAR &&
+            line[current_pos] == state.current_string_delim) {
+          current_pos++;
+          continue;
+        }
+        // Found closing delimiter
+        break;
+      }
+      const size_t string_length = current_pos - string_start;
       // If it reached the end of line, it didn't find the delimiter, so the
       // token is unknown
       if (pos + string_length == line_length) {
         token_array_push_simple(ta, TOKEN_UNKNOWN);
       } else {
-        token_array_push(ta, TOKEN_STRING, line + pos, string_length);
+        // Clean string of any escaped characters, and push the string
+        token_array_clean_and_push_string(ta, line + pos, string_length);
         // advance past the last string delimiter
         pos++;
       }
@@ -284,7 +313,7 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
       pos += word_length;
       continue;
     }
-    // TODO: REMOVE THIS-- it's just to prevent infinite loops
+    token_array_push_simple(ta, TOKEN_UNKNOWN);
     pos += 1;
   }
 }

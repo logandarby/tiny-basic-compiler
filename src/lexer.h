@@ -85,6 +85,12 @@ TokenArray token_array_init(void);
 // Push a token with text content
 void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
                       size_t length);
+// Pushes a string token with string content
+// First cleans the string of any escaped characters. For example, if the string
+// 'Hello \"quotes\"' is pushed with the delimiter={"}, then the string will be
+// cleaned to 'Hello "quotes"'.
+void token_array_clean_and_push_string(TokenArray ta, const char *text,
+                                       size_t length);
 // Push a simple token (operators, keywords, etc.) with no text content
 void token_array_push_simple(TokenArray ta, enum TOKEN token_type);
 
