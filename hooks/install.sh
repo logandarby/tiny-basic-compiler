@@ -36,8 +36,8 @@ mkdir -p .git/hooks
 hooks_installed=0
 
 for hook_file in hooks/*; do
-    # Skip this script and any non-executable files
-    if [[ "$hook_file" == "hooks/install.sh" ]] || [[ ! -f "$hook_file" ]]; then
+    # Skip this script, README files, and any non-executable files
+    if [[ "$hook_file" == "hooks/install.sh" ]] || [[ "$hook_file" == "hooks/README.md" ]] || [[ ! -f "$hook_file" ]]; then
         continue
     fi
     
