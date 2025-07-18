@@ -51,10 +51,17 @@ extern bool mem_eq(const void *s1, const void *s2, size_t s1_size,
 // defined in errno.h
 #if DZ_ENABLE_LOGS == 1
 #define DZ_TRACE(...)                                                          \
-  dz_impl_log(stdout, DzErrorLevel_TRACE, false, __VA_ARGS__)
-#define DZ_INFO(...) dz_impl_log(stdout, DzErrorLevel_INFO, false, __VA_ARGS__)
-#define DZ_WARN(...) dz_impl_log(stdout, DzErrorLevel_WARN, false, __VA_ARGS__)
-#define DZ_WARNNO(...) dz_impl_log(stdout, DzErrorLevel_WARN, true, __VA_ARGS__)
+  dz_impl_log(stdout, DzErrorLevel_TRACE, false, __FILE__, __func__, __LINE__, \
+              __VA_ARGS__)
+#define DZ_INFO(...)                                                           \
+  dz_impl_log(stdout, DzErrorLevel_INFO, false, __FILE__, __func__, __LINE__,  \
+              __VA_ARGS__)
+#define DZ_WARN(...)                                                           \
+  dz_impl_log(stdout, DzErrorLevel_WARN, false, __FILE__, __func__, __LINE__,  \
+              __VA_ARGS__)
+#define DZ_WARNNO(...)                                                         \
+  dz_impl_log(stdout, DzErrorLevel_WARN, true, __FILE__, __func__, __LINE__,   \
+              __VA_ARGS__)
 #else
 #define DZ_TRACE(...)
 #define DZ_INFO(...)
@@ -64,15 +71,18 @@ extern bool mem_eq(const void *s1, const void *s2, size_t s1_size,
 
 #define DZ_ERRNO(...) DZ_ERRORNO(__VA_ARGS__)
 #define DZ_ERROR(...)                                                          \
-  dz_impl_log(stderr, DzErrorLevel_ERROR, false, __VA_ARGS__)
+  dz_impl_log(stderr, DzErrorLevel_ERROR, false, __FILE__, __func__, __LINE__, \
+              __VA_ARGS__)
 #define DZ_ERRORNO(...)                                                        \
-  dz_impl_log(stderr, DzErrorLevel_ERROR, true, __VA_ARGS__)
+  dz_impl_log(stderr, DzErrorLevel_ERROR, true, __FILE__, __func__, __LINE__,  \
+              __VA_ARGS__)
 
 // THROW -- Logs an error message and terminates the program
 // Arguments: A format string and its arguments -- similar to printf
 #define DZ_THROW(...)                                                          \
   do {                                                                         \
-    dz_impl_log(stderr, DzErrorLevel_ERROR, false, __VA_ARGS__);               \
+    dz_impl_log(stderr, DzErrorLevel_ERROR, false, __FILE__, __func__,         \
+                __LINE__, __VA_ARGS__);                                        \
     DZ_DEBUGBREAK();                                                           \
     abort();                                                                   \
   } while (0)
@@ -135,4 +145,5 @@ extern void dz_impl_assert_msg(const char *filename, const char *function_name,
                                const char *msg, ...);
 
 extern void dz_impl_log(FILE *stream, DzErrorLevel error_level, bool show_errno,
-                        const char *msg, ...);
+                        const char *filename, const char *function_name,
+                        const int line_number, const char *msg, ...);

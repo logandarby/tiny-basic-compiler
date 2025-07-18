@@ -106,22 +106,47 @@ void dz_impl_assert_msg(const char *filename, const char *functionname,
   DZ_DEBUGBREAK();
 }
 
-void dz_impl_log(FILE *stream, const DzErrorLevel error_level,
-                 const bool show_errno, const char *msg, ...) {
+void dz_impl_log(FILE *stream, DzErrorLevel error_level, bool show_errno,
+                 const char *filename, const char *function_name,
+                 const int line_number, const char *msg, ...) {
   static char timebuffer[100];
   get_formatted_time(timebuffer, sizeof(timebuffer));
+
+  // Safe fallbacks for potentially NULL parameters
+  const char *safe_filename = filename ? filename : "<unknown file>";
+  const char *safe_function_name =
+      function_name ? function_name : "<unknown function>";
+  const char *safe_color = get_error_level_color(error_level);
+  const char *safe_level_str = get_error_level_string(error_level);
+
+  if (!safe_color)
+    safe_color = KNRM;
+  if (!safe_level_str)
+    safe_level_str = "UNKNOWN";
+
+  const char *relative_file = strrstr(safe_filename, "src");
+  const char *relative_file_name =
+      (relative_file) ? relative_file : safe_filename;
+
   if (!show_errno) {
-    fprintf(stream, "[%s] %s[%s]%s: ", timebuffer,
-            get_error_level_color(error_level),
-            get_error_level_string(error_level), KNRM);
+    fprintf(stream, "[%s] %s[%s]%s ./%s:%d in %s(): ", timebuffer, safe_color,
+            safe_level_str, KNRM, relative_file_name, line_number,
+            safe_function_name);
   } else {
-    fprintf(stream, "[%s] %s[%s, Errno %d]%s: ", timebuffer,
-            get_error_level_color(error_level),
-            get_error_level_string(error_level), errno, KNRM);
+    fprintf(stream, "[%s] %s[%s, Errno %d]%s ./%s:%d in %s(): ", timebuffer,
+            safe_color, safe_level_str, errno, KNRM, relative_file_name,
+            line_number, safe_function_name);
   }
   va_list args;
   va_start(args, msg);
-  vfprintf(stream, msg, args);
+
+  // Safely handle NULL msg parameter
+  if (msg != NULL) {
+    vfprintf(stream, msg, args);
+  } else {
+    fprintf(stream, "<NULL message>");
+  }
+
   fprintf(stream, "\n");
   va_end(args);
 }
