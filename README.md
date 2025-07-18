@@ -98,6 +98,82 @@ tests/              # Criterion test suites
 examples/           # Sample BASIC programs to test on
 ```
 
+## Developer Defines and Macros
+
+The compiler includes several debugging and utility macros defined in `src/dz_debug.h` for development and debugging purposes.
+
+### Compilation Flags
+
+These flags can be defined during compilation to enable certain things
+
+- **`DZ_DEBUG`** - Master debug flag that enables all debugging features when defined. Automatically test to 1 when running `make debug`
+- **`DZ_TESTING`** - Testing flag that is automatically set to 1 when running `make test`, allows conditional compilation of test-specific code
+  
+### Debug Control Defines
+
+These macros control various debugging features:
+
+- **`DZ_ENABLE_ASSERTS`** - Controls whether assertion macros are active (enabled when `DZ_DEBUG` is set)
+- **`DZ_ENABLE_DEBUGBREAK`** - Controls whether debug breaking is enabled (enabled when `DZ_DEBUG` is set)
+- **`DZ_ENABLE_LOGS`** - Controls whether logging macros are active (enabled when `DZ_DEBUG` is set, error logging always available)
+
+### Logging Macros
+
+Hierarchical logging system with file, function, and line number information:
+
+- **`DZ_TRACE(...)`** - Lowest level debugging information
+- **`DZ_INFO(...)`** - General informational messages
+- **`DZ_WARN(...)`** - Warning messages for potentially problematic situations
+- **`DZ_WARNNO(...)`** - Warning messages that also display the current `errno` value
+- **`DZ_ERROR(...)`** - Error messages (always available, regardless of `DZ_ENABLE_LOGS`)
+- **`DZ_ERRNO(...)`** / **`DZ_ERRORNO(...)`** - Error messages that also display the current `errno` value
+
+All logging macros accept printf-style format strings and arguments.
+
+### Assertion Macros
+
+Runtime and compile-time assertion utilities:
+
+- **`DZ_ASSERT(condition [, message, ...])`** - Runtime assertion that checks a condition and optionally displays a custom message on failure
+- **`DZ_STATIC_ASSERT(condition, message)`** - Compile-time assertion for constant expressions
+
+Enabled only when `DZ_ENABLE_ASSERTS` or `DZ_DEBUG` is set.
+
+### Control Flow Macros
+
+- **`DZ_DEBUGBREAK(...)`** - Triggers a debug break (raises `SIGTRAP`) when debugging is enabled
+- **`DZ_THROW(...)`** - Logs an error message, triggers a debug break, and terminates the program
+
+### Usage Examples
+
+```c
+// Utility macros
+int arr[] = {1, 2, 3, 4, 5};
+int len = array_len(arr);  // len = 5
+int maximum = max(10, 20); // maximum = 20
+
+// Testing conditional compilation
+#ifdef DZ_TESTING
+    // This code only runs during tests
+    printf("Running in test mode\n");
+    enable_debug_output();
+#endif
+
+// Logging
+DZ_INFO("Starting compilation of %s", filename);
+DZ_WARN("Deprecated syntax detected on line %d", line_num);
+DZ_ERROR("Failed to open file: %s", filename);
+
+// Assertions
+DZ_ASSERT(ptr != NULL, "Pointer cannot be null");
+DZ_STATIC_ASSERT(sizeof(int) == 4, "This code assumes 32-bit integers");
+
+// Error handling
+if (file_error) {
+    DZ_THROW("Critical file system error occurred");
+}
+```
+
 ## Example Programs
 
 Check the `examples/` directory for sample BASIC programs that demonstrate the supported syntax.

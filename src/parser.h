@@ -58,12 +58,11 @@ typedef struct {
   size_t node_array_size;
 } AST;
 
-// Creates an empty Abstract Syntax Tree
-AST ast_init(void);
-// Fills an AST with the parsed information from the ta
-void ast_parse(AST *ast, const TokenArray ta);
-// Creates a root node with the specified grammar type (for testing)
-NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
+// Initializes an AST and parses the TokenArray according to the
+// grammar rules above.
+// The AST must be destroyed with the ast_destroy function
+AST ast_parse(const TokenArray ta);
+
 NodeID ast_head(AST ast);
 void ast_destroy(AST *ast);
 
@@ -81,3 +80,14 @@ void ast_node_add_child_grammar(AST *ast, NodeID parent_id,
 
 const Token *ast_node_get_token(AST *ast, NodeID node_id);
 GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);
+
+// ====================
+// TESTING UTILS
+// ====================
+
+#ifdef DZ_TESTING
+// Creates an empty Abstract Syntax Tree
+AST ast_init(void);
+// Creates a root node with the specified grammar type (for testing)
+NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
+#endif

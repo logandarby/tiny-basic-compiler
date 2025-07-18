@@ -34,10 +34,10 @@ AST ast_init(void) {
   return ast;
 }
 
-void ast_parse(AST *ast, const TokenArray ta) {
-  (void)ast; // Suppress unused parameter warning
-  (void)ta;  // Suppress unused parameter warning
+AST ast_parse(const TokenArray ta) {
+  UNUSED(ta);
   DZ_THROW("Not implemented yet");
+  return ast_init();
 }
 
 NodeID ast_head(AST ast) {

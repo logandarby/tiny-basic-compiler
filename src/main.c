@@ -27,8 +27,7 @@ int main(const int argc, const char **argv) {
   TokenArray tokens = lexer_parse(fr);
   filereader_destroy(&fr);
 
-  AST ast = ast_init();
-  ast_parse(&ast, tokens);
+  AST ast = ast_parse(tokens);
 
   ast_destroy(&ast);
   token_array_destroy(&tokens);

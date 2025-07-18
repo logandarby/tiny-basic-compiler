@@ -1,0 +1,5 @@
+- string pool (arena) should be interned using a hashmap inside the lexer
+- implement parser ast from tokenarray
+- maybe come up with better way to handle token array shared memory?
+- implement basic emitter
+- implement some basic optimizations (tail end recursion, constexpr, etc.)
