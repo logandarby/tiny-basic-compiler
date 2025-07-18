@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# Pre-push hook for tiny-basic-compiler
+# This hook will:
+# 1. Build the project
+# 2. Run the full test suite
+# 3. Check that tests pass before allowing push
+
+set -e
+
+echo "🚀 Running pre-push checks..."
+
+# Change to project root
+cd "$(git rev-parse --show-toplevel)"
+
+# Build the project first
+echo "🔨 Building project..."
+if ! make clean >/dev/null 2>&1; then
+    echo "⚠️  Clean failed, continuing..."
+fi
+
+if ! make; then
+    echo "❌ Build failed! Cannot push with compilation errors."
+    exit 1
+fi
+
+echo "✅ Project builds successfully!"
+
+# Check if we have tests
+if [ -d "tests" ] && [ -n "$(find tests -name '*_test.c' -o -name '*_test.cpp' 2>/dev/null)" ]; then
+    echo "🧪 Running test suite..."
+    
+    # Run tests
+    if ! make test; then
+        echo "❌ Tests failed! Cannot push with failing tests."
+        echo ""
+        echo "💡 Fix the failing tests before pushing"
+        exit 1
+    fi
+    
+    echo "✅ All tests passed!"
+else
+    echo "⚠️  No tests found in tests/ directory, skipping test run"
+fi
+
+# Additional checks for release builds
+echo "🔍 Running additional checks..."
+
+# Try building debug version
+echo "🐛 Building debug version..."
+if ! make debug >/dev/null 2>&1; then
+    echo "❌ Debug build failed!"
+    exit 1
+fi
+
+echo "✅ Debug build successful!"
+
+# Check for any uncommitted changes that might affect the build
+if ! git diff-index --quiet HEAD --; then
+    echo "⚠️  You have uncommitted changes. Consider committing them first."
+    echo "📝 Uncommitted files:"
+    git diff-index --name-only HEAD --
+    echo ""
+    echo "❓ Do you want to continue with the push? (y/N)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        echo "🛑 Push cancelled"
+        exit 1
+    fi
+fi
+
+echo "✅ Pre-push checks completed successfully!"
+echo "🚀 Proceeding with push..."
+echo "" 

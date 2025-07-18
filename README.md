@@ -70,10 +70,30 @@ make test
 
 This builds and runs the complete test suite.
 
+## Git Hooks
+
+The project includes git hooks to maintain code quality and catch issues early. The hooks automatically:
+
+- Check code formatting with clang-format
+- Build the project before commits and pushes
+- Run the test suite before pushing
+- Validate that code compiles without errors
+
+### Installing Hooks
+
+To install the git hooks, run:
+
+```bash
+./hooks/install.sh
+```
+
+This sets up automatic checks that run before commits and pushes. See `hooks/README.md` for more details.
+
 ## Project Structure
 
 ```
 src/                # Source
+hooks/              # Contains pre-push and pre-commit hooks, as well as an installation script for them
 tests/              # Criterion test suites
 examples/           # Sample BASIC programs to test on
 ```
