@@ -68,6 +68,15 @@ extern bool mem_eq(const void *s1, const void *s2, size_t s1_size,
 #define DZ_ERRORNO(...)                                                        \
   dz_impl_log(stderr, DzErrorLevel_ERROR, true, __VA_ARGS__)
 
+// THROW -- Logs an error message and terminates the program
+// Arguments: A format string and its arguments -- similar to printf
+#define DZ_THROW(...)                                                          \
+  do {                                                                         \
+    dz_impl_log(stderr, DzErrorLevel_ERROR, false, __VA_ARGS__);               \
+    DZ_DEBUGBREAK();                                                           \
+    abort();                                                                   \
+  } while (0)
+
 // DEBUGBREAK -- Breaks when encountered
 #if DZ_ENABLE_DEBUGBREAK == 1
 #include <signal.h>

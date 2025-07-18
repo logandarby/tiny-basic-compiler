@@ -29,8 +29,10 @@ nl ::= '\n'+
 */
 
 typedef struct ASTNode ASTNode;
+// Index into out-of-band array with ASTNode struct
+typedef size_t NodeID;
 
-#define MAX_AST_CHILDREN 5
+#define AST_MAX_CHILDREN 5
 
 typedef enum GRAMMAR_TYPE {
   GRAMMAR_TYPE_PROGRAM,
@@ -43,23 +45,39 @@ typedef enum GRAMMAR_TYPE {
 } GRAMMAR_TYPE;
 
 typedef struct {
-  const GRAMMAR_TYPE grammar;
-  ASTNode *children[MAX_AST_CHILDREN];
-  size_t child_count;
+  GRAMMAR_TYPE grammar;
+  NodeID children[AST_MAX_CHILDREN];
+  short child_count;
 } GrammarNode;
 
 typedef struct {
-  ASTNode *_head;
-  // ArenaAllocator _allocator;
+  NodeID _head;
+  // Stores the ASTNodes out of band -- dynamically reallocates
+  ASTNode *node_array;
+  size_t node_array_capacity;
+  size_t node_array_size;
 } AST;
 
-// Buillds an abstract syntax tree based on the grammar specification at the top
-// of the file.
-AST ast_init(TokenArray ta);
-void ast_destroy(AST ast);
+// Creates an empty Abstract Syntax Tree
+AST ast_init(void);
+// Fills an AST with the parsed information from the ta
+void ast_parse(AST *ast, const TokenArray ta);
+// Creates a root node with the specified grammar type (for testing)
+NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
+NodeID ast_head(AST ast);
+void ast_destroy(AST *ast);
 
-bool ast_node_is_token(ASTNode *node);
-bool ast_node_is_gramamr(ASTNode *node);
+bool ast_node_is_token(AST *ast, NodeID node_id);
+bool ast_node_is_grammar(AST *ast, NodeID node_id);
+// Gets the child of a node. Only works on GrammarNodes-- you should check that
+// the node is a grammar node before calling thing
+NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number);
+short ast_node_get_child_count(AST *ast, NodeID node_id);
+// These two methods add children to a node. Note that adding children only
+// works on GrammarNodes -- you should check this before calling this method
+void ast_node_add_child_token(AST *ast, NodeID parent_id, Token token);
+void ast_node_add_child_grammar(AST *ast, NodeID parent_id,
+                                GRAMMAR_TYPE grammar_type);
 
-Token ast_node_get_token(ASTNode *node);
-GrammarNode ast_node_get_grammer(ASTNode *node);
+const Token *ast_node_get_token(AST *ast, NodeID node_id);
+GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);

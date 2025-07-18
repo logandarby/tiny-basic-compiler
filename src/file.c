@@ -103,6 +103,8 @@ bool _filereader_is_eof(const FileReader fr) {
 }
 
 void _filereader_debug_print(const FileReader fr) {
+  UNUSED(fr);
+  return;
   DZ_INFO("FileReader: %p\n", fr);
   DZ_INFO("File: %s\n", fr->io->label);
   DZ_INFO("Line buffer: %s\n", fr->line_buffer);
@@ -110,8 +112,6 @@ void _filereader_debug_print(const FileReader fr) {
   DZ_INFO("Line buffer size: %zu\n", fr->line_buffer_size);
   DZ_INFO("Error: %d\n", fr->error);
   DZ_INFO("Is EOF: %s\n", _filereader_is_eof(fr) ? "true" : "false");
-  UNUSED(fr);
-  return;
 }
 
 // Reads the next line into the line buffer, and sets the

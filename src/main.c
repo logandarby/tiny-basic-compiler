@@ -10,6 +10,8 @@
 
 #include "args.h"
 #include "file.h"
+#include "lexer.h"
+#include "parser.h"
 
 int main(const int argc, const char **argv) {
   const struct Args args = parse_args(argc, argv);
@@ -22,12 +24,14 @@ int main(const int argc, const char **argv) {
     return EXIT_FAILURE;
   }
 
-  const char *line;
-  while ((line = filereader_read_next_line(fr))) {
-    printf("%s\n", line);
-  }
-
+  TokenArray tokens = lexer_parse(fr);
   filereader_destroy(&fr);
+
+  AST ast = ast_init();
+  ast_parse(&ast, tokens);
+
+  ast_destroy(&ast);
+  token_array_destroy(&tokens);
 
   return EXIT_SUCCESS;
 }
