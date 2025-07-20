@@ -62,10 +62,80 @@ typedef struct {
 // grammar rules above.
 // The AST must be destroyed with the ast_destroy function
 AST ast_parse(const TokenArray ta);
+void ast_destroy(AST *ast);
+NodeID ast_head(AST ast);
+bool ast_is_empty(AST *ast);
+
+// ====================
+// AST Traversal Visitor
+//
+// The AST Traversal Utils are a way to traverse the AST and perform actions on
+// the nodes.
+// ====================
+
+typedef enum {
+  AST_TRAVERSAL_CONTINUE,
+  AST_TRAVERSAL_STOP,
+  AST_TRAVERSAL_SKIP_CHILDREN,
+} AST_TRAVERSAL_ACTION;
+
+typedef struct {
+  int sibling_index;
+  NodeID parent_id;
+  short total_siblings;
+} AstTraversalGenericContext;
+
+typedef struct {
+  AST_TRAVERSAL_ACTION(*visit_token)
+  (const Token *token, AstTraversalGenericContext generic_context,
+   void *context);
+  AST_TRAVERSAL_ACTION(*visit_grammar_enter)
+  (GrammarNode *grammar, NodeID node_id,
+   AstTraversalGenericContext generic_context, void *context);
+  AST_TRAVERSAL_ACTION(*visit_grammar_exit)
+  (GrammarNode *grammar, NodeID node_id,
+   AstTraversalGenericContext generic_context, void *context);
+} AstTraversalVisitor;
+
+// Traverses the AST starting from the given node, from left to right.
+// Does a depth-first traversal.
+// Returns true if the traversal was successful, false otherwise.
+// The visitor is called for each node in the AST.
+// The context is passed to the visitor.
+// The visitor can return one of the following actions:
+// - AST_TRAVERSAL_CONTINUE: Continue the traversal.
+// - AST_TRAVERSAL_STOP: Stop the traversal.
+// - AST_TRAVERSAL_SKIP_CHILDREN: Skip the children of the current node, and go
+// on to the next sibling.
+bool ast_traverse(AST *ast, NodeID start, AstTraversalVisitor *visitor,
+                  void *context);
+
+// Prints the AST. An example of the traversal pattern.
+void ast_print(AST *ast);
+
+// A testing utility used to verify the structure of the AST.
+// Example:
+// ast_verify_structure(&ast,
+//  "PROGRAM(STATEMENT(LET,IDENT(x),EQ,EXPRESSION(NUMBER(5),PLUS,NUMBER(3))))"
+// );
+bool ast_verify_structure(AST *ast, const char *expected_structure);
+
+const char *grammar_type_to_string(GRAMMAR_TYPE type);
+
+// ====================
+// TESTING UTILS
+//
+// These testing utils expose internal AST implementation details for testing.
+// They are not part of the public API and are not guaranteed to be stable.
+// ====================
+
+#ifdef DZ_TESTING
+// Creates an empty Abstract Syntax Tree
+AST ast_init(void);
+// Creates a root node with the specified grammar type (for testing)
+NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
 
 NodeID ast_head(AST ast);
-void ast_destroy(AST *ast);
-
 bool ast_node_is_token(AST *ast, NodeID node_id);
 bool ast_node_is_grammar(AST *ast, NodeID node_id);
 // Gets the child of a node. Only works on GrammarNodes-- you should check that
@@ -74,20 +144,10 @@ NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number);
 short ast_node_get_child_count(AST *ast, NodeID node_id);
 // These two methods add children to a node. Note that adding children only
 // works on GrammarNodes -- you should check this before calling this method
-void ast_node_add_child_token(AST *ast, NodeID parent_id, Token token);
-void ast_node_add_child_grammar(AST *ast, NodeID parent_id,
-                                GRAMMAR_TYPE grammar_type);
+NodeID ast_node_add_child_token(AST *ast, NodeID parent_id, Token token);
+NodeID ast_node_add_child_grammar(AST *ast, NodeID parent_id,
+                                  GRAMMAR_TYPE grammar_type);
 
 const Token *ast_node_get_token(AST *ast, NodeID node_id);
 GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);
-
-// ====================
-// TESTING UTILS
-// ====================
-
-#ifdef DZ_TESTING
-// Creates an empty Abstract Syntax Tree
-AST ast_init(void);
-// Creates a root node with the specified grammar type (for testing)
-NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
 #endif

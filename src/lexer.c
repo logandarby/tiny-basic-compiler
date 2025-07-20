@@ -147,6 +147,74 @@ const char *STRING_DELIMS = "'\"";
 const char *WHITESPACE_CHARS = " \t\n\r\f\v";
 const char ESCAPE_CHAR = '\\';
 
+// Long terrible function, but it does the job since we have exhaustive enums
+// turned on in the compiler warnings
+const char *token_type_to_string(enum TOKEN type) {
+  switch (type) {
+  case TOKEN_UNKNOWN:
+    return "UNKNOWN";
+  case TOKEN_PLUS:
+    return "PLUS";
+  case TOKEN_MINUS:
+    return "MINUS";
+  case TOKEN_MULT:
+    return "MULT";
+  case TOKEN_DIV:
+    return "DIV";
+  case TOKEN_GT:
+    return "GT";
+  case TOKEN_LT:
+    return "LT";
+  case TOKEN_GTE:
+    return "GTE";
+  case TOKEN_LTE:
+    return "LTE";
+  case TOKEN_EQ:
+    return "EQ";
+  case TOKEN_NOTEQ:
+    return "NOTEQ";
+  case TOKEN_EQEQ:
+    return "EQEQ";
+  case TOKEN_NOT:
+    return "NOT";
+  case TOKEN_AND:
+    return "AND";
+  case TOKEN_OR:
+    return "OR";
+  case TOKEN_STRING:
+    return "STRING";
+  case TOKEN_NUMBER:
+    return "NUMBER";
+  case TOKEN_IDENT:
+    return "IDENT";
+  case TOKEN_LABEL:
+    return "LABEL";
+  case TOKEN_PRINT:
+    return "PRINT";
+  case TOKEN_INPUT:
+    return "INPUT";
+  case TOKEN_LET:
+    return "LET";
+  case TOKEN_IF:
+    return "IF";
+  case TOKEN_GOTO:
+    return "GOTO";
+  case TOKEN_THEN:
+    return "THEN";
+  case TOKEN_ELSE:
+    return "ELSE";
+  case TOKEN_ENDIF:
+    return "ENDIF";
+  case TOKEN_WHILE:
+    return "WHILE";
+  case TOKEN_REPEAT:
+    return "REPEAT";
+  case TOKEN_ENDWHILE:
+    return "ENDWHILE";
+  }
+  return "";
+}
+
 bool _is_whitespace_char(const char c) {
   return strchr(WHITESPACE_CHARS, c) != NULL;
 }

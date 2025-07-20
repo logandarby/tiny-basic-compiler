@@ -76,6 +76,10 @@ bool token_is_operator(const Token token);
 // Destroys any allocated data associated with the Token
 void token_destroy(Token token);
 
+// A debug function that converts a token type into a legible string.
+// Used for debugging purposes, and printing to the console.
+const char *token_type_to_string(enum TOKEN type);
+
 // ------------------------------------
 // TOKEN ARRAY UTIL
 // Dynamic array for storing tokens
