@@ -1,3 +1,5 @@
+- add labels and comments to lexer
+- make ast nodeIDs a linked list I think.
 - string pool (arena) should be interned using a hashmap inside the lexer
 - implement parser ast from tokenarray
 - maybe come up with better way to handle token array shared memory?

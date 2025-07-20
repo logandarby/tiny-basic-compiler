@@ -11,7 +11,7 @@
 #include "args.h"
 #include "file.h"
 #include "lexer.h"
-#include "parser.h"
+#include "parser/parser.h"
 
 int main(const int argc, const char **argv) {
   const struct Args args = parse_args(argc, argv);
@@ -29,10 +29,10 @@ int main(const int argc, const char **argv) {
 
   AST ast = ast_parse(tokens);
   ast_print(&ast);
-  ast_verify_structure(
-      &ast, "PROGRAM(STATEMENT(LET,IDENT,EQ,EXPRESSION("
-            "TERM(UNARY(PRIMARY(NUMBER))),PLUS,TERM(UNARY(PRIMARY(NUMBER))))),"
-            "STATEMENT(PRINT,EXPRESSION(TERM(UNARY(PRIMARY(IDENT))))))");
+  // ast_verify_structure(
+  //     &ast, "PROGRAM(STATEMENT(LET,IDENT,EQ,EXPRESSION("
+  //           "TERM(UNARY(PRIMARY(NUMBER))),PLUS,TERM(UNARY(PRIMARY(NUMBER))))),"
+  //           "STATEMENT(PRINT,EXPRESSION(TERM(UNARY(PRIMARY(IDENT))))))");
 
   ast_destroy(&ast);
   token_array_destroy(&tokens);

@@ -7,7 +7,7 @@
 // the list of tokens into an AST based off the Tiny BASIC grammar
 // ---------------------------------------------
 
-#include "lexer.h"
+#include "../lexer.h"
 
 /*
 GRAMMAR DEFINITION
@@ -28,11 +28,15 @@ primary ::= number | ident
 nl ::= '\n'+
 */
 
+// ====================
+// AST & PARSER DEFINITIONS
+// ====================
+
+#define AST_MAX_CHILDREN 5
+
 typedef struct ASTNode ASTNode;
 // Index into out-of-band array with ASTNode struct
 typedef size_t NodeID;
-
-#define AST_MAX_CHILDREN 5
 
 typedef enum GRAMMAR_TYPE {
   GRAMMAR_TYPE_PROGRAM,
@@ -50,6 +54,9 @@ typedef struct {
   short child_count;
 } GrammarNode;
 
+// An AST is a collection of ASTNodes.
+// It stores the head of the AST, and a pointer to the out-of-band array of
+// ASTNodes.
 typedef struct {
   NodeID _head;
   // Stores the ASTNodes out of band -- dynamically reallocates
@@ -58,6 +65,24 @@ typedef struct {
   size_t node_array_size;
 } AST;
 
+typedef enum AST_NODE_TYPE {
+  AST_NODE_TYPE_TOKEN,
+  AST_NODE_TYPE_GRAMMAR,
+} AST_NODE_TYPE;
+
+// An ASTNode is a discriminated union of a Token or a GrammarNode.
+// A token is a leaf node which is always a token from the lexer.
+// A GrammarNode is a non-leaf node which is a grammar rule from the grammar
+// rules above.
+// It is used to store the AST in a single array.
+struct ASTNode {
+  AST_NODE_TYPE node_type;
+  union {
+    Token token; // For Leaf Nodes, which are always tokens from the lexer
+    GrammarNode grammar; // For intermediary Grammer tokens
+  } node;
+};
+
 // Initializes an AST and parses the TokenArray according to the
 // grammar rules above.
 // The AST must be destroyed with the ast_destroy function
@@ -65,12 +90,16 @@ AST ast_parse(const TokenArray ta);
 void ast_destroy(AST *ast);
 NodeID ast_head(AST ast);
 bool ast_is_empty(AST *ast);
+// Creates an empty Abstract Syntax Tree
+AST ast_init(void);
 
 // ====================
 // AST Traversal Visitor
 //
-// The AST Traversal Utils are a way to traverse the AST and perform actions on
-// the nodes.
+// The AST Traversal Utils are a convenient way to traverse the AST and perform
+// actions on the nodes.
+//
+// see ast_traverse for more details.
 // ====================
 
 typedef enum {
@@ -80,11 +109,17 @@ typedef enum {
 } AST_TRAVERSAL_ACTION;
 
 typedef struct {
-  int sibling_index;
+  short sibling_index;
   NodeID parent_id;
   short total_siblings;
 } AstTraversalGenericContext;
 
+// A visitor is a function that is called for each node in the AST.
+// You must implement all three functions.
+// The generic context is passed to the visitor, which contains information such
+// as the sibling index, the parent node, and the total number of siblings.
+// The context is passed to the visitor, which is a user-defined context that
+// is passed to the visitor.
 typedef struct {
   AST_TRAVERSAL_ACTION(*visit_token)
   (const Token *token, AstTraversalGenericContext generic_context,
@@ -123,15 +158,9 @@ bool ast_verify_structure(AST *ast, const char *expected_structure);
 const char *grammar_type_to_string(GRAMMAR_TYPE type);
 
 // ====================
-// TESTING UTILS
-//
-// These testing utils expose internal AST implementation details for testing.
-// They are not part of the public API and are not guaranteed to be stable.
+// UTILS
 // ====================
 
-#ifdef DZ_TESTING
-// Creates an empty Abstract Syntax Tree
-AST ast_init(void);
 // Creates a root node with the specified grammar type (for testing)
 NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
 
@@ -150,4 +179,3 @@ NodeID ast_node_add_child_grammar(AST *ast, NodeID parent_id,
 
 const Token *ast_node_get_token(AST *ast, NodeID node_id);
 GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);
-#endif

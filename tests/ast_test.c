@@ -1,4 +1,4 @@
-#include "../src/parser.h"
+#include "../src/parser/parser.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 #include <stdio.h>

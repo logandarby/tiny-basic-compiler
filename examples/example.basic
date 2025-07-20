@@ -1,1 +1,5 @@
-IF+-123 foo*THEN\
+// Fairly complicated basic program:
+LET x = 10 + 20
+if (x > 5) THEN
+    PRINT x
+ENDIF

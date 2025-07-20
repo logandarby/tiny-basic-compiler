@@ -1,0 +1,11 @@
+WHILE 1 + 1 < 2 REPEAT
+    PRINT 1 + 2 / -2
+ENDWHILE
+
+LABEL test
+
+GOTO test
+
+INPUT x 
+
+LET x = 5
