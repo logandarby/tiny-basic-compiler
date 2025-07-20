@@ -41,7 +41,7 @@ typedef size_t NodeID;
 typedef enum GRAMMAR_TYPE {
   GRAMMAR_TYPE_PROGRAM,
   GRAMMAR_TYPE_STATEMENT,
-  GRAMMAR_TYPE_COMPARAISON,
+  GRAMMAR_TYPE_COMPARISON,
   GRAMMAR_TYPE_EXPRESSION,
   GRAMMAR_TYPE_TERM,
   GRAMMAR_TYPE_UNARY,
@@ -50,6 +50,7 @@ typedef enum GRAMMAR_TYPE {
 
 typedef struct {
   GRAMMAR_TYPE grammar;
+  // TODO: This should be a linked list
   NodeID children[AST_MAX_CHILDREN];
   short child_count;
 } GrammarNode;
@@ -161,7 +162,6 @@ const char *grammar_type_to_string(GRAMMAR_TYPE type);
 // UTILS
 // ====================
 
-// Creates a root node with the specified grammar type (for testing)
 NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
 
 NodeID ast_head(AST ast);

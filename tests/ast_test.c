@@ -601,7 +601,7 @@ Test(AST, ast_node_access_all_grammar_types) {
   NodeID root = create_root_node(&ast, GRAMMAR_TYPE_PROGRAM);
 
   // Test all grammar types
-  GRAMMAR_TYPE types[] = {GRAMMAR_TYPE_STATEMENT,  GRAMMAR_TYPE_COMPARAISON,
+  GRAMMAR_TYPE types[] = {GRAMMAR_TYPE_STATEMENT,  GRAMMAR_TYPE_COMPARISON,
                           GRAMMAR_TYPE_EXPRESSION, GRAMMAR_TYPE_TERM,
                           GRAMMAR_TYPE_UNARY,      GRAMMAR_TYPE_PRIMARY};
 

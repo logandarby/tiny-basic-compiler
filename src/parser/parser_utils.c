@@ -148,121 +148,126 @@ typedef struct {
   char error_msg[256];
 } ASTVerificationContext;
 
-static AST_TRAVERSAL_ACTION
-_verify_grammar_enter(GrammarNode *grammar, NodeID node_id,
-                      AstTraversalGenericContext generic_context,
-                      void *context) {
-  UNUSED(node_id);
-  UNUSED(generic_context);
-  ASTVerificationContext *ctx = (ASTVerificationContext *)context;
-  const char *expected_grammar_str = grammar_type_to_string(grammar->grammar);
-  if (strncmp(ctx->current_pos, expected_grammar_str,
-              strlen(expected_grammar_str)) != 0) {
-    ctx->matches = false;
-    snprintf(ctx->error_msg, sizeof(ctx->error_msg),
-             "Expected grammar type: %s, got: %s", expected_grammar_str,
-             ctx->current_pos);
-    return AST_TRAVERSAL_STOP;
-  }
-  ctx->current_pos += strlen(expected_grammar_str);
-  if (ctx->current_pos[0] != '(') {
-    ctx->matches = false;
-    snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected '(', got: %s",
-             ctx->current_pos);
-    return AST_TRAVERSAL_STOP;
-  }
-  ctx->current_pos++;
-  return AST_TRAVERSAL_CONTINUE;
-}
+// static AST_TRAVERSAL_ACTION
+// _verify_grammar_enter(GrammarNode *grammar, NodeID node_id,
+//                       AstTraversalGenericContext generic_context,
+//                       void *context) {
+//   UNUSED(node_id);
+//   UNUSED(generic_context);
+//   ASTVerificationContext *ctx = (ASTVerificationContext *)context;
+//   const char *expected_grammar_str =
+//   grammar_type_to_string(grammar->grammar); if (strncmp(ctx->current_pos,
+//   expected_grammar_str,
+//               strlen(expected_grammar_str)) != 0) {
+//     ctx->matches = false;
+//     snprintf(ctx->error_msg, sizeof(ctx->error_msg),
+//              "Expected grammar type: %s, got: %s", expected_grammar_str,
+//              ctx->current_pos);
+//     return AST_TRAVERSAL_STOP;
+//   }
+//   ctx->current_pos += strlen(expected_grammar_str);
+//   if (ctx->current_pos[0] != '(') {
+//     ctx->matches = false;
+//     snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected '(', got: %s",
+//              ctx->current_pos);
+//     return AST_TRAVERSAL_STOP;
+//   }
+//   ctx->current_pos++;
+//   return AST_TRAVERSAL_CONTINUE;
+// }
 
-static AST_TRAVERSAL_ACTION
-_verify_grammar_exit(GrammarNode *grammar, NodeID node_id,
-                     AstTraversalGenericContext generic_context,
-                     void *context) {
-  UNUSED(grammar);
-  UNUSED(node_id);
-  UNUSED(generic_context);
-  ASTVerificationContext *ctx = (ASTVerificationContext *)context;
-  if (ctx->current_pos[0] != ')') {
-    ctx->matches = false;
-    snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ')', got: %s",
-             ctx->current_pos);
-    return AST_TRAVERSAL_STOP;
-  }
-  ctx->current_pos++;
-  // If its not the last sibling, check for a comma
-  if (generic_context.sibling_index < generic_context.total_siblings - 1) {
-    if (ctx->current_pos[0] != ',') {
-      ctx->matches = false;
-      snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ',', got: %s",
-               ctx->current_pos);
-      return AST_TRAVERSAL_STOP;
-    }
-    ctx->current_pos++;
-  }
-  return AST_TRAVERSAL_CONTINUE;
-}
+// static AST_TRAVERSAL_ACTION
+// _verify_grammar_exit(GrammarNode *grammar, NodeID node_id,
+//                      AstTraversalGenericContext generic_context,
+//                      void *context) {
+//   UNUSED(grammar);
+//   UNUSED(node_id);
+//   UNUSED(generic_context);
+//   ASTVerificationContext *ctx = (ASTVerificationContext *)context;
+//   if (ctx->current_pos[0] != ')') {
+//     ctx->matches = false;
+//     snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ')', got: %s",
+//              ctx->current_pos);
+//     return AST_TRAVERSAL_STOP;
+//   }
+//   ctx->current_pos++;
+//   // If its not the last sibling, check for a comma
+//   if (generic_context.sibling_index < generic_context.total_siblings - 1) {
+//     if (ctx->current_pos[0] != ',') {
+//       ctx->matches = false;
+//       snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ',', got:
+//       %s",
+//                ctx->current_pos);
+//       return AST_TRAVERSAL_STOP;
+//     }
+//     ctx->current_pos++;
+//   }
+//   return AST_TRAVERSAL_CONTINUE;
+// }
 
-static AST_TRAVERSAL_ACTION
-_verify_token(const Token *token, AstTraversalGenericContext generic_context,
-              void *context) {
-  UNUSED(token);
-  ASTVerificationContext *ctx = (ASTVerificationContext *)context;
-  const char *expected_token_str = token_type_to_string(token->type);
-  // Check the token type
-  if (strncmp(ctx->current_pos, expected_token_str,
-              strlen(expected_token_str)) != 0) {
-    ctx->matches = false;
-    snprintf(ctx->error_msg, sizeof(ctx->error_msg),
-             "Expected token type: %s, got: %s", expected_token_str,
-             ctx->current_pos);
-  }
-  // Only if the token has text, check for text in brackets
-  if (token->text) {
-    if (ctx->current_pos[0] != '(') {
-      ctx->matches = false;
-      snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected '(', got: %s",
-               ctx->current_pos);
-      return AST_TRAVERSAL_STOP;
-    }
-    ctx->current_pos++;
-    // Check for the text in brackets
-    if (strncmp(ctx->current_pos, token->text, strlen(token->text)) != 0) {
-      ctx->matches = false;
-      snprintf(ctx->error_msg, sizeof(ctx->error_msg),
-               "Expected text: %s, got: %s", token->text, ctx->current_pos);
-      return AST_TRAVERSAL_STOP;
-    }
-    ctx->current_pos += strlen(token->text);
-    if (ctx->current_pos[0] != ')') {
-      ctx->matches = false;
-      snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ')', got: %s",
-               ctx->current_pos);
-      return AST_TRAVERSAL_STOP;
-    }
-    ctx->current_pos++;
-  }
-  // Better error message if token doesn't have text, but expected one does
-  if (!token->text && ctx->current_pos[0] == '(') {
-    ctx->matches = false;
-    snprintf(ctx->error_msg, sizeof(ctx->error_msg),
-             "Expected text inside token %s, but recieved an empty token",
-             expected_token_str);
-    return AST_TRAVERSAL_STOP;
-  }
-  ctx->current_pos += strlen(expected_token_str);
-  // If its not the last subling, check for a comma
-  if (generic_context.sibling_index < generic_context.total_siblings - 1) {
-    if (ctx->current_pos[0] != ',') {
-      ctx->matches = false;
-      snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ',', got: %s",
-               ctx->current_pos);
-      return AST_TRAVERSAL_STOP;
-    }
-    ctx->current_pos++;
-  }
-  return AST_TRAVERSAL_CONTINUE;
-}
+// static AST_TRAVERSAL_ACTION
+// _verify_token(const Token *token, AstTraversalGenericContext generic_context,
+//               void *context) {
+//   UNUSED(token);
+//   ASTVerificationContext *ctx = (ASTVerificationContext *)context;
+//   const char *expected_token_str = token_type_to_string(token->type);
+//   // Check the token type
+//   if (strncmp(ctx->current_pos, expected_token_str,
+//               strlen(expected_token_str)) != 0) {
+//     ctx->matches = false;
+//     snprintf(ctx->error_msg, sizeof(ctx->error_msg),
+//              "Expected token type: %s, got: %s", expected_token_str,
+//              ctx->current_pos);
+//   }
+//   // Only if the token has text, check for text in brackets
+//   if (token->text) {
+//     if (ctx->current_pos[0] != '(') {
+//       ctx->matches = false;
+//       snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected '(', got:
+//       %s",
+//                ctx->current_pos);
+//       return AST_TRAVERSAL_STOP;
+//     }
+//     ctx->current_pos++;
+//     // Check for the text in brackets
+//     if (strncmp(ctx->current_pos, token->text, strlen(token->text)) != 0) {
+//       ctx->matches = false;
+//       snprintf(ctx->error_msg, sizeof(ctx->error_msg),
+//                "Expected text: %s, got: %s", token->text, ctx->current_pos);
+//       return AST_TRAVERSAL_STOP;
+//     }
+//     ctx->current_pos += strlen(token->text);
+//     if (ctx->current_pos[0] != ')') {
+//       ctx->matches = false;
+//       snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ')', got:
+//       %s",
+//                ctx->current_pos);
+//       return AST_TRAVERSAL_STOP;
+//     }
+//     ctx->current_pos++;
+//   }
+//   // Better error message if token doesn't have text, but expected one does
+//   if (!token->text && ctx->current_pos[0] == '(') {
+//     ctx->matches = false;
+//     snprintf(ctx->error_msg, sizeof(ctx->error_msg),
+//              "Expected text inside token %s, but recieved an empty token",
+//              expected_token_str);
+//     return AST_TRAVERSAL_STOP;
+//   }
+//   ctx->current_pos += strlen(expected_token_str);
+//   // If its not the last subling, check for a comma
+//   if (generic_context.sibling_index < generic_context.total_siblings - 1) {
+//     if (ctx->current_pos[0] != ',') {
+//       ctx->matches = false;
+//       snprintf(ctx->error_msg, sizeof(ctx->error_msg), "Expected ',', got:
+//       %s",
+//                ctx->current_pos);
+//       return AST_TRAVERSAL_STOP;
+//     }
+//     ctx->current_pos++;
+//   }
+//   return AST_TRAVERSAL_CONTINUE;
+// }
 
 bool ast_verify_structure(AST *ast, const char *expected_structure) {
   UNUSED(ast);
@@ -270,25 +275,17 @@ bool ast_verify_structure(AST *ast, const char *expected_structure) {
   if (ast_is_empty(ast)) {
     return strlen(expected_structure) == 0;
   }
-  AstTraversalVisitor visitor = {
-      .visit_token = _verify_token,
-      .visit_grammar_enter = _verify_grammar_enter,
-      .visit_grammar_exit = _verify_grammar_exit,
-  };
-  ASTVerificationContext ctx = {
-      .expected_pattern = expected_structure,
-      .current_pos = expected_structure,
-      .matches = true,
-      .error_msg = {0},
-  };
-  ast_traverse(ast, ast_head(*ast), &visitor, &ctx);
-  if (!ctx.matches) {
-    char *recieved_structure = ast_bracket_print(ast);
-    DZ_ERROR("AST does not match expected structure: %s\n\t\tExpected: "
+  char *recieved_structure = ast_bracket_print(ast);
+  const bool matches = str_eq(recieved_structure, expected_structure,
+                              strlen(expected_structure));
+  if (!matches) {
+    DZ_ERROR("AST does not match expected structure.\n\t\tExpected: "
              "%s\n\t\tGot:      %s\n",
-             ctx.error_msg, expected_structure, recieved_structure);
-    free(recieved_structure);
+             expected_structure, recieved_structure);
+  }
+  free(recieved_structure);
+  if (!matches) {
     DZ_DEBUGBREAK();
   }
-  return ctx.matches;
+  return matches;
 }

@@ -145,7 +145,7 @@ bool _parse_comparison(AST *ast, NodeID parent_node, ParseContext *pc) {
     return false;
   }
   const NodeID comparison_node =
-      ast_node_add_child_grammar(ast, parent_node, GRAMMAR_TYPE_COMPARAISON);
+      ast_node_add_child_grammar(ast, parent_node, GRAMMAR_TYPE_COMPARISON);
   // TODO: This should be + instead of *
   while (true) {
     if (_parse_expression(ast, comparison_node, pc)) {

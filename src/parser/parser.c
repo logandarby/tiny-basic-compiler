@@ -144,8 +144,8 @@ const char *grammar_type_to_string(GRAMMAR_TYPE type) {
     return "PROGRAM";
   case GRAMMAR_TYPE_STATEMENT:
     return "STATEMENT";
-  case GRAMMAR_TYPE_COMPARAISON:
-    return "COMPARAISON";
+  case GRAMMAR_TYPE_COMPARISON:
+    return "COMPARISON";
   case GRAMMAR_TYPE_EXPRESSION:
     return "EXPRESSION";
   case GRAMMAR_TYPE_TERM:
