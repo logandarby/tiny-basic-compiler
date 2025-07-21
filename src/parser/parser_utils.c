@@ -72,7 +72,7 @@ static void _write_to_bracket_context(BracketPrintContext *ctx,
     ctx->str_capacity *= 2;
     ctx->str = xrealloc(ctx->str, ctx->str_capacity);
   }
-  strncpy(ctx->str + ctx->str_len, str, str_len);
+  memcpy(ctx->str + ctx->str_len, str, str_len);
   ctx->str_len += str_len;
   ctx->str[ctx->str_len] = '\0';
 }

@@ -24,7 +24,7 @@ COMP_FLAGS := -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcas
 
 # Release build flags
 C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
-	-MMD -MP -O3 -Wno-stringop-truncation 
+	-MMD -MP -O3
 
 # Debug build flags  
 DEBUG_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
