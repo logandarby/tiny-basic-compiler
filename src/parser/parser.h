@@ -12,10 +12,10 @@
 /*
 GRAMMAR DEFINITION
 
-program ::= {statement}
+program ::= {statement}*
 statement ::= "PRINT" (expression | string) nl
-    | "IF" comparison "THEN" nl {statement} "ENDIF" nl
-    | "WHILE" comparison "REPEAT" nl {statement} "ENDWHILE" nl
+    | "IF" comparison "THEN" nl {statement}* "ENDIF" nl
+    | "WHILE" comparison "REPEAT" nl {statement}* "ENDWHILE" nl
     | "LABEL" ident nl
     | "GOTO" ident nl
     | "LET" ident "=" expression nl
@@ -40,6 +40,7 @@ typedef size_t NodeID;
 // DYNAMIC ARRAY FOR NODE IDS
 // ====================
 
+// In every node, we hold a nodeIDArray that holds NodeIDs dynamically
 typedef struct {
   NodeID *data;
   size_t size;
@@ -63,6 +64,10 @@ void node_id_array_add(NodeIDArray *arr, NodeID node_id);
 
 // Get the current size of the array
 size_t node_id_array_size(const NodeIDArray *arr);
+
+// ========================
+// AST DEFINITIONS
+// ========================
 
 typedef enum GRAMMAR_TYPE {
   GRAMMAR_TYPE_PROGRAM,
@@ -97,9 +102,8 @@ typedef enum AST_NODE_TYPE {
 
 // An ASTNode is a discriminated union of a Token or a GrammarNode.
 // A token is a leaf node which is always a token from the lexer.
-// A GrammarNode is a non-leaf node which is a grammar rule from the grammar
-// rules above.
-// It is used to store the AST in a single array.
+// A GrammarNode is a potentially non-leaf node which is a grammar rule from the
+// grammar rules above. It is used to store the AST in a single array.
 struct ASTNode {
   AST_NODE_TYPE node_type;
   union {
@@ -113,10 +117,35 @@ struct ASTNode {
 // The AST must be destroyed with the ast_destroy function
 AST ast_parse(const TokenArray ta);
 void ast_destroy(AST *ast);
+// The root of the ast
 NodeID ast_head(AST ast);
 bool ast_is_empty(AST *ast);
-// Creates an empty Abstract Syntax Tree
+// Creates an empty Abstract Syntax Tree, used only for testing really
 AST ast_init(void);
+// Creates a root node. Only can do so on an empty tree
+NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
+// Returns if the node is a token
+bool ast_node_is_token(AST *ast, NodeID node_id);
+// Returns if the node is a grammar node
+bool ast_node_is_grammar(AST *ast, NodeID node_id);
+// Gets the child of a node. Only works on GrammarNodes-- you should check that
+// the node is a grammar node before calling thing
+NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number);
+// Get the # of children the node has
+short ast_node_get_child_count(AST *ast, NodeID node_id);
+// These method adds a child token to a node. Note that adding children only
+// works on GrammarNodes -- you should check this before calling this method
+NodeID ast_node_add_child_token(AST *ast, NodeID parent_id, Token token);
+// These method adds a child gramamr node to a node. Note that adding children
+// only works on GrammarNodes -- you should check this before calling this
+// method
+NodeID ast_node_add_child_grammar(AST *ast, NodeID parent_id,
+                                  GRAMMAR_TYPE grammar_type);
+// If the node is a Token node, it gets the Token. Otherwise, it panics
+const Token *ast_node_get_token(AST *ast, NodeID node_id);
+// If the node is a grammar node, retrives the grammar type. Otherwise, it
+// panics.
+GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);
 
 // ====================
 // AST Traversal Visitor
@@ -181,25 +210,3 @@ void ast_print(AST *ast);
 bool ast_verify_structure(AST *ast, const char *expected_structure);
 
 const char *grammar_type_to_string(GRAMMAR_TYPE type);
-
-// ====================
-// UTILS
-// ====================
-
-NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
-
-NodeID ast_head(AST ast);
-bool ast_node_is_token(AST *ast, NodeID node_id);
-bool ast_node_is_grammar(AST *ast, NodeID node_id);
-// Gets the child of a node. Only works on GrammarNodes-- you should check that
-// the node is a grammar node before calling thing
-NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number);
-short ast_node_get_child_count(AST *ast, NodeID node_id);
-// These two methods add children to a node. Note that adding children only
-// works on GrammarNodes -- you should check this before calling this method
-NodeID ast_node_add_child_token(AST *ast, NodeID parent_id, Token token);
-NodeID ast_node_add_child_grammar(AST *ast, NodeID parent_id,
-                                  GRAMMAR_TYPE grammar_type);
-
-const Token *ast_node_get_token(AST *ast, NodeID node_id);
-GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);

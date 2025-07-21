@@ -1,5 +1,4 @@
 #include "parser.h"
-#include "../core.h"
 #include "../dz_debug.h"
 
 // ====================
