@@ -29,10 +29,6 @@ int main(const int argc, const char **argv) {
 
   AST ast = ast_parse(tokens);
   ast_print(&ast);
-  // ast_verify_structure(
-  //     &ast, "PROGRAM(STATEMENT(LET,IDENT,EQ,EXPRESSION("
-  //           "TERM(UNARY(PRIMARY(NUMBER))),PLUS,TERM(UNARY(PRIMARY(NUMBER))))),"
-  //           "STATEMENT(PRINT,EXPRESSION(TERM(UNARY(PRIMARY(IDENT))))))");
 
   ast_destroy(&ast);
   token_array_destroy(&tokens);

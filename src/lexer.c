@@ -229,7 +229,9 @@ bool _is_alpha_char(const char c) {
 
 bool _is_numeric_char(const char c) { return (c >= '0' && c <= '9'); }
 
-bool _is_alpha_numeric_char(const char c) {
+// Variables must start with a numeric character, but then contain numbers or
+// underscores
+bool _is_variable_char(const char c) {
   return _is_alpha_char(c) || _is_numeric_char(c) || c == '_';
 }
 
@@ -361,8 +363,7 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
     }
     // Check for an identifier or keyword
     if (_is_alpha_char(line[pos])) {
-      const size_t word_length =
-          strspn_callback(line + pos, _is_alpha_numeric_char);
+      const size_t word_length = strspn_callback(line + pos, _is_variable_char);
       const enum TOKEN token =
           _get_token(line + pos, word_length, KEYWORD_MAP,
                      array_size(KEYWORD_MAP), KEYWORD_START);
