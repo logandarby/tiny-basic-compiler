@@ -230,7 +230,7 @@ bool _is_alpha_char(const char c) {
 bool _is_numeric_char(const char c) { return (c >= '0' && c <= '9'); }
 
 bool _is_alpha_numeric_char(const char c) {
-  return _is_alpha_char(c) || _is_numeric_char(c);
+  return _is_alpha_char(c) || _is_numeric_char(c) || c == '_';
 }
 
 bool _is_string_delim(const char c) { return strchr(STRING_DELIMS, c) != NULL; }

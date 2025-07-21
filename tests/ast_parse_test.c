@@ -44,7 +44,7 @@ Test(AST_Parse, single_newline) {
   TokenArray ta = NULL;
   AST ast = parse_string_to_ast("\n", &ta);
 
-  cr_assert(ast_verify_structure(&ast, "PROGRAM()"),
+  cr_assert(ast_verify_structure(&ast, ""),
             "Single newline should result in empty program");
 
   ast_destroy(&ast);
@@ -270,7 +270,8 @@ Test(AST_Parse, simple_comparison_equal) {
       ast_verify_structure(
           &ast,
           "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY(IDENT("
-          "x))))),EQEQ,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(5)))))),THEN))"),
+          "x))))),EQEQ,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(5)))))),THEN,ENDIF)"
+          ")"),
       "IF with equality comparison should parse correctly");
 
   ast_destroy(&ast);
@@ -285,7 +286,8 @@ Test(AST_Parse, simple_comparison_not_equal) {
       ast_verify_structure(
           &ast,
           "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY(IDENT("
-          "x))))),NOTEQ,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(0)))))),THEN))"),
+          "x))))),NOTEQ,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(0)))))),THEN,"
+          "ENDIF))"),
       "IF with not-equal comparison should parse correctly");
 
   ast_destroy(&ast);
@@ -300,7 +302,8 @@ Test(AST_Parse, simple_comparison_greater) {
       ast_verify_structure(
           &ast,
           "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY(IDENT("
-          "x))))),GT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(10)))))),THEN))"),
+          "x))))),GT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(10)))))),THEN,ENDIF)"
+          ")"),
       "IF with greater-than comparison should parse correctly");
 
   ast_destroy(&ast);
@@ -315,7 +318,8 @@ Test(AST_Parse, simple_comparison_less) {
       ast_verify_structure(
           &ast,
           "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY(IDENT("
-          "y))))),LT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(100)))))),THEN))"),
+          "y))))),LT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(100)))))),THEN,ENDIF)"
+          ")"),
       "IF with less-than comparison should parse correctly");
 
   ast_destroy(&ast);
@@ -329,7 +333,7 @@ Test(AST_Parse, simple_comparison_greater_equal) {
   cr_assert(ast_verify_structure(
                 &ast, "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY("
                       "PRIMARY(IDENT(score))))),GTE,EXPRESSION(TERM(UNARY("
-                      "PRIMARY(NUMBER(90)))))),THEN))"),
+                      "PRIMARY(NUMBER(90)))))),THEN,ENDIF))"),
             "IF with greater-equal comparison should parse correctly");
 
   ast_destroy(&ast);
@@ -344,7 +348,8 @@ Test(AST_Parse, simple_comparison_less_equal) {
       ast_verify_structure(
           &ast,
           "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY(IDENT("
-          "age))))),LTE,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(65)))))),THEN))"),
+          "age))))),LTE,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(65)))))),THEN,"
+          "ENDIF))"),
       "IF with less-equal comparison should parse correctly");
 
   ast_destroy(&ast);
@@ -360,7 +365,8 @@ Test(AST_Parse, comparison_with_expressions) {
           &ast,
           "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY(IDENT("
           "x)))),PLUS,TERM(UNARY(PRIMARY(NUMBER(1))))),GT,EXPRESSION(TERM("
-          "UNARY(PRIMARY(IDENT(y))),MULT,UNARY(PRIMARY(NUMBER(2)))))),THEN))"),
+          "UNARY(PRIMARY(IDENT(y))),MULT,UNARY(PRIMARY(NUMBER(2)))))),THEN,"
+          "ENDIF))"),
       "IF with expressions in comparison should parse correctly");
 
   ast_destroy(&ast);
@@ -379,7 +385,8 @@ Test(AST_Parse, if_statement_empty) {
       ast_verify_structure(
           &ast,
           "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY(IDENT("
-          "x))))),EQEQ,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(0)))))),THEN))"),
+          "x))))),EQEQ,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(0)))))),THEN,ENDIF)"
+          ")"),
       "Empty IF statement should parse correctly");
 
   ast_destroy(&ast);
@@ -395,7 +402,7 @@ Test(AST_Parse, if_statement_with_print) {
                 &ast,
                 "PROGRAM(STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY("
                 "IDENT(x))))),GT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(0)))))),"
-                "THEN,STATEMENT(PRINT,STRING(positive))))"),
+                "THEN,STATEMENT(PRINT,STRING(positive)),ENDIF))"),
             "IF statement with PRINT should parse correctly");
 
   ast_destroy(&ast);
@@ -412,7 +419,7 @@ Test(AST_Parse, if_statement_multiple_statements) {
                       "PRIMARY(IDENT(x))))),EQEQ,EXPRESSION(TERM(UNARY(PRIMARY("
                       "NUMBER(1)))))),THEN,STATEMENT(PRINT,EXPRESSION(TERM("
                       "UNARY(PRIMARY(IDENT(x)))))),STATEMENT(LET,IDENT(y),EQ,"
-                      "EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(2))))))))"),
+                      "EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(2)))))),ENDIF))"),
             "IF statement with multiple statements should parse correctly");
 
   ast_destroy(&ast);
@@ -431,7 +438,7 @@ Test(AST_Parse, nested_if_statements) {
                 "IDENT(x))))),GT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(0)))))),"
                 "THEN,STATEMENT(IF,COMPARISON(EXPRESSION(TERM(UNARY(PRIMARY("
                 "IDENT(y))))),GT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(0)))))),"
-                "THEN,STATEMENT(PRINT,STRING(both positive)))))"),
+                "THEN,STATEMENT(PRINT,STRING(both positive)),ENDIF),ENDIF))"),
             "Nested IF statements should parse correctly");
 
   ast_destroy(&ast);
@@ -449,7 +456,7 @@ Test(AST_Parse, while_statement_empty) {
   cr_assert(ast_verify_structure(
                 &ast, "PROGRAM(STATEMENT(WHILE,COMPARISON(EXPRESSION(TERM("
                       "UNARY(PRIMARY(IDENT(x))))),LT,EXPRESSION(TERM(UNARY("
-                      "PRIMARY(NUMBER(10)))))),REPEAT))"),
+                      "PRIMARY(NUMBER(10)))))),REPEAT,ENDWHILE))"),
             "Empty WHILE statement should parse correctly");
 
   ast_destroy(&ast);
@@ -469,7 +476,7 @@ Test(AST_Parse, while_statement_with_body) {
           "IDENT(count))))),LT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(5)))))),"
           "REPEAT,STATEMENT(PRINT,EXPRESSION(TERM(UNARY(PRIMARY(IDENT(count))))"
           ")),STATEMENT(LET,IDENT(count),EQ,EXPRESSION(TERM(UNARY(PRIMARY("
-          "IDENT(count)))),PLUS,TERM(UNARY(PRIMARY(NUMBER(1))))))))"),
+          "IDENT(count)))),PLUS,TERM(UNARY(PRIMARY(NUMBER(1)))))),ENDWHILE))"),
       "WHILE statement with body should parse correctly");
 
   ast_destroy(&ast);
@@ -478,7 +485,7 @@ Test(AST_Parse, while_statement_with_body) {
 
 Test(AST_Parse, nested_while_statements) {
   TokenArray ta = NULL;
-  AST ast = parse_string_to_ast("WHILE i < 3 REPEAT\nWHILE j < 2 REPEAT\nPRINT,"
+  AST ast = parse_string_to_ast("WHILE i < 3 REPEAT\nWHILE j < 2 REPEAT\nPRINT"
                                 "\"nested\"\nENDWHILE\nENDWHILE\n",
                                 &ta);
 
@@ -488,7 +495,8 @@ Test(AST_Parse, nested_while_statements) {
                 "PRIMARY(IDENT(i))))),LT,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER("
                 "3)))))),REPEAT,STATEMENT(WHILE,COMPARISON(EXPRESSION(TERM("
                 "UNARY(PRIMARY(IDENT(j))))),LT,EXPRESSION(TERM(UNARY(PRIMARY("
-                "NUMBER(2)))))),REPEAT,STATEMENT(PRINT,STRING(nested)))))"),
+                "NUMBER(2)))))),REPEAT,STATEMENT(PRINT,STRING(nested)),"
+                "ENDWHILE),ENDWHILE))"),
             "Nested WHILE statements should parse correctly");
 
   ast_destroy(&ast);
@@ -626,14 +634,15 @@ Test(AST_Parse, program_with_control_flow) {
       "LET x = 10\nIF x > 5 THEN\nPRINT \"large\"\nENDIF\nPRINT \"done\"\n",
       &ta);
 
-  cr_assert(ast_verify_structure(
-                &ast,
-                "PROGRAM(STATEMENT(LET,IDENT(x),EQ,EXPRESSION(TERM(UNARY("
-                "PRIMARY(NUMBER(10)))))),STATEMENT(IF,COMPARISON(EXPRESSION("
-                "TERM(UNARY(PRIMARY(IDENT(x))))),GT,EXPRESSION(TERM(UNARY("
-                "PRIMARY(NUMBER(5)))))),THEN,STATEMENT(PRINT,STRING(large))),"
-                "STATEMENT(PRINT,STRING(done)))"),
-            "Program with control flow should parse correctly");
+  cr_assert(
+      ast_verify_structure(
+          &ast,
+          "PROGRAM(STATEMENT(LET,IDENT(x),EQ,EXPRESSION(TERM(UNARY("
+          "PRIMARY(NUMBER(10)))))),STATEMENT(IF,COMPARISON(EXPRESSION("
+          "TERM(UNARY(PRIMARY(IDENT(x))))),GT,EXPRESSION(TERM(UNARY("
+          "PRIMARY(NUMBER(5)))))),THEN,STATEMENT(PRINT,STRING(large)),ENDIF),"
+          "STATEMENT(PRINT,STRING(done)))"),
+      "Program with control flow should parse correctly");
 
   ast_destroy(&ast);
   token_array_destroy(&ta);
@@ -653,7 +662,7 @@ Test(AST_Parse, loop_with_counter) {
           "PRIMARY(IDENT(i))))),LTE,EXPRESSION(TERM(UNARY(PRIMARY(NUMBER(3)))))"
           "),REPEAT,STATEMENT(PRINT,EXPRESSION(TERM(UNARY(PRIMARY(IDENT(i))))))"
           ",STATEMENT(LET,IDENT(i),EQ,EXPRESSION(TERM(UNARY(PRIMARY(IDENT(i))))"
-          ",PLUS,TERM(UNARY(PRIMARY(NUMBER(1))))))))"),
+          ",PLUS,TERM(UNARY(PRIMARY(NUMBER(1)))))),ENDWHILE))"),
       "Loop with counter should parse correctly");
 
   ast_destroy(&ast);

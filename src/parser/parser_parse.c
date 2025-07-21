@@ -6,6 +6,11 @@
 // This file contains the implementation of the main parser function.
 // ---------------------------
 
+// Keywords that signal the start of a statement
+static const enum TOKEN STATEMENT_START_KEYWORDS[] = {
+    TOKEN_PRINT, TOKEN_IF,  TOKEN_WHILE, TOKEN_LABEL,
+    TOKEN_GOTO,  TOKEN_LET, TOKEN_INPUT};
+
 // ====================
 // PARSE CONTEXT
 // ====================
@@ -165,6 +170,8 @@ bool _parse_comparison(AST *ast, NodeID parent_node, ParseContext *pc) {
   return true;
 }
 
+bool _parse_statement_star(AST *ast, NodeID parent_node, ParseContext *pc);
+
 // Parses a statement.
 // Returns true if the statement was parsed successfully, false otherwise.
 bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
@@ -192,7 +199,7 @@ bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
       return false;
     }
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!_parse_statement(ast, statement_node, pc)) {
+    if (!_parse_statement_star(ast, statement_node, pc)) {
       return false;
     }
     if (!pc_match(pc, TOKEN_ENDIF)) {
@@ -209,7 +216,7 @@ bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
       return false;
     }
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!_parse_statement(ast, statement_node, pc)) {
+    if (!_parse_statement_star(ast, statement_node, pc)) {
       return false;
     }
     if (!pc_match(pc, TOKEN_ENDWHILE)) {
@@ -250,15 +257,20 @@ bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
     if (!pc_match(pc, TOKEN_IDENT)) {
       return false;
     }
+    pc_add_token_and_advance(pc, ast, statement_node);
     return true;
   }
   return false;
 }
 
-// Parses program ::= {statement}
-// Returns true if the program was parsed successfully, false otherwise.
-bool _parse_program(AST *ast, NodeID parent_node, ParseContext *pc) {
+// Parses 0 or more statements
+bool _parse_statement_star(AST *ast, NodeID parent_node, ParseContext *pc) {
   while (!pc_done(pc)) {
+    const bool is_keyword = pc_match_array(
+        pc, STATEMENT_START_KEYWORDS, array_size(STATEMENT_START_KEYWORDS));
+    if (!is_keyword) {
+      return true;
+    }
     if (!_parse_statement(ast, parent_node, pc)) {
       return false;
     }
@@ -266,12 +278,18 @@ bool _parse_program(AST *ast, NodeID parent_node, ParseContext *pc) {
   return true;
 }
 
+// Parses program ::= {statement}
+// Returns true if the program was parsed successfully, false otherwise.
+bool _parse_program(AST *ast, NodeID parent_node, ParseContext *pc) {
+  return _parse_statement_star(ast, parent_node, pc);
+}
+
 AST ast_parse(const TokenArray ta) {
   AST ast = ast_init();
+  ast_create_root_node(&ast, GRAMMAR_TYPE_PROGRAM);
   if (token_array_is_empty(ta)) {
     return ast;
   }
-  ast_create_root_node(&ast, GRAMMAR_TYPE_PROGRAM);
   ParseContext pc = pc_init(ta);
   _parse_program(&ast, ast_head(ast), &pc);
   return ast;

@@ -32,11 +32,37 @@ nl ::= '\n'+
 // AST & PARSER DEFINITIONS
 // ====================
 
-#define AST_MAX_CHILDREN 5
-
 typedef struct ASTNode ASTNode;
 // Index into out-of-band array with ASTNode struct
 typedef size_t NodeID;
+
+// ====================
+// DYNAMIC ARRAY FOR NODE IDS
+// ====================
+
+typedef struct {
+  NodeID *data;
+  size_t size;
+  size_t capacity;
+} NodeIDArray;
+
+// Initialize a new NodeIDArray
+NodeIDArray node_id_array_init(void);
+
+// Destroy a NodeIDArray and free its memory
+void node_id_array_destroy(NodeIDArray *arr);
+
+// Get the element at the specified index
+NodeID node_id_array_at(const NodeIDArray *arr, size_t index);
+
+// Get pointer to the first element (head)
+NodeID *node_id_array_head(const NodeIDArray *arr);
+
+// Add a new NodeID to the array
+void node_id_array_add(NodeIDArray *arr, NodeID node_id);
+
+// Get the current size of the array
+size_t node_id_array_size(const NodeIDArray *arr);
 
 typedef enum GRAMMAR_TYPE {
   GRAMMAR_TYPE_PROGRAM,
@@ -50,9 +76,7 @@ typedef enum GRAMMAR_TYPE {
 
 typedef struct {
   GRAMMAR_TYPE grammar;
-  // TODO: This should be a linked list
-  NodeID children[AST_MAX_CHILDREN];
-  short child_count;
+  NodeIDArray children;
 } GrammarNode;
 
 // An AST is a collection of ASTNodes.

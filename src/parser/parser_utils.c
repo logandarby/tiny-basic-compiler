@@ -284,8 +284,5 @@ bool ast_verify_structure(AST *ast, const char *expected_structure) {
              expected_structure, recieved_structure);
   }
   free(recieved_structure);
-  if (!matches) {
-    DZ_DEBUGBREAK();
-  }
   return matches;
 }

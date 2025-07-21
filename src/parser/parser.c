@@ -1,13 +1,66 @@
 #include "parser.h"
-#include "core.h"
-#include "dz_debug.h"
+#include "../core.h"
+#include "../dz_debug.h"
 
 // ====================
 // CONSTANTS & DEFINITIONS
 // ====================
 
 #define INIT_NODE_ARRAY_SIZE 512
+#define INIT_NODE_ID_ARRAY_SIZE 4
 const size_t AST_RESIZE_FACTOR = 2;
+const size_t NODE_ID_ARRAY_RESIZE_FACTOR = 2;
+
+// ====================
+// NODE ID ARRAY IMPLEMENTATION
+// ====================
+
+NodeIDArray node_id_array_init(void) {
+  NodeIDArray arr = {
+      .data = xmalloc(INIT_NODE_ID_ARRAY_SIZE * sizeof(NodeID)),
+      .size = 0,
+      .capacity = INIT_NODE_ID_ARRAY_SIZE,
+  };
+  return arr;
+}
+
+void node_id_array_destroy(NodeIDArray *arr) {
+  if (arr && arr->data) {
+    free(arr->data);
+    arr->data = NULL;
+    arr->size = 0;
+    arr->capacity = 0;
+  }
+}
+
+NodeID node_id_array_at(const NodeIDArray *arr, size_t index) {
+  DZ_ASSERT(arr, "NodeIDArray pointer is null");
+  DZ_ASSERT(index < arr->size, "Index out of bounds");
+  return arr->data[index];
+}
+
+NodeID *node_id_array_head(const NodeIDArray *arr) {
+  DZ_ASSERT(arr, "NodeIDArray pointer is null");
+  return arr->data;
+}
+
+void node_id_array_add(NodeIDArray *arr, NodeID node_id) {
+  DZ_ASSERT(arr, "NodeIDArray pointer is null");
+
+  // Resize if necessary
+  if (arr->size >= arr->capacity) {
+    arr->capacity *= NODE_ID_ARRAY_RESIZE_FACTOR;
+    arr->data = xrealloc(arr->data, arr->capacity * sizeof(NodeID));
+  }
+
+  arr->data[arr->size] = node_id;
+  arr->size++;
+}
+
+size_t node_id_array_size(const NodeIDArray *arr) {
+  DZ_ASSERT(arr, "NodeIDArray pointer is null");
+  return arr->size;
+}
 
 // ====================
 // TESTING UTIL IMPLEMENTATION
@@ -34,9 +87,10 @@ NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number) {
             "Token nodes do not have children.");
   ASTNode *parent_node = _get_node(ast, parent_id);
   const GrammarNode grammar_node = parent_node->node.grammar;
-  DZ_ASSERT(child_number < grammar_node.child_count,
+  DZ_ASSERT((size_t)child_number < node_id_array_size(&grammar_node.children),
             "Trying to access a child that cannot exist");
-  const NodeID child_id = grammar_node.children[child_number];
+  const NodeID child_id =
+      node_id_array_at(&grammar_node.children, (size_t)child_number);
   DZ_ASSERT(child_id < ast->node_array_size,
             "Child node does not exist in the ast");
   return child_id;
@@ -45,7 +99,7 @@ NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number) {
 short ast_node_get_child_count(AST *ast, NodeID node_id) {
   if (ast_node_is_grammar(ast, node_id)) {
     ASTNode *node = _get_node(ast, node_id);
-    return node->node.grammar.child_count;
+    return (short)node_id_array_size(&node->node.grammar.children);
   }
   return 0;
 }
@@ -87,8 +141,8 @@ NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type) {
             "AST already has nodes, cannot create root");
   _maybe_resize_node_array(ast);
   GrammarNode grammar = {
-      .grammar = grammar_type, .child_count = 0,
-      // children array automatically zero-initialized
+      .grammar = grammar_type,
+      .children = node_id_array_init(),
   };
   ASTNode root_node = {.node_type = AST_NODE_TYPE_GRAMMAR,
                        .node = {.grammar = grammar}};
@@ -104,15 +158,13 @@ bool _node_exists(AST *ast, NodeID node_id) {
 
 NodeID ast_node_add_child_token(AST *ast, NodeID parent_id, Token token) {
   GrammarNode *parent_node = _ast_node_get_grammar_mut(ast, parent_id);
-  DZ_ASSERT(parent_node->child_count < AST_MAX_CHILDREN);
   _maybe_resize_node_array(ast);
   // Get grammar node pointer AFTER potential reallocation
   parent_node = _ast_node_get_grammar_mut(ast, parent_id);
   ASTNode new_token_node = {AST_NODE_TYPE_TOKEN, {.token = token}};
   NodeID new_node_id = (NodeID)ast->node_array_size;
   ast->node_array[ast->node_array_size] = new_token_node;
-  parent_node->children[parent_node->child_count] = new_node_id;
-  parent_node->child_count++;
+  node_id_array_add(&parent_node->children, new_node_id);
   ast->node_array_size++;
   return new_node_id;
 }
@@ -120,20 +172,18 @@ NodeID ast_node_add_child_token(AST *ast, NodeID parent_id, Token token) {
 NodeID ast_node_add_child_grammar(AST *ast, NodeID parent_id,
                                   GRAMMAR_TYPE grammar_type) {
   GrammarNode *parent_node = _ast_node_get_grammar_mut(ast, parent_id);
-  DZ_ASSERT(parent_node->child_count < AST_MAX_CHILDREN);
   _maybe_resize_node_array(ast);
   // Get grammar node pointer AFTER potential reallocation
   parent_node = _ast_node_get_grammar_mut(ast, parent_id);
   GrammarNode grammar = {
-      .grammar = grammar_type, .child_count = 0,
-      // children array automatically zero-initialized
+      .grammar = grammar_type,
+      .children = node_id_array_init(),
   };
   ASTNode new_grammar_node = {.node_type = AST_NODE_TYPE_GRAMMAR,
                               .node = {.grammar = grammar}};
   NodeID new_node_id = (NodeID)ast->node_array_size;
   ast->node_array[ast->node_array_size] = new_grammar_node;
-  parent_node->children[parent_node->child_count] = new_node_id;
-  parent_node->child_count++;
+  node_id_array_add(&parent_node->children, new_node_id);
   ast->node_array_size++;
   return new_node_id;
 }
@@ -180,6 +230,12 @@ NodeID ast_head(AST ast) {
 
 void ast_destroy(AST *ast) {
   if (ast->node_array) {
+    // Clean up NodeIDArray children for all grammar nodes
+    for (size_t i = 0; i < ast->node_array_size; i++) {
+      if (ast->node_array[i].node_type == AST_NODE_TYPE_GRAMMAR) {
+        node_id_array_destroy(&ast->node_array[i].node.grammar.children);
+      }
+    }
     free(ast->node_array);
   }
 }

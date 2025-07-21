@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
+// Test constant to replace the removed TEST_MAX_CHILDREN
+#define TEST_MAX_CHILDREN 10
+
 // =========================
 // HELPER FUNCTIONS
 // =========================
@@ -258,21 +261,21 @@ Test(AST, ast_node_add_maximum_children) {
   NodeID root = create_root_node(&ast, GRAMMAR_TYPE_PROGRAM);
 
   // Keep track of tokens so we can destroy them after the test
-  Token tokens[AST_MAX_CHILDREN];
+  Token tokens[TEST_MAX_CHILDREN];
 
-  // Add AST_MAX_CHILDREN (5) children
-  for (int i = 0; i < AST_MAX_CHILDREN; i++) {
+  // Add TEST_MAX_CHILDREN children
+  for (int i = 0; i < TEST_MAX_CHILDREN; i++) {
     char text[10];
     sprintf(text, "%d", i);
     tokens[i] = create_test_token(TOKEN_NUMBER, text);
     ast_node_add_child_token(&ast, root, tokens[i]);
   }
 
-  cr_assert_eq(ast_node_get_child_count(&ast, root), AST_MAX_CHILDREN,
+  cr_assert_eq(ast_node_get_child_count(&ast, root), TEST_MAX_CHILDREN,
                "Should have maximum children");
 
   // Verify all children are correct
-  for (int i = 0; i < AST_MAX_CHILDREN; i++) {
+  for (int i = 0; i < TEST_MAX_CHILDREN; i++) {
     NodeID child = ast_node_get_child(&ast, root, (short)i);
     const Token *token = ast_node_get_token(&ast, child);
     char expected[10];
@@ -284,7 +287,7 @@ Test(AST, ast_node_add_maximum_children) {
   ast_destroy(&ast);
 
   // Clean up tokens after the test
-  for (int i = 0; i < AST_MAX_CHILDREN; i++) {
+  for (int i = 0; i < TEST_MAX_CHILDREN; i++) {
     destroy_test_token(&tokens[i]);
   }
 }
@@ -314,21 +317,21 @@ Test(AST, ast_node_add_mixed_children_types) {
 Test(AST, ast_node_respects_max_children_constraint) {
   AST ast = ast_init();
   NodeID root = create_root_node(&ast, GRAMMAR_TYPE_PROGRAM);
-  Token tokens[AST_MAX_CHILDREN] = {0};
+  Token tokens[TEST_MAX_CHILDREN] = {0};
 
-  // Add exactly AST_MAX_CHILDREN (5) children to test the per-node child limit
-  for (int i = 0; i < AST_MAX_CHILDREN; i++) {
+  // Add exactly TEST_MAX_CHILDREN (5) children to test the per-node child limit
+  for (int i = 0; i < TEST_MAX_CHILDREN; i++) {
     char text[20];
     sprintf(text, "child_%d", i);
     tokens[i] = create_test_token(TOKEN_IDENT, text);
     ast_node_add_child_token(&ast, root, tokens[i]);
   }
 
-  cr_assert_eq(ast_node_get_child_count(&ast, root), AST_MAX_CHILDREN,
-               "Should have exactly AST_MAX_CHILDREN children");
+  cr_assert_eq(ast_node_get_child_count(&ast, root), TEST_MAX_CHILDREN,
+               "Should have exactly TEST_MAX_CHILDREN children");
 
   // Verify all children are correct and accessible
-  for (int i = 0; i < AST_MAX_CHILDREN; i++) {
+  for (int i = 0; i < TEST_MAX_CHILDREN; i++) {
     NodeID child = ast_node_get_child(&ast, root, (short)i);
     const Token *token = ast_node_get_token(&ast, child);
     char expected[20];
@@ -338,7 +341,7 @@ Test(AST, ast_node_respects_max_children_constraint) {
   }
 
   ast_destroy(&ast);
-  for (int i = 0; i < AST_MAX_CHILDREN; i++) {
+  for (int i = 0; i < TEST_MAX_CHILDREN; i++) {
     destroy_test_token(&tokens[i]);
   }
 }
@@ -607,7 +610,7 @@ Test(AST, ast_node_access_all_grammar_types) {
 
   size_t num_types = sizeof(types) / sizeof(types[0]);
 
-  for (size_t i = 0; i < num_types && i < AST_MAX_CHILDREN; i++) {
+  for (size_t i = 0; i < num_types && i < TEST_MAX_CHILDREN; i++) {
     ast_node_add_child_grammar(&ast, root, types[i]);
     NodeID child = ast_node_get_child(&ast, root, (short)i);
     GRAMMAR_TYPE retrieved_type = ast_node_get_grammar(&ast, child);
@@ -633,7 +636,7 @@ Test(AST, ast_node_access_all_token_types) {
 
   size_t num_tokens = sizeof(test_tokens) / sizeof(test_tokens[0]);
 
-  for (size_t i = 0; i < num_tokens && i < AST_MAX_CHILDREN; i++) {
+  for (size_t i = 0; i < num_tokens && i < TEST_MAX_CHILDREN; i++) {
     Token token = create_test_token(test_tokens[i].type, test_tokens[i].text);
     ast_node_add_child_token(&ast, root, token);
 
