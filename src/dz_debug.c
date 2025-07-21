@@ -1,6 +1,7 @@
 #include "dz_debug.h"
 
 #include <errno.h>
+#include <execinfo.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +76,18 @@ bool mem_eq(const void *s1, const void *s2, size_t s1_size, size_t s2_size) {
   return memcmp(s1, s2, s1_size) == 0;
 }
 
+static void dz_print_backtrace(void) {
+  void *callstack[128];
+  int frames = backtrace(callstack, 128);
+  char **strs = backtrace_symbols(callstack, frames);
+
+  fprintf(stderr, "%sStack trace:%s\n", KRED, KNRM);
+  for (int i = 0; i < frames; ++i) {
+    fprintf(stderr, "  %s%d: %s%s\n", KYEL, i, strs[i], KNRM);
+  }
+  free(strs);
+}
+
 void dz_impl_assert_msg(const char *filename, const char *functionname,
                         const int line_number, const char *condition_string,
                         bool condition, const char *msg, ...) {
@@ -103,7 +116,42 @@ void dz_impl_assert_msg(const char *filename, const char *functionname,
     fprintf(stderr, "\n");
   }
   va_end(args);
+
+  // Print backtrace on assertion failure
+  dz_print_backtrace();
+
   DZ_DEBUGBREAK();
+}
+
+void dz_impl_throw(const char *filename, const char *function_name,
+                   const int line_number, const char *msg, ...) {
+  va_list args;
+  va_start(args, msg);
+
+  // Log the error message using the internal log function
+  static char timebuffer[100];
+  get_formatted_time(timebuffer, sizeof(timebuffer));
+
+  const char *relative_file = strrstr(filename, "src");
+  const char *relative_file_name = (relative_file) ? relative_file : filename;
+
+  fprintf(stderr, "[%s] %s[ERROR]%s ./%s:%d in %s(): ", timebuffer, KRED, KNRM,
+          relative_file_name, line_number, function_name);
+
+  if (msg != NULL) {
+    vfprintf(stderr, msg, args);
+  } else {
+    fprintf(stderr, "<NULL message>");
+  }
+  fprintf(stderr, "\n");
+
+  va_end(args);
+
+  // Print backtrace before terminating
+  dz_print_backtrace();
+
+  DZ_DEBUGBREAK();
+  abort();
 }
 
 void dz_impl_log(FILE *stream, DzErrorLevel error_level, bool show_errno,

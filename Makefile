@@ -16,11 +16,26 @@ DEBUG_DEPS := $(DEBUG_OBJS:.o=.d)
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
+# Compiler
 CC := gcc
-C_FLAGS := $(INC_FLAGS) -MMD -MP -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual  -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 -fsanitize=address -O1 -fno-omit-frame-pointer
-DEBUG_C_FLAGS := $(INC_FLAGS) -MMD -MP -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 -fsanitize=address -g -O0 -fno-omit-frame-pointer -DDZ_DEBUG
-TEST_C_FLAGS := $(DEBUG_C_FLAGS) -DDZ_TESTING=1
-LD_FLAGS := -fsanitize=address
+
+# Common flags for errors and warning
+COMP_FLAGS := -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 
+
+# Release build flags
+C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
+	-MMD -MP -O3 -Wno-stringop-truncation 
+
+# Debug build flags  
+DEBUG_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
+	-MMD -MP -fsanitize=address -g -O0 -fno-omit-frame-pointer -DDZ_DEBUG                          # Enable debug macros
+
+# Test build flags
+TEST_C_FLAGS := $(DEBUG_C_FLAGS) -DDZ_TESTING=1  # Debug flags + testing macros
+
+# Linker flags
+LD_FLAGS := -fsanitize=address                   # Link AddressSanitizer
+DEBUG_LD_FLAGS := -fsanitize=address -rdynamic   # AddressSanitizer + export symbols for backtraces
 
 
 # =========================
@@ -40,7 +55,7 @@ $(BUILD_DIR)/%.c.o: %.c
 # =========================
 
 $(DEBUG_BUILD_DIR)/$(DEBUG_EXEC): $(DEBUG_OBJS)
-	$(CC) $(DEBUG_OBJS) -o $@ $(LD_FLAGS)
+	$(CC) $(DEBUG_OBJS) -o $@ $(DEBUG_LD_FLAGS)
 
 $(DEBUG_BUILD_DIR)/%.c.o: %.c
 	$(MKDIR_P) $(dir $@)
@@ -64,7 +79,7 @@ $(TEST_BUILD_DIR)/%.c.o: %.c
 	$(CC) $(TEST_C_FLAGS) -c $< -o $@
 
 $(TEST_BUILD_DIR)/$(TEST_EXEC): $(TEST_OBJS) $(PROD_TEST_OBJS)
-	$(CC) $^ -o $@ -lcriterion -pthread $(LD_FLAGS)
+	$(CC) $^ -o $@ -lcriterion -pthread $(DEBUG_LD_FLAGS)
 
 test: $(TEST_BUILD_DIR)/$(TEST_EXEC)
 	$<

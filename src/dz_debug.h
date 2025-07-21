@@ -13,6 +13,7 @@
 // These are all enabled when debugging is enabled using the DZ_DEBUG
 // flag
 
+#include <execinfo.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,15 +78,9 @@ extern bool mem_eq(const void *s1, const void *s2, size_t s1_size,
   dz_impl_log(stderr, DzErrorLevel_ERROR, true, __FILE__, __func__, __LINE__,  \
               __VA_ARGS__)
 
-// THROW -- Logs an error message and terminates the program
+// THROW -- Logs an error message, prints backtrace, and terminates the program
 // Arguments: A format string and its arguments -- similar to printf
-#define DZ_THROW(...)                                                          \
-  do {                                                                         \
-    dz_impl_log(stderr, DzErrorLevel_ERROR, false, __FILE__, __func__,         \
-                __LINE__, __VA_ARGS__);                                        \
-    DZ_DEBUGBREAK();                                                           \
-    abort();                                                                   \
-  } while (0)
+#define DZ_THROW(...) dz_impl_throw(__FILE__, __func__, __LINE__, __VA_ARGS__)
 
 // DEBUGBREAK -- Breaks when encountered
 #if DZ_ENABLE_DEBUGBREAK == 1
@@ -143,6 +138,10 @@ extern void dz_impl_assert_msg(const char *filename, const char *function_name,
                                const int line_number,
                                const char *condition_string, bool condition,
                                const char *msg, ...);
+
+// Throws an error with backtrace and terminates the program
+extern void dz_impl_throw(const char *filename, const char *function_name,
+                          const int line_number, const char *msg, ...);
 
 extern void dz_impl_log(FILE *stream, DzErrorLevel error_level, bool show_errno,
                         const char *filename, const char *function_name,
