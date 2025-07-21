@@ -35,35 +35,9 @@ nl ::= '\n'+
 typedef struct ASTNode ASTNode;
 // Index into out-of-band array with ASTNode struct
 typedef size_t NodeID;
-
-// ====================
-// DYNAMIC ARRAY FOR NODE IDS
-// ====================
-
-// In every node, we hold a nodeIDArray that holds NodeIDs dynamically
-typedef struct {
-  NodeID *data;
-  size_t size;
-  size_t capacity;
-} NodeIDArray;
-
-// Initialize a new NodeIDArray
-NodeIDArray node_id_array_init(void);
-
-// Destroy a NodeIDArray and free its memory
-void node_id_array_destroy(NodeIDArray *arr);
-
-// Get the element at the specified index
-NodeID node_id_array_at(const NodeIDArray *arr, size_t index);
-
-// Get pointer to the first element (head)
-NodeID *node_id_array_head(const NodeIDArray *arr);
-
-// Add a new NodeID to the array
-void node_id_array_add(NodeIDArray *arr, NodeID node_id);
-
-// Get the current size of the array
-size_t node_id_array_size(const NodeIDArray *arr);
+// Represents when no node is present
+extern const NodeID NO_NODE;
+;
 
 // ========================
 // AST DEFINITIONS
@@ -81,7 +55,8 @@ typedef enum GRAMMAR_TYPE {
 
 typedef struct {
   GRAMMAR_TYPE grammar;
-  NodeIDArray children;
+  NodeID first_child;
+  NodeID last_child;
 } GrammarNode;
 
 // An AST is a collection of ASTNodes.
@@ -110,6 +85,8 @@ struct ASTNode {
     Token token; // For Leaf Nodes, which are always tokens from the lexer
     GrammarNode grammar; // For intermediary Grammer tokens
   } node;
+  NodeID next_sibling; // Optionally points to the next sibling in the AST,
+                       // otherwise NO_NODE
 };
 
 // Initializes an AST and parses the TokenArray according to the
@@ -128,11 +105,6 @@ NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type);
 bool ast_node_is_token(AST *ast, NodeID node_id);
 // Returns if the node is a grammar node
 bool ast_node_is_grammar(AST *ast, NodeID node_id);
-// Gets the child of a node. Only works on GrammarNodes-- you should check that
-// the node is a grammar node before calling thing
-NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number);
-// Get the # of children the node has
-short ast_node_get_child_count(AST *ast, NodeID node_id);
 // These method adds a child token to a node. Note that adding children only
 // works on GrammarNodes -- you should check this before calling this method
 NodeID ast_node_add_child_token(AST *ast, NodeID parent_id, Token token);
@@ -146,6 +118,8 @@ const Token *ast_node_get_token(AST *ast, NodeID node_id);
 // If the node is a grammar node, retrives the grammar type. Otherwise, it
 // panics.
 GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);
+NodeID ast_get_first_child(AST *ast, NodeID node);
+NodeID ast_get_next_sibling(AST *ast, NodeID node);
 
 // ====================
 // AST Traversal Visitor
@@ -163,9 +137,9 @@ typedef enum {
 } AST_TRAVERSAL_ACTION;
 
 typedef struct {
-  short sibling_index;
+  NodeID node_id;
   NodeID parent_id;
-  short total_siblings;
+  AST *ast;
 } AstTraversalGenericContext;
 
 // A visitor is a function that is called for each node in the AST.
@@ -210,3 +184,18 @@ void ast_print(AST *ast);
 bool ast_verify_structure(AST *ast, const char *expected_structure);
 
 const char *grammar_type_to_string(GRAMMAR_TYPE type);
+
+// ==============================
+// TESTING UTIL
+//
+// These utils are used strictly for testing if possible considering their
+// inefficiency.
+// =============================
+
+#ifdef DZ_TESTING
+// Gets the child of a node. Only works on GrammarNodes-- you should check that
+// the node is a grammar node before calling thing
+NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number);
+// Get the # of children the node has
+size_t ast_node_get_child_count(AST *ast, NodeID node_id);
+#endif

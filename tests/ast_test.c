@@ -1,3 +1,6 @@
+#ifndef DZ_TESTING
+#define DZ_TESTING
+
 #include "../src/parser/parser.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
@@ -859,3 +862,6 @@ Test(AST, ast_handles_deeply_nested_structure) {
 // testing with signal handling or fork/exec, which is beyond the scope of basic
 // unit tests with Criterion. The API documentation clearly states these are
 // assertion failures.
+
+#undef DZ_TESTING
+#endif

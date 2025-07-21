@@ -6,60 +6,8 @@
 // ====================
 
 #define INIT_NODE_ARRAY_SIZE 512
-#define INIT_NODE_ID_ARRAY_SIZE 4
 const size_t AST_RESIZE_FACTOR = 2;
-const size_t NODE_ID_ARRAY_RESIZE_FACTOR = 2;
-
-// ====================
-// NODE ID ARRAY IMPLEMENTATION
-// ====================
-
-NodeIDArray node_id_array_init(void) {
-  NodeIDArray arr = {
-      .data = xmalloc(INIT_NODE_ID_ARRAY_SIZE * sizeof(NodeID)),
-      .size = 0,
-      .capacity = INIT_NODE_ID_ARRAY_SIZE,
-  };
-  return arr;
-}
-
-void node_id_array_destroy(NodeIDArray *arr) {
-  if (arr && arr->data) {
-    free(arr->data);
-    arr->data = NULL;
-    arr->size = 0;
-    arr->capacity = 0;
-  }
-}
-
-NodeID node_id_array_at(const NodeIDArray *arr, size_t index) {
-  DZ_ASSERT(arr, "NodeIDArray pointer is null");
-  DZ_ASSERT(index < arr->size, "Index out of bounds");
-  return arr->data[index];
-}
-
-NodeID *node_id_array_head(const NodeIDArray *arr) {
-  DZ_ASSERT(arr, "NodeIDArray pointer is null");
-  return arr->data;
-}
-
-void node_id_array_add(NodeIDArray *arr, NodeID node_id) {
-  DZ_ASSERT(arr, "NodeIDArray pointer is null");
-
-  // Resize if necessary
-  if (arr->size >= arr->capacity) {
-    arr->capacity *= NODE_ID_ARRAY_RESIZE_FACTOR;
-    arr->data = xrealloc(arr->data, arr->capacity * sizeof(NodeID));
-  }
-
-  arr->data[arr->size] = node_id;
-  arr->size++;
-}
-
-size_t node_id_array_size(const NodeIDArray *arr) {
-  DZ_ASSERT(arr, "NodeIDArray pointer is null");
-  return arr->size;
-}
+const NodeID NO_NODE = ((NodeID)-1);
 
 // ====================
 // TESTING UTIL IMPLEMENTATION
@@ -79,28 +27,6 @@ bool ast_node_is_token(AST *ast, NodeID node_id) {
 bool ast_node_is_grammar(AST *ast, NodeID node_id) {
   ASTNode *node = _get_node(ast, node_id);
   return node->node_type == AST_NODE_TYPE_GRAMMAR;
-}
-
-NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number) {
-  DZ_ASSERT(ast_node_is_grammar(ast, parent_id),
-            "Token nodes do not have children.");
-  ASTNode *parent_node = _get_node(ast, parent_id);
-  const GrammarNode grammar_node = parent_node->node.grammar;
-  DZ_ASSERT((size_t)child_number < node_id_array_size(&grammar_node.children),
-            "Trying to access a child that cannot exist");
-  const NodeID child_id =
-      node_id_array_at(&grammar_node.children, (size_t)child_number);
-  DZ_ASSERT(child_id < ast->node_array_size,
-            "Child node does not exist in the ast");
-  return child_id;
-}
-
-short ast_node_get_child_count(AST *ast, NodeID node_id) {
-  if (ast_node_is_grammar(ast, node_id)) {
-    ASTNode *node = _get_node(ast, node_id);
-    return (short)node_id_array_size(&node->node.grammar.children);
-  }
-  return 0;
 }
 
 // Mutable version of ast_node_get_token
@@ -141,10 +67,12 @@ NodeID ast_create_root_node(AST *ast, GRAMMAR_TYPE grammar_type) {
   _maybe_resize_node_array(ast);
   GrammarNode grammar = {
       .grammar = grammar_type,
-      .children = node_id_array_init(),
+      .first_child = NO_NODE,
+      .last_child = NO_NODE,
   };
   ASTNode root_node = {.node_type = AST_NODE_TYPE_GRAMMAR,
-                       .node = {.grammar = grammar}};
+                       .node = {.grammar = grammar},
+                       .next_sibling = NO_NODE};
   ast->node_array[0] = root_node;
   ast->node_array_size = 1;
   ast->_head = 0;
@@ -155,16 +83,35 @@ bool _node_exists(AST *ast, NodeID node_id) {
   return node_id < ast->node_array_size;
 }
 
+// Requires the new_node_id already exists in the out-of-band array
+void _ast_add_node_to_linked_list(AST *ast, GrammarNode *parent_node,
+                                  NodeID new_node_id) {
+  // If the parent node has children, we extend the linked list
+  if (parent_node->last_child != NO_NODE) {
+    ASTNode *prev_last_child = &ast->node_array[parent_node->last_child];
+    prev_last_child->next_sibling = new_node_id;
+    parent_node->last_child = new_node_id;
+  } else {
+    // Else, we create the linked list
+    parent_node->first_child = new_node_id;
+    parent_node->last_child = new_node_id;
+  }
+}
+
 NodeID ast_node_add_child_token(AST *ast, NodeID parent_id, Token token) {
   GrammarNode *parent_node = _ast_node_get_grammar_mut(ast, parent_id);
   _maybe_resize_node_array(ast);
   // Get grammar node pointer AFTER potential reallocation
   parent_node = _ast_node_get_grammar_mut(ast, parent_id);
-  ASTNode new_token_node = {AST_NODE_TYPE_TOKEN, {.token = token}};
+  ASTNode new_token_node = {
+      AST_NODE_TYPE_TOKEN,
+      {.token = token},
+      .next_sibling = NO_NODE // Initialized later
+  };
   NodeID new_node_id = (NodeID)ast->node_array_size;
   ast->node_array[ast->node_array_size] = new_token_node;
-  node_id_array_add(&parent_node->children, new_node_id);
   ast->node_array_size++;
+  _ast_add_node_to_linked_list(ast, parent_node, new_node_id);
   return new_node_id;
 }
 
@@ -176,14 +123,16 @@ NodeID ast_node_add_child_grammar(AST *ast, NodeID parent_id,
   parent_node = _ast_node_get_grammar_mut(ast, parent_id);
   GrammarNode grammar = {
       .grammar = grammar_type,
-      .children = node_id_array_init(),
+      .first_child = NO_NODE,
+      .last_child = NO_NODE,
   };
   ASTNode new_grammar_node = {.node_type = AST_NODE_TYPE_GRAMMAR,
-                              .node = {.grammar = grammar}};
+                              .node = {.grammar = grammar},
+                              .next_sibling = NO_NODE};
   NodeID new_node_id = (NodeID)ast->node_array_size;
   ast->node_array[ast->node_array_size] = new_grammar_node;
-  node_id_array_add(&parent_node->children, new_node_id);
   ast->node_array_size++;
+  _ast_add_node_to_linked_list(ast, parent_node, new_node_id);
   return new_node_id;
 }
 
@@ -229,17 +178,22 @@ NodeID ast_head(AST ast) {
 
 void ast_destroy(AST *ast) {
   if (ast->node_array) {
-    // Clean up NodeIDArray children for all grammar nodes
-    for (size_t i = 0; i < ast->node_array_size; i++) {
-      if (ast->node_array[i].node_type == AST_NODE_TYPE_GRAMMAR) {
-        node_id_array_destroy(&ast->node_array[i].node.grammar.children);
-      }
-    }
     free(ast->node_array);
   }
 }
 
 bool ast_is_empty(AST *ast) { return ast->node_array_size == 0; }
+
+NodeID ast_get_first_child(AST *ast, NodeID node) {
+  if (!ast_node_is_grammar(ast, node)) {
+    return NO_NODE;
+  }
+  return _ast_node_get_grammar_mut(ast, node)->first_child;
+}
+
+NodeID ast_get_next_sibling(AST *ast, NodeID node) {
+  return ast->node_array[node].next_sibling;
+}
 
 // ====================
 // TRAVERSAL UTILITIES
@@ -267,19 +221,16 @@ _ast_traverse_with_context(AST *ast, NodeID current_node,
   case AST_TRAVERSAL_CONTINUE:
     // Visit the children
     {
-      short child_count = ast_node_get_child_count(ast, current_node);
-      for (short i = 0; i < child_count; i++) {
-        NodeID child_id = ast_node_get_child(ast, current_node, i);
+      NodeID current_child = ast_get_first_child(ast, current_node);
+      while (current_child != NO_NODE) {
         AstTraversalGenericContext child_context = {
-            .parent_id = current_node,
-            .sibling_index = i,
-            .total_siblings = child_count,
-        };
+            .ast = ast, .parent_id = current_node, .node_id = current_child};
         const bool should_continue = _ast_traverse_with_context(
-            ast, child_id, child_context, visitor, context);
+            ast, current_child, child_context, visitor, context);
         if (!should_continue) {
           return false;
         }
+        current_child = ast_get_next_sibling(ast, current_child);
       }
     }
     break;
@@ -316,12 +267,40 @@ bool ast_traverse(AST *ast, NodeID start, AstTraversalVisitor *visitor,
   DZ_ASSERT(visitor, "Visitor pointer is null");
   DZ_ASSERT(context, "Context pointer is null");
 
-  // For the root node, parent_id doesn't make sense, so we use start itself
-  // and sibling_index = 0, total_siblings = 1 (the root is the only "sibling")
   AstTraversalGenericContext root_context = {
-      .parent_id = start,
-      .sibling_index = 0,
-      .total_siblings = 1,
+      .parent_id = NO_NODE,
+      .node_id = start,
+      .ast = ast,
   };
   return _ast_traverse_with_context(ast, start, root_context, visitor, context);
+}
+
+size_t ast_node_get_child_count(AST *ast, NodeID node_id) {
+  if (ast_node_is_grammar(ast, node_id)) {
+    ASTNode *node = _get_node(ast, node_id);
+    NodeID current_child = node->node.grammar.first_child;
+    size_t total_children = 0;
+    while (current_child != NO_NODE) {
+      total_children++;
+      current_child = ast_get_next_sibling(ast, current_child);
+    }
+    return total_children;
+  }
+  return 0;
+}
+
+NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number) {
+  DZ_ASSERT(ast_node_is_grammar(ast, parent_id),
+            "Token nodes do not have children.");
+  ASTNode *parent_node = _get_node(ast, parent_id);
+  const GrammarNode grammar_node = parent_node->node.grammar;
+  NodeID current_child = grammar_node.first_child;
+  for (short i = 0; i < child_number; i++) {
+    DZ_ASSERT(current_child != NO_NODE,
+              "Child node number does not exist as a child of the parent node");
+    current_child = ast_get_next_sibling(ast, current_child);
+  }
+  DZ_ASSERT(current_child < ast->node_array_size,
+            "Child node does not exist in the ast");
+  return current_child;
 }
