@@ -20,7 +20,7 @@ statement ::= "PRINT" (expression | string) nl
     | "GOTO" ident nl
     | "LET" ident "=" expression nl
     | "INPUT" ident nl
-comparison ::= expression (("==" | "!=" | ">" | ">=" | "<" | "<=") expression)+
+comparison ::= expression ("==" | "!=" | ">" | ">=" | "<" | "<=") expression
 expression ::= term {( "-" | "+" ) term}
 term ::= unary {( "/" | "*" ) unary}
 unary ::= ["+" | "-"] primary

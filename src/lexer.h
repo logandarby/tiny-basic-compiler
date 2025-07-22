@@ -8,14 +8,20 @@
 // Give a FileReader, lexes the input into a list of tokens
 // ------------------------------------
 
-#define OPERATOR_START 100
-#define LITERAL_START 200
-#define KEYWORD_START 300
+// Token categorization system: Uses explicit enum values with fixed spacing
+// to enable O(1) category checking via range comparisons.
+// Each category occupies a range of TOKEN_CATEGORY_SPACING values.
+#define TOKEN_CATEGORY_SPACING 100
+#define OPERATOR_START (TOKEN_CATEGORY_SPACING) // Range: 100-199
+#define LITERAL_START                                                          \
+  (OPERATOR_START + TOKEN_CATEGORY_SPACING)                    // Range: 200-299
+#define KEYWORD_START (LITERAL_START + TOKEN_CATEGORY_SPACING) // Range: 300-399
 
 enum TOKEN {
   // Unknown
   TOKEN_UNKNOWN = 0,
-  // Operators
+
+  // Operators: Arithmetic, relational, and logical operators
   TOKEN_PLUS = OPERATOR_START,
   TOKEN_MINUS,
   TOKEN_MULT,
@@ -32,11 +38,13 @@ enum TOKEN {
   TOKEN_NOT,
   TOKEN_AND,
   TOKEN_OR,
-  // Literals
+
+  // Literals: String, number, and identifier tokens
   TOKEN_STRING = LITERAL_START,
   TOKEN_NUMBER,
   TOKEN_IDENT,
-  // Internal Keywords
+
+  // Keywords: Language-specific reserved words
   TOKEN_LABEL = KEYWORD_START,
   TOKEN_PRINT,
   TOKEN_INPUT,

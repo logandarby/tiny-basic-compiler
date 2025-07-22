@@ -145,28 +145,22 @@ bool _parse_expression(AST *ast, NodeID parent_node, ParseContext *pc) {
   return true;
 }
 
+static const enum TOKEN COMPARISON_OPS[] = {TOKEN_EQEQ, TOKEN_NOTEQ, TOKEN_GT,
+                                            TOKEN_LT,   TOKEN_GTE,   TOKEN_LTE};
+
 bool _parse_comparison(AST *ast, NodeID parent_node, ParseContext *pc) {
   if (token_array_is_empty(pc->_ta)) {
     return false;
   }
   const NodeID comparison_node =
       ast_node_add_child_grammar(ast, parent_node, GRAMMAR_TYPE_COMPARISON);
-  // TODO: This should be + instead of *
-  while (true) {
-    if (_parse_expression(ast, comparison_node, pc)) {
-      if (pc_match_array(pc,
-                         (const enum TOKEN[]){TOKEN_EQEQ, TOKEN_NOTEQ, TOKEN_GT,
-                                              TOKEN_LT, TOKEN_GTE, TOKEN_LTE},
-                         6)) {
-        pc_add_token_and_advance(pc, ast, comparison_node);
-        continue;
-      } else {
-        break;
-      }
-    } else {
-      return false;
-    }
-  }
+  if (!_parse_expression(ast, comparison_node, pc))
+    return false;
+  if (!pc_match_array(pc, COMPARISON_OPS, array_size(COMPARISON_OPS)))
+    return false;
+  pc_add_token_and_advance(pc, ast, comparison_node);
+  if (!_parse_expression(ast, comparison_node, pc))
+    return false;
   return true;
 }
 
@@ -187,76 +181,61 @@ bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
       pc_add_token_and_advance(pc, ast, statement_node);
       return true;
     } else {
-      _parse_expression(ast, statement_node, pc);
-      return true;
+      return _parse_expression(ast, statement_node, pc);
     }
   } else if (pc_match(pc, TOKEN_IF)) {
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!_parse_comparison(ast, statement_node, pc)) {
+    if (!_parse_comparison(ast, statement_node, pc))
       return false;
-    }
-    if (!pc_match(pc, TOKEN_THEN)) {
+    if (!pc_match(pc, TOKEN_THEN))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!_parse_statement_star(ast, statement_node, pc)) {
+    if (!_parse_statement_star(ast, statement_node, pc))
       return false;
-    }
-    if (!pc_match(pc, TOKEN_ENDIF)) {
+    if (!pc_match(pc, TOKEN_ENDIF))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
     return true;
   } else if (pc_match(pc, TOKEN_WHILE)) {
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!_parse_comparison(ast, statement_node, pc)) {
+    if (!_parse_comparison(ast, statement_node, pc))
       return false;
-    }
-    if (!pc_match(pc, TOKEN_REPEAT)) {
+    if (!pc_match(pc, TOKEN_REPEAT))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!_parse_statement_star(ast, statement_node, pc)) {
+    if (!_parse_statement_star(ast, statement_node, pc))
       return false;
-    }
-    if (!pc_match(pc, TOKEN_ENDWHILE)) {
+    if (!pc_match(pc, TOKEN_ENDWHILE))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
     return true;
   } else if (pc_match(pc, TOKEN_LABEL)) {
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!pc_match(pc, TOKEN_IDENT)) {
+    if (!pc_match(pc, TOKEN_IDENT))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
     return true;
   } else if (pc_match(pc, TOKEN_GOTO)) {
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!pc_match(pc, TOKEN_IDENT)) {
+    if (!pc_match(pc, TOKEN_IDENT))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
     return true;
   } else if (pc_match(pc, TOKEN_LET)) {
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!pc_match(pc, TOKEN_IDENT)) {
+    if (!pc_match(pc, TOKEN_IDENT))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!pc_match(pc, TOKEN_EQ)) {
+    if (!pc_match(pc, TOKEN_EQ))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!_parse_expression(ast, statement_node, pc)) {
+    if (!_parse_expression(ast, statement_node, pc))
       return false;
-    }
     return true;
   } else if (pc_match(pc, TOKEN_INPUT)) {
     pc_add_token_and_advance(pc, ast, statement_node);
-    if (!pc_match(pc, TOKEN_IDENT)) {
+    if (!pc_match(pc, TOKEN_IDENT))
       return false;
-    }
     pc_add_token_and_advance(pc, ast, statement_node);
     return true;
   }

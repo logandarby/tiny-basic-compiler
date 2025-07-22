@@ -1,13 +1,14 @@
+- [ ] implement basic emitter
+  - After some basic research, it seems like x86-64 assembly might be the best
 - [ ] add labels and comments to lexer
-- [ ] make ast nodeIDs a linked list I think.
-  - I don't necessarily need pointers, since I already have nodeIDs.
-  - This means I can store the first_child and next_siblings of a node as NodeIDs
 - [ ] right now, the contiguous array of nodes doesn't support deletion without collecting garbage. Depending on the optimizations I do, I might need to clean this up
   - This means implementing something like a freelist of holes in the contiguous array
 - [ ] string pool (arena) should be interned using a hashmap inside the lexer to avoid duplicate identifiers being used
 - [ ] maybe come up with better way to handle token array shared memory
   - really, its a problem of ownership of memory-- right now the architecture works fine so long as the ownership doesn't get more complicated
-- [ ] implement basic emitter
 - [ ] implement some basic optimizations (tail end recursion, constexpr with constant folding, etc.)
 
 - [x] implement parser ast from tokenarray
+- [x] make ast nodeIDs a linked list I think.
+  - I don't necessarily need pointers, since I already have nodeIDs.
+  - This means I can store the first_child and next_siblings of a node as NodeIDs

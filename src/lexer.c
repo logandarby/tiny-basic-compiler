@@ -6,6 +6,54 @@
 #include <assert.h>
 #include <string.h>
 
+// ----------------------------------
+// Constants, Definitions, and Macros
+// ----------------------------------
+
+// Lexer constants & macros
+
+// Converts token enum values to array indices by extracting the offset within
+// each category. E.g., TOKEN_LABEL (300) -> 0, TOKEN_PRINT (301) -> 1, etc.
+#define _index_of(token) ((token) % TOKEN_CATEGORY_SPACING)
+
+const char *const KEYWORD_MAP[] = {
+    [_index_of(TOKEN_LABEL)] = "LABEL",
+    [_index_of(TOKEN_GOTO)] = "GOTO",
+    [_index_of(TOKEN_PRINT)] = "PRINT",
+    [_index_of(TOKEN_INPUT)] = "INPUT",
+    [_index_of(TOKEN_LET)] = "LET",
+    [_index_of(TOKEN_IF)] = "IF",
+    [_index_of(TOKEN_THEN)] = "THEN",
+    [_index_of(TOKEN_ELSE)] = "ELSE",
+    [_index_of(TOKEN_ENDIF)] = "ENDIF",
+    [_index_of(TOKEN_WHILE)] = "WHILE",
+    [_index_of(TOKEN_REPEAT)] = "REPEAT",
+    [_index_of(TOKEN_ENDWHILE)] = "ENDWHILE",
+};
+
+const char *const OPERATOR_MAP[] = {
+    [_index_of(TOKEN_PLUS)] = "+",   [_index_of(TOKEN_MINUS)] = "-",
+    [_index_of(TOKEN_MULT)] = "*",   [_index_of(TOKEN_DIV)] = "/",
+    [_index_of(TOKEN_GT)] = ">",     [_index_of(TOKEN_LT)] = "<",
+    [_index_of(TOKEN_GTE)] = ">=",   [_index_of(TOKEN_LTE)] = "<=",
+    [_index_of(TOKEN_EQ)] = "=",     [_index_of(TOKEN_EQEQ)] = "==",
+    [_index_of(TOKEN_NOTEQ)] = "!=", [_index_of(TOKEN_NOT)] = "!",
+    [_index_of(TOKEN_AND)] = "&&",   [_index_of(TOKEN_OR)] = "||",
+};
+
+const char *OPERATOR_CHARS = "+-*/><=!&|";
+const char *STRING_DELIMS = "'\"";
+const char *WHITESPACE_CHARS = " \t\n\r\f\v";
+const char ESCAPE_CHAR = '\\';
+
+enum LEXER_STATE { LEXER_STATE_NORMAL, LEXER_STATE_PARSING_STRING };
+
+typedef struct {
+  enum LEXER_STATE state;
+  char current_string_delim; // Stores the string delimiter
+} LexerState;
+
+// Token Array Definitions
 const size_t INIT_CAPACITY = 512;
 const unsigned int CAPACITY_MULTIPLIER = 2;
 
@@ -123,30 +171,6 @@ void token_array_destroy(TokenArray *ta_ptr) {
 // LEXER Implementation
 // ------------------------------------
 
-const char *const KEYWORD_MAP[] = {
-    [TOKEN_LABEL % 100] = "LABEL",   [TOKEN_GOTO % 100] = "GOTO",
-    [TOKEN_PRINT % 100] = "PRINT",   [TOKEN_INPUT % 100] = "INPUT",
-    [TOKEN_LET % 100] = "LET",       [TOKEN_IF % 100] = "IF",
-    [TOKEN_THEN % 100] = "THEN",     [TOKEN_ELSE % 100] = "ELSE",
-    [TOKEN_ENDIF % 100] = "ENDIF",   [TOKEN_WHILE % 100] = "WHILE",
-    [TOKEN_REPEAT % 100] = "REPEAT", [TOKEN_ENDWHILE % 100] = "ENDWHILE",
-};
-
-const char *const OPERATOR_MAP[] = {
-    [TOKEN_PLUS % 100] = "+",   [TOKEN_MINUS % 100] = "-",
-    [TOKEN_MULT % 100] = "*",   [TOKEN_DIV % 100] = "/",
-    [TOKEN_GT % 100] = ">",     [TOKEN_LT % 100] = "<",
-    [TOKEN_GTE % 100] = ">=",   [TOKEN_LTE % 100] = "<=",
-    [TOKEN_EQ % 100] = "=",     [TOKEN_EQEQ % 100] = "==",
-    [TOKEN_NOTEQ % 100] = "!=", [TOKEN_NOT % 100] = "!",
-    [TOKEN_AND % 100] = "&&",   [TOKEN_OR % 100] = "||",
-};
-
-const char *OPERATOR_CHARS = "+-*/><=!&|";
-const char *STRING_DELIMS = "'\"";
-const char *WHITESPACE_CHARS = " \t\n\r\f\v";
-const char ESCAPE_CHAR = '\\';
-
 // Long terrible function, but it does the job since we have exhaustive enums
 // turned on in the compiler warnings
 const char *token_type_to_string(enum TOKEN type) {
@@ -253,7 +277,7 @@ bool _string_slice_equals(const char *str_slice, const size_t str_length,
 enum TOKEN _get_token(const char *str_slice, const size_t str_length,
                       const char *const map[], const size_t map_size,
                       const size_t token_offset) {
-  for (size_t i = token_offset % 100; i < map_size; i++) {
+  for (size_t i = _index_of(token_offset); i < map_size; i++) {
     if (_string_slice_equals(str_slice, str_length, map[i])) {
       return (enum TOKEN)(i + token_offset);
     }
@@ -268,13 +292,6 @@ size_t strspn_callback(const char *str, bool (*predicate)(char c)) {
   }
   return count;
 }
-
-enum LEXER_STATE { LEXER_STATE_NORMAL, LEXER_STATE_PARSING_STRING };
-
-typedef struct {
-  enum LEXER_STATE state;
-  char current_string_delim; // Stores the string delimiter
-} LexerState;
 
 // Parses tokens from the line, and adds them to the TokenArray
 void _lexer_parse_line(const char *const line, const size_t max_line_length,
