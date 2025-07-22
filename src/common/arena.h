@@ -9,7 +9,7 @@
 // https://github.com/spevnev/uprintf
 // ----------------------------------
 
-#include "core.h"
+#include "../core/core.h"
 
 // Arena type with forward declaration for internal region
 typedef struct _ArenaRegion ArenaRegion;

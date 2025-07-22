@@ -65,3 +65,24 @@ bool string_clean_escape_sequences(char *input, const EscapeConfig *config) {
   input[write_idx] = '\0';
   return true;
 }
+
+// Custom function to compare string slice with exact token match
+bool string_slice_equals(const char *str_slice, const size_t str_length,
+                         const char *token_str) {
+  if (token_str == NULL) {
+    return false;
+  }
+  size_t token_len = strlen(token_str);
+  if (token_len != str_length) {
+    return false;
+  }
+  return strncmp(str_slice, token_str, str_length) == 0;
+}
+
+size_t strspn_callback(const char *str, bool (*predicate)(char c)) {
+  size_t count = 0;
+  while (str[count] && predicate(str[count])) {
+    count++;
+  }
+  return count;
+}

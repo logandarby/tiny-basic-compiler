@@ -1,4 +1,4 @@
-#include "../src/string_util.h"
+#include "../src/common/string_util.h"
 #include <criterion/criterion.h>
 #include <criterion/redirect.h>
 #include <stdbool.h>

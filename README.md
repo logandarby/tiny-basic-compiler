@@ -92,10 +92,21 @@ This sets up automatic checks that run before commits and pushes. See `hooks/REA
 ## Project Structure
 
 ```
-src/                # Source
+src/                # Source code organized by compiler phases
+├── main.c          # Entry point and main driver
+├── common/         # Shared utilities and data structures
+├── core/           # Core compiler infrastructure
+├── frontend/       # Frontend compilation phases (source → AST)
+│   ├── lexer/          # Lexical analysis (tokenization)
+│   └── parser/         # Syntax analysis (parsing)
+├── ast/            # Abstract Syntax Tree & utilities
+├── middleend/      # Middle-end: AST analysis & optimization
+├── backend/        # Backend compilation phases (AST → target code)
+└── debug/          # Debugging macros and diagnostic utilities
 hooks/              # Contains pre-push and pre-commit hooks, as well as an installation script for them
 tests/              # Criterion test suites
 examples/           # Sample BASIC programs to test on
+builds/             # Build artifacts (release and debug versions)
 ```
 
 ## Developer Defines and Macros
@@ -149,7 +160,7 @@ Enabled only when `DZ_ENABLE_ASSERTS` or `DZ_DEBUG` is set.
 ```c
 // Utility macros
 int arr[] = {1, 2, 3, 4, 5};
-int len = array_len(arr);  // len = 5
+int len = array_size(arr);  // len = 5
 int maximum = max(10, 20); // maximum = 20
 
 // Testing conditional compilation

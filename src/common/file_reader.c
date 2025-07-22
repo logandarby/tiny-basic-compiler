@@ -1,5 +1,5 @@
-#include "file.h"
-#include "dz_debug.h"
+#include "file_reader.h"
+#include "../debug/dz_debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

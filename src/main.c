@@ -8,10 +8,11 @@
 // measure.
 // -------------------------------------
 
-#include "args.h"
-#include "file.h"
-#include "lexer.h"
-#include "parser/parser.h"
+#include "ast/ast_utils.h"
+#include "common/file_reader.h"
+#include "core/args.h"
+#include "frontend/lexer/lexer.h"
+#include "frontend/parser/parser.h"
 
 int main(const int argc, const char **argv) {
   const struct Args args = parse_args(argc, argv);

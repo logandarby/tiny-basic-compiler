@@ -1,5 +1,7 @@
-#include "../src/file.h"
-#include "../src/parser/parser.h"
+#include "../src/ast/ast_utils.h"
+#include "../src/common/file_reader.h"
+#include "../src/frontend/lexer/lexer.h"
+#include "../src/frontend/parser/parser.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 

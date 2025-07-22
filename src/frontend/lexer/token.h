@@ -1,12 +1,6 @@
 #pragma once
-#include "core.h"
-#include "file.h"
 
-// ------------------------------------
-// LEXER
-//
-// Give a FileReader, lexes the input into a list of tokens
-// ------------------------------------
+#include "../../core/core.h"
 
 // Token categorization system: Uses explicit enum values with fixed spacing
 // to enable O(1) category checking via range comparisons.
@@ -121,11 +115,3 @@ Token token_array_at(const TokenArray ta, size_t index);
 
 // Destroys a TokenArray, all the tokens within it, and sets the pointer to NULL
 void token_array_destroy(TokenArray *ta);
-
-// ------------------------------------
-// LEXER API
-// ------------------------------------
-
-// Parses from a file reader, and returns the result as a dynamically
-// allocated TokenArray. You must call token_array_destroy
-TokenArray lexer_parse(FileReader filereader);

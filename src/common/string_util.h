@@ -6,7 +6,7 @@
 // Contains utils to clean strings from escaped characters
 // ----------------------------------
 
-#include "core.h"
+#include "../core/core.h"
 
 static const char ESCAPE_PREFIX = '\\';
 static const size_t ESCAPE_SEQUENCE_LENGTH = 2;
@@ -48,3 +48,10 @@ static const EscapeConfig DEFAULT_ESCAPE_CONFIG = {
 // The EscapeConfig is OPTIONAL, and is replaced with this
 // DEFAULT_ESCAPE_MAPPINGS
 bool string_clean_escape_sequences(char *input, const EscapeConfig *config);
+
+// Custom function to compare string slice with exact token match
+bool string_slice_equals(const char *str_slice, const size_t str_length,
+                         const char *token_str);
+
+// Custom version of strcpn using a callback instead of a list of characters
+size_t strspn_callback(const char *str, bool (*predicate)(char c));

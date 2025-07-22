@@ -1,4 +1,4 @@
-#include "../src/arena.h"
+#include "../src/common/arena.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 #include <string.h>

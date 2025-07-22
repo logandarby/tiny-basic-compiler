@@ -1,4 +1,4 @@
-#include "../src/lexer.h"
+#include "../src/frontend/lexer/token.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 

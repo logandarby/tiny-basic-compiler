@@ -1,7 +1,8 @@
 #ifndef DZ_TESTING
 #define DZ_TESTING
 
-#include "../src/parser/parser.h"
+#include "../src/ast/ast.h"
+#include "../src/frontend/lexer/token.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 #include <stdio.h>

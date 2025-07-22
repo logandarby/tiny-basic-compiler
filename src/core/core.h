@@ -13,14 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dz_debug.h"
-
-// =================
-// Common Macros
-// =================
-
-#define UNUSED(x) (void)(x)
-#define array_size(x) (sizeof(x) / sizeof(x[0]))
+#include "../debug/dz_debug.h"
+#include "compiler.h"
 
 // =================
 // X Allocation Utils (Panic on Failure)

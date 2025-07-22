@@ -1,4 +1,4 @@
-#include "../src/file.h"
+#include "../src/common/file_reader.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 #include <stdio.h>

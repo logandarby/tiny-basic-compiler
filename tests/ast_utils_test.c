@@ -1,4 +1,5 @@
-#include "../src/parser/parser.h"
+#include "../src/ast/ast.h"
+#include "../src/ast/ast_utils.h"
 #include <criterion/criterion.h>
 #include <criterion/redirect.h>
 

@@ -7,8 +7,10 @@
 - [ ] maybe come up with better way to handle token array shared memory
   - really, its a problem of ownership of memory-- right now the architecture works fine so long as the ownership doesn't get more complicated
 - [ ] implement some basic optimizations (tail end recursion, constexpr with constant folding, etc.)
+- [ ] optimize hot paths w/ compiler attributes perchance
 
 - [x] implement parser ast from tokenarray
 - [x] make ast nodeIDs a linked list I think.
   - I don't necessarily need pointers, since I already have nodeIDs.
   - This means I can store the first_child and next_siblings of a node as NodeIDs
+- [x] Reorganize directory structure for better maintainability

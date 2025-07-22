@@ -1,32 +1,14 @@
 #pragma once
 
-// ---------------------------------------------
-// PARSER
+// ------------------------------------
+// AST & PARSER
 //
-// Given a list of Tokens from the Lexer, the Parser turns
-// the list of tokens into an AST based off the Tiny BASIC grammar
-// ---------------------------------------------
+// The AST is a tree structure that represents the program.
+// The parser is used to parse the program into an AST.
+// ------------------------------------
 
-#include "../lexer.h"
-
-/*
-GRAMMAR DEFINITION
-
-program ::= {statement}*
-statement ::= "PRINT" (expression | string) nl
-    | "IF" comparison "THEN" nl {statement}* "ENDIF" nl
-    | "WHILE" comparison "REPEAT" nl {statement}* "ENDWHILE" nl
-    | "LABEL" ident nl
-    | "GOTO" ident nl
-    | "LET" ident "=" expression nl
-    | "INPUT" ident nl
-comparison ::= expression ("==" | "!=" | ">" | ">=" | "<" | "<=") expression
-expression ::= term {( "-" | "+" ) term}
-term ::= unary {( "/" | "*" ) unary}
-unary ::= ["+" | "-"] primary
-primary ::= number | ident
-nl ::= '\n'+
-*/
+#include "../core/core.h"
+#include "../frontend/lexer/token.h"
 
 // ====================
 // AST & PARSER DEFINITIONS
@@ -89,10 +71,6 @@ struct ASTNode {
                        // otherwise NO_NODE
 };
 
-// Initializes an AST and parses the TokenArray according to the
-// grammar rules above.
-// The AST must be destroyed with the ast_destroy function
-AST ast_parse(const TokenArray ta);
 void ast_destroy(AST *ast);
 // The root of the ast
 NodeID ast_head(AST ast);
@@ -118,71 +96,9 @@ const Token *ast_node_get_token(AST *ast, NodeID node_id);
 // If the node is a grammar node, retrives the grammar type. Otherwise, it
 // panics.
 GRAMMAR_TYPE ast_node_get_grammar(AST *ast, NodeID node_id);
+GrammarNode *ast_node_get_grammar_mut(AST *ast, NodeID node_id);
 NodeID ast_get_first_child(AST *ast, NodeID node);
 NodeID ast_get_next_sibling(AST *ast, NodeID node);
-
-// ====================
-// AST Traversal Visitor
-//
-// The AST Traversal Utils are a convenient way to traverse the AST and perform
-// actions on the nodes.
-//
-// see ast_traverse for more details.
-// ====================
-
-typedef enum {
-  AST_TRAVERSAL_CONTINUE,
-  AST_TRAVERSAL_STOP,
-  AST_TRAVERSAL_SKIP_CHILDREN,
-} AST_TRAVERSAL_ACTION;
-
-typedef struct {
-  NodeID node_id;
-  NodeID parent_id;
-  AST *ast;
-} AstTraversalGenericContext;
-
-// A visitor is a function that is called for each node in the AST.
-// You must implement all three functions.
-// The generic context is passed to the visitor, which contains information such
-// as the sibling index, the parent node, and the total number of siblings.
-// The context is passed to the visitor, which is a user-defined context that
-// is passed to the visitor.
-typedef struct {
-  AST_TRAVERSAL_ACTION(*visit_token)
-  (const Token *token, AstTraversalGenericContext generic_context,
-   void *context);
-  AST_TRAVERSAL_ACTION(*visit_grammar_enter)
-  (GrammarNode *grammar, NodeID node_id,
-   AstTraversalGenericContext generic_context, void *context);
-  AST_TRAVERSAL_ACTION(*visit_grammar_exit)
-  (GrammarNode *grammar, NodeID node_id,
-   AstTraversalGenericContext generic_context, void *context);
-} AstTraversalVisitor;
-
-// Traverses the AST starting from the given node, from left to right.
-// Does a depth-first traversal.
-// Returns true if the traversal was successful, false otherwise.
-// The visitor is called for each node in the AST.
-// The context is passed to the visitor.
-// The visitor can return one of the following actions:
-// - AST_TRAVERSAL_CONTINUE: Continue the traversal.
-// - AST_TRAVERSAL_STOP: Stop the traversal.
-// - AST_TRAVERSAL_SKIP_CHILDREN: Skip the children of the current node, and go
-// on to the next sibling.
-bool ast_traverse(AST *ast, NodeID start, AstTraversalVisitor *visitor,
-                  void *context);
-
-// Prints the AST. An example of the traversal pattern.
-void ast_print(AST *ast);
-
-// A testing utility used to verify the structure of the AST.
-// Example:
-// ast_verify_structure(&ast,
-//  "PROGRAM(STATEMENT(LET,IDENT(x),EQ,EXPRESSION(NUMBER(5),PLUS,NUMBER(3))))"
-// );
-bool ast_verify_structure(AST *ast, const char *expected_structure);
-
 const char *grammar_type_to_string(GRAMMAR_TYPE type);
 
 // ==============================

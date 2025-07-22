@@ -7,7 +7,7 @@
 // in an efficient manner
 // --------------------------------------
 
-#include "core.h"
+#include "../core/core.h"
 
 // --------------------------------------
 // FILE I/O ABSTRACTION LAYER
