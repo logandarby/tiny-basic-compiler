@@ -9,6 +9,7 @@
 // -------------------------------------
 
 #include "ast/ast_utils.h"
+#include "common/error_reporter.h"
 #include "common/file_reader.h"
 #include "core/args.h"
 #include "frontend/lexer/lexer.h"
@@ -33,6 +34,8 @@ int main(const int argc, const char **argv) {
 
   ast_destroy(&ast);
   token_array_destroy(&tokens);
+
+  er_free();
 
   return EXIT_SUCCESS;
 }

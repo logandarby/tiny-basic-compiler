@@ -13,6 +13,7 @@
 // These are all enabled when debugging is enabled using the DZ_DEBUG
 // flag
 
+#include "../core/compiler.h"
 #include <execinfo.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -28,10 +29,15 @@
 #define DZ_ENABLE_LOGS 1
 #endif
 
-// Common util macros
-#define max(a, b) (a > b ? a : b)
-#define min(a, b) (a > b ? b : a)
-#define array_len(a) (sizeof(a) / sizeof(a[0]))
+// Terminal Colours
+extern const char *KNRM;
+extern const char *KRED;
+extern const char *KGRN;
+extern const char *KYEL;
+extern const char *KWHT;
+extern const char *KBLU;
+extern const char *KMAG;
+extern const char *KCYN;
 
 // More readable strcmp == 0 call
 extern bool str_eq(const char *s1, const char *s2, size_t n);
@@ -137,12 +143,14 @@ typedef enum DzErrorLevel {
 extern void dz_impl_assert_msg(const char *filename, const char *function_name,
                                const int line_number,
                                const char *condition_string, bool condition,
-                               const char *msg, ...);
+                               const char *msg, ...) FORMAT_PRINTF(6, 7);
 
 // Throws an error with backtrace and terminates the program
 extern void dz_impl_throw(const char *filename, const char *function_name,
-                          const int line_number, const char *msg, ...);
+                          const int line_number, const char *msg, ...)
+    FORMAT_PRINTF(4, 5);
 
 extern void dz_impl_log(FILE *stream, DzErrorLevel error_level, bool show_errno,
                         const char *filename, const char *function_name,
-                        const int line_number, const char *msg, ...);
+                        const int line_number, const char *msg, ...)
+    FORMAT_PRINTF(7, 8);

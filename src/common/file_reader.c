@@ -127,7 +127,8 @@ bool _read_next_line(FileReader fr) {
       fr->io->getline(&fr->line_buffer, &fr->line_buffer_size, fr->io->stream);
   if (bytes_read == -1 && !fr->io->feof(fr->io->stream)) {
     fr->error = FR_ERR_CANT_READ;
-    DZ_ERRORNO("CRITICAL: Could not read next line of file: %s\n");
+    DZ_ERRORNO("CRITICAL: Could not read next line of file %s\n", fr->filename);
+    exit(EXIT_FAILURE);
     return false;
   } else if (bytes_read == -1) {
     fr->line_buffer[0] = '\0';

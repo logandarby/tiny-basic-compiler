@@ -1,12 +1,11 @@
 #include "core.h"
-#include "dz_debug.h"
+#include "../debug/dz_debug.h"
 
 void *xmalloc(const size_t size) {
   void *ptr = malloc(size);
   if (!ptr || !size) {
-    DZ_ERRORNO(
-        "CRITICAL: Could not allocate memory of size %zd. %s\nExiting...",
-        size);
+    DZ_ERRORNO("CRITICAL: Could not allocate memory of size %zd\nExiting...",
+               size);
     exit(EXIT_FAILURE);
   }
   return ptr;
@@ -15,9 +14,8 @@ void *xmalloc(const size_t size) {
 void *xcalloc(const size_t n, const size_t size) {
   void *ptr = calloc(n, size);
   if (!ptr || !size) {
-    DZ_ERRORNO(
-        "CRITICAL: Could not allocate memory of size %zd. %s\nExiting...",
-        size);
+    DZ_ERRORNO("CRITICAL: Could not allocate memory of size %zd.\nExiting...",
+               size);
     exit(EXIT_FAILURE);
   }
   return ptr;

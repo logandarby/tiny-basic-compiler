@@ -5,7 +5,7 @@ DEBUG_EXEC ?= teeny-debug
 
 BUILD_DIR ?= ./builds/release
 DEBUG_BUILD_DIR ?= ./builds/debug
-SRC_DIRS ?= ./src
+SRC_DIRS ?= ./src ./extern
 
 SRCS := $(shell find $(SRC_DIRS) -name *.c -or -name *.s)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
@@ -13,14 +13,14 @@ DEBUG_OBJS := $(SRCS:%=$(DEBUG_BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 DEBUG_DEPS := $(DEBUG_OBJS:.o=.d)
 
-INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+INC_DIRS := $(shell find $(SRC_DIRS) -type d) 
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 # Compiler
 CC := gcc
 
 # Common flags for errors and warning
-COMP_FLAGS := -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual -Wswitch-enum -Wconversion -Wunreachable-code -Wformat=2 
+COMP_FLAGS := -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Wcast-qual -Wswitch-enum -Wunreachable-code -Wformat=2 
 
 # Release build flags
 C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \

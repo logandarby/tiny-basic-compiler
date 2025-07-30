@@ -9,15 +9,14 @@
 #include <time.h>
 
 // Terminal Colours
-static const char *KNRM = "\x1B[0m";
-static const char *KRED = "\x1B[31m";
-static const char *KGRN = "\x1B[32m";
-static const char *KYEL = "\x1B[33m";
-static const char *KWHT = "\x1B[37m";
-// Unused, just keeping them for now
-// static const char *KBLU = "\x1B[34m";
-// static const char *KMAG = "\x1B[35m";
-// static const char *KCYN = "\x1B[36m";
+const char *KNRM = "\x1B[0m";
+const char *KRED = "\x1B[31m";
+const char *KGRN = "\x1B[32m";
+const char *KYEL = "\x1B[33m";
+const char *KWHT = "\x1B[37m";
+const char *KBLU = "\x1B[34m";
+const char *KMAG = "\x1B[35m";
+const char *KCYN = "\x1B[36m";
 
 static const char *get_error_level_color(const DzErrorLevel error_level) {
   switch (error_level) {
