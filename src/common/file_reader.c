@@ -12,6 +12,11 @@ typedef struct FileReaderHandle {
   char *line_buffer; // Dynamically allocated
   size_t current_line_length;
   size_t line_buffer_size;
+  // Publically available struct of current line number to create better error
+  // msgs 1 - Indexed
+  struct {
+    size_t line;
+  } cursor_pos;
   enum FR_ERROR error; // Internal error state
 } FileReaderHandle;
 
@@ -159,6 +164,10 @@ FileReader filereader_init(const char *filename) {
       .error = FR_ERR_NONE,
       .current_line_length = 0,
       .line_buffer_size = INIT_FILE_LINE_BUFFER,
+      .cursor_pos =
+          {
+              .line = NO_LINE_NUMBER,
+          },
   };
   FileReader return_val = (FileReader)xmalloc(sizeof(FileReaderHandle));
   memcpy(return_val, &fr, sizeof(FileReaderHandle));
@@ -180,7 +189,15 @@ const char *filereader_read_next_line(FileReader fr) {
 
   const bool success = _read_next_line(fr);
   if (!success) {
+    fr->cursor_pos.line = NO_LINE_NUMBER;
     return NULL;
+  }
+
+  // Move current cursor
+  if (fr->cursor_pos.line == NO_LINE_NUMBER) {
+    fr->cursor_pos.line = 1;
+  } else {
+    fr->cursor_pos.line++;
   }
 
   return fr->line_buffer;
@@ -230,6 +247,10 @@ FileReader filereader_init_from_fileio(FileIO *io) {
       .error = FR_ERR_NONE,
       .current_line_length = 0,
       .line_buffer_size = INIT_FILE_LINE_BUFFER,
+      .cursor_pos =
+          {
+              .line = NO_LINE_NUMBER,
+          },
   };
 
   FileReader return_val = (FileReader)xmalloc(sizeof(FileReaderHandle));
@@ -244,4 +265,8 @@ const char *filereader_get_current_line(FileReader fr) {
 
 size_t filereader_get_linebuffer_length(const FileReader fr) {
   return fr->line_buffer_size;
+}
+
+size_t filereader_get_current_line_number(FileReader fr) {
+  return fr->cursor_pos.line;
 }

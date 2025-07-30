@@ -156,6 +156,10 @@ void dz_impl_throw(const char *filename, const char *function_name,
 void dz_impl_log(FILE *stream, DzErrorLevel error_level, bool show_errno,
                  const char *filename, const char *function_name,
                  const int line_number, const char *msg, ...) {
+  if (error_level == DzErrorLevel_ERROR) {
+    dz_print_backtrace();
+  }
+
   static char timebuffer[100];
   get_formatted_time(timebuffer, sizeof(timebuffer));
 

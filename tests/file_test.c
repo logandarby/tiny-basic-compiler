@@ -1,5 +1,6 @@
 #include "../src/common/file_reader.h"
 #include <criterion/criterion.h>
+#include <criterion/internal/assert.h>
 #include <criterion/parameterized.h>
 #include <stdio.h>
 #include <string.h>
@@ -95,6 +96,45 @@ Test(file_reader, basic_multiple_lines) {
   assert_lines_equal(words, expected, array_size(expected));
 
   linelist_destroy(words);
+  filereader_destroy(&fr);
+}
+
+// =================================
+// FileReader LINE INDEX Tests
+// =================================
+
+Test(file_reader, basic_line_index) {
+  FileReader fr =
+      filereader_init_from_string("first line\bsecond line\nthird line\n");
+  size_t line_num = filereader_get_current_line_number(fr);
+  cr_assert_eq(
+      line_num, NO_LINE_NUMBER,
+      "FileReader line number should be initialized with sentinel error value");
+
+  filereader_read_next_line(fr);
+  line_num = filereader_get_current_line_number(fr);
+  cr_assert_eq(line_num, 1);
+
+  filereader_read_next_line(fr);
+  line_num = filereader_get_current_line_number(fr);
+  cr_assert_eq(line_num, 2);
+
+  filereader_read_next_line(fr);
+  line_num = filereader_get_current_line_number(fr);
+  cr_assert_eq(line_num, 3);
+
+  filereader_read_next_line(fr);
+  line_num = filereader_get_current_line_number(fr);
+  cr_assert_eq(
+      line_num, NO_LINE_NUMBER,
+      "FileReader line number should be set to Sentinel value after EOF");
+
+  filereader_read_next_line(fr);
+  line_num = filereader_get_current_line_number(fr);
+  cr_assert_eq(line_num, NO_LINE_NUMBER,
+               "FileReader line number should be set to Sentinel value after "
+               "multiple reads from EOF");
+
   filereader_destroy(&fr);
 }
 

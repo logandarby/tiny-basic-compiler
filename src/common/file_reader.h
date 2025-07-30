@@ -60,6 +60,8 @@ enum FR_ERROR {
   FR_ERR_WORD_TOO_BIG, // Word was too big to fit into a buffer
 };
 
+static const size_t NO_LINE_NUMBER = (size_t)-1;
+
 // Opaque type for file reading
 // typedef struct FileReaderHandle *FileReader; // This line is now redundant
 
@@ -81,6 +83,12 @@ enum FR_ERROR filereader_get_error(const FileReader fr);
 
 // Reads the next line of the file. If the file hits the EOF, returns NULL
 const char *filereader_read_next_line(FileReader fr);
+
+// Gets the current line number of the FileReader, starting from 1.
+// So, the first line is line 1.
+// If the EOF is reached, or a line hasn't been reached yet, returns
+// NO_LINE_NUMBER
+size_t filereader_get_current_line_number(FileReader fr);
 
 // Returns a pointer to the current line. Does not modify the struct
 const char *filereader_get_current_line(const FileReader fr);
