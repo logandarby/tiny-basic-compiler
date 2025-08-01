@@ -23,6 +23,14 @@ TINY BASIC is a simplified version of the BASIC programming language, designed t
 
 The project uses a Makefile for building. Several build targets are available:
 
+### Setting Up For IDE 
+
+Sets up files which are needed for LSP support for include directories. This should be re-ran everytime any external dependencies change. The user must have `bear` installed.
+
+```bash
+make setup
+```
+
 ### Release Build
 ```bash
 make
@@ -40,6 +48,13 @@ Builds the debug version (`teeny-debug`) with full debugging symbols and no opti
 make clean
 ```
 Removes all build artifacts
+
+### Formatting the Codebase 
+
+Formats the whole codebase according to the clang-format file. Must have clang-format installed locally. 
+```bash 
+make format
+```
 
 ## Running the Compiler
 
@@ -92,6 +107,7 @@ This sets up automatic checks that run before commits and pushes. See `hooks/REA
 ## Project Structure
 
 ```
+extern/             # External Libraries (stb, etc.)
 src/                # Source code organized by compiler phases
 ├── main.c          # Entry point and main driver
 ├── common/         # Shared utilities and data structures

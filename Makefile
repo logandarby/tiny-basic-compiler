@@ -88,7 +88,7 @@ test: $(TEST_BUILD_DIR)/$(TEST_EXEC)
 # Phony Targets
 # =========================
 
-.PHONY: clean debug test format
+.PHONY: clean debug test format setup
 
 debug: $(DEBUG_BUILD_DIR)/$(DEBUG_EXEC)
 
@@ -97,6 +97,9 @@ clean:
 
 format:
 	find src/ -name '*.c' -o -name '*.h' | xargs clang-format -i
+
+setup:
+	bear -- make clean && bear -- make
 
 -include $(DEPS)
 -include $(DEBUG_DEPS)
