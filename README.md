@@ -84,7 +84,7 @@ The project includes git hooks to maintain code quality and catch issues early. 
 To install the git hooks, run:
 
 ```bash
-./hooks/install.sh
+bash ./hooks/install.sh
 ```
 
 This sets up automatic checks that run before commits and pushes. See `hooks/README.md` for more details.

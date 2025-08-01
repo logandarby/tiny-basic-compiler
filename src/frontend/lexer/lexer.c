@@ -90,7 +90,7 @@ enum TOKEN get_token_from_string(const char *str_slice, const size_t str_length,
 
 // Parses tokens from the line, and adds them to the TokenArray
 void _lexer_parse_line(const char *const line, const size_t max_line_length,
-                       TokenArray ta) {
+                       const size_t line_number, TokenArray ta) {
   // FSM State
   LexerState state = {
       .current_string_delim = '\0',
@@ -127,13 +127,19 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
         break;
       }
       const size_t string_length = current_pos - string_start;
+      // Get line:col of file (1-indexed)
+      const FileLocation file_location = {
+          .line = line_number,
+          .col = pos + 1,
+      };
       // If it reached the end of line, it didn't find the delimiter, so the
       // token is unknown
       if (pos + string_length == line_length) {
-        token_array_push_simple(ta, TOKEN_UNKNOWN);
+        token_array_push_simple(ta, TOKEN_UNKNOWN, file_location);
       } else {
         // Clean string of any escaped characters, and push the string
-        token_array_clean_and_push_string(ta, line + pos, string_length);
+        token_array_clean_and_push_string(ta, line + pos, string_length,
+                                          file_location);
         // advance past the last string delimiter
         pos++;
       }
@@ -143,6 +149,11 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
       pos += string_length;
       continue;
     }
+    // Get line:col of file (1-indexed)
+    const FileLocation file_location = {
+        .line = line_number,
+        .col = pos + 1,
+    };
     // Eat Whitespace
     if (_is_whitespace_char(line[pos])) {
       const size_t whitespace_len = strspn(line + pos, WHITESPACE_CHARS);
@@ -161,7 +172,7 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
       const enum TOKEN token =
           get_token_from_string(line + pos, operator_length, OPERATOR_MAP,
                                 array_size(OPERATOR_MAP), OPERATOR_START);
-      token_array_push_simple(ta, token);
+      token_array_push_simple(ta, token, file_location);
       pos += operator_length;
       continue;
     }
@@ -169,7 +180,8 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
     if (_is_numeric_char(line[pos])) {
       const size_t number_length =
           strspn_callback(line + pos, _is_numeric_char);
-      token_array_push(ta, TOKEN_NUMBER, line + pos, number_length);
+      token_array_push(ta, TOKEN_NUMBER, line + pos, number_length,
+                       file_location);
       pos += number_length;
       continue;
     }
@@ -181,15 +193,16 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
                                 array_size(KEYWORD_MAP), KEYWORD_START);
       if (token != TOKEN_UNKNOWN) {
         // It's a keyword
-        token_array_push_simple(ta, token);
+        token_array_push_simple(ta, token, file_location);
       } else {
         // It's an identifier
-        token_array_push(ta, TOKEN_IDENT, line + pos, word_length);
+        token_array_push(ta, TOKEN_IDENT, line + pos, word_length,
+                         file_location);
       }
       pos += word_length;
       continue;
     }
-    token_array_push_simple(ta, TOKEN_UNKNOWN);
+    token_array_push_simple(ta, TOKEN_UNKNOWN, file_location);
     pos += 1;
   }
 }
@@ -206,7 +219,8 @@ TokenArray lexer_parse(FileReader filereader) {
     if (!line) {
       break; // EOF reached
     }
-    _lexer_parse_line(line, filereader_get_linebuffer_length(filereader), ta);
+    _lexer_parse_line(line, filereader_get_linebuffer_length(filereader),
+                      filereader_get_current_line_number(filereader), ta);
   }
   return ta;
 }

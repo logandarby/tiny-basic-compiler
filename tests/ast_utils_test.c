@@ -3,6 +3,12 @@
 #include <criterion/criterion.h>
 #include <criterion/redirect.h>
 
+// Mock FileLocation for easy testing
+static const FileLocation fl = {
+    .line = 0,
+    .col = 0,
+};
+
 Test(parser, test_verify_structure) {
   // Create MOCK AST representing the following program:
   // LET x = 10 + 20
@@ -18,10 +24,10 @@ Test(parser, test_verify_structure) {
       ast_node_add_child_grammar(&ast, program, GRAMMAR_TYPE_STATEMENT);
 
   // LET statement tokens and expression
-  ast_node_add_child_token(&ast, let_stmt, token_create_simple(TOKEN_LET));
-  Token ident_x = {TOKEN_IDENT, NULL}; // Use NULL for text in mock
+  ast_node_add_child_token(&ast, let_stmt, token_create_simple(TOKEN_LET, fl));
+  Token ident_x = {TOKEN_IDENT, NULL, fl}; // Use NULL for text in mock
   ast_node_add_child_token(&ast, let_stmt, ident_x);
-  ast_node_add_child_token(&ast, let_stmt, token_create_simple(TOKEN_EQ));
+  ast_node_add_child_token(&ast, let_stmt, token_create_simple(TOKEN_EQ, fl));
 
   // Expression: 10 + 20
   NodeID expr1 =
@@ -32,25 +38,26 @@ Test(parser, test_verify_structure) {
   NodeID unary1 = ast_node_add_child_grammar(&ast, term1, GRAMMAR_TYPE_UNARY);
   NodeID primary1 =
       ast_node_add_child_grammar(&ast, unary1, GRAMMAR_TYPE_PRIMARY);
-  Token num_10 = {TOKEN_NUMBER, NULL}; // Use NULL for text in mock
+  Token num_10 = {TOKEN_NUMBER, NULL, fl}; // Use NULL for text in mock
   ast_node_add_child_token(&ast, primary1, num_10);
 
   // + operator
-  ast_node_add_child_token(&ast, expr1, token_create_simple(TOKEN_PLUS));
+  ast_node_add_child_token(&ast, expr1, token_create_simple(TOKEN_PLUS, fl));
 
   // Term: 20
   NodeID term2 = ast_node_add_child_grammar(&ast, expr1, GRAMMAR_TYPE_TERM);
   NodeID unary2 = ast_node_add_child_grammar(&ast, term2, GRAMMAR_TYPE_UNARY);
   NodeID primary2 =
       ast_node_add_child_grammar(&ast, unary2, GRAMMAR_TYPE_PRIMARY);
-  Token num_20 = {TOKEN_NUMBER, NULL}; // Use NULL for text in mock
+  Token num_20 = {TOKEN_NUMBER, NULL, fl}; // Use NULL for text in mock
   ast_node_add_child_token(&ast, primary2, num_20);
 
   // Statement 2: PRINT x
   NodeID print_stmt =
       ast_node_add_child_grammar(&ast, program, GRAMMAR_TYPE_STATEMENT);
 
-  ast_node_add_child_token(&ast, print_stmt, token_create_simple(TOKEN_PRINT));
+  ast_node_add_child_token(&ast, print_stmt,
+                           token_create_simple(TOKEN_PRINT, fl));
 
   // Expression: x
   NodeID print_expr =
@@ -61,7 +68,7 @@ Test(parser, test_verify_structure) {
       ast_node_add_child_grammar(&ast, print_term, GRAMMAR_TYPE_UNARY);
   NodeID print_primary =
       ast_node_add_child_grammar(&ast, print_unary, GRAMMAR_TYPE_PRIMARY);
-  Token ident_x_print = {TOKEN_IDENT, NULL}; // Use NULL for text in mock
+  Token ident_x_print = {TOKEN_IDENT, NULL, fl}; // Use NULL for text in mock
   ast_node_add_child_token(&ast, print_primary, ident_x_print);
 
   // Verify the structure

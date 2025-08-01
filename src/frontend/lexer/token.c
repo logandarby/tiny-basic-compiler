@@ -18,16 +18,16 @@ struct TokenArrayHandle {
 // ------------------------------------
 
 Token token_create(TokenArray ta, enum TOKEN type, const char *text,
-                   size_t length) {
-  Token t = {.type = type, .text = NULL};
+                   size_t length, const FileLocation location) {
+  Token t = {.type = type, .text = NULL, .file_pos = location};
   if (text) {
     t.text = arena_allocate_string(&ta->arena, text, text + length);
   }
   return t;
 }
 
-Token token_create_simple(enum TOKEN type) {
-  Token t = {.type = type, .text = NULL};
+Token token_create_simple(enum TOKEN type, const FileLocation location) {
+  Token t = {.type = type, .text = NULL, .file_pos = location};
   return t;
 }
 
@@ -40,6 +40,8 @@ bool token_is_keyword(const Token token) { return token.type >= KEYWORD_START; }
 bool token_is_operator(const Token token) {
   return token.type >= OPERATOR_START && token.type <= LITERAL_START;
 }
+
+FileLocation token_get_file_pos(const Token token) { return token.file_pos; }
 
 // Destroys any allocated data associated with the Token
 void token_destroy(Token token) { UNUSED(token); }
@@ -64,28 +66,30 @@ TokenArray token_array_init(void) {
   return return_val;
 }
 
-void token_array_push_simple(TokenArray ta, enum TOKEN token_type) {
+void token_array_push_simple(TokenArray ta, enum TOKEN token_type,
+                             const FileLocation location) {
   if (ta->size == ta->capacity) {
     _resize_token_array(ta, ta->capacity * CAPACITY_MULTIPLIER);
   }
-  ta->head[ta->size] = token_create_simple(token_type);
+  ta->head[ta->size] = token_create_simple(token_type, location);
   ta->size++;
 }
 
 void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
-                      size_t length) {
+                      size_t length, const FileLocation location) {
   if (ta->size == ta->capacity) {
     _resize_token_array(ta, ta->capacity * CAPACITY_MULTIPLIER);
   }
-  ta->head[ta->size] = token_create(ta, token_type, text, length);
+  ta->head[ta->size] = token_create(ta, token_type, text, length, location);
   ta->size++;
 }
 
 void token_array_clean_and_push_string(TokenArray ta, const char *text,
-                                       const size_t length) {
+                                       const size_t length,
+                                       const FileLocation location) {
 
   // Push the string
-  token_array_push(ta, TOKEN_STRING, text, length);
+  token_array_push(ta, TOKEN_STRING, text, length, location);
   // Clean the string -- match for pattern {escape_character}{delmiter}
   Token *current_token = &ta->head[ta->size - 1];
   char *token_text = current_token->text;

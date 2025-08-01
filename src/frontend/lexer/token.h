@@ -53,10 +53,17 @@ enum TOKEN {
   TOKEN_ENDWHILE,
 };
 
+typedef struct FileLocation {
+  size_t line;
+  size_t col;
+} FileLocation;
+
 typedef struct {
   enum TOKEN type;
   char *text; // Optionally stores the actual text for this token (numbers,
               // identifiers, strings, etc.)
+  struct FileLocation file_pos; // Stores where in the file the token is located
+                                // for better error reporting
 } Token;
 
 typedef struct TokenArrayHandle *TokenArray;
@@ -65,15 +72,21 @@ typedef struct TokenArrayHandle *TokenArray;
 // TOKEN Struct API
 // ------------------------------------
 
+// Create token. Must call token_destroy afterwards
 Token token_create(TokenArray ta, enum TOKEN type, const char *text,
-                   size_t length);
-Token token_create_simple(enum TOKEN type);
+                   size_t length, FileLocation location);
+// Create token. Must call token_destroy afterwards
+Token token_create_simple(enum TOKEN type, FileLocation location);
 
+// Get information about token type
 bool token_is_number(const Token token);
 bool token_is_string(const Token token);
 bool token_is_identifier(const Token token);
 bool token_is_keyword(const Token token);
 bool token_is_operator(const Token token);
+
+// Get the location where the token appears in the file
+FileLocation token_get_file_pos(const Token token);
 
 // Destroys any allocated data associated with the Token
 void token_destroy(Token token);
@@ -91,15 +104,16 @@ TokenArray token_array_init(void);
 
 // Push a token with text content
 void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
-                      size_t length);
+                      size_t length, FileLocation location);
 // Pushes a string token with string content
 // First cleans the string of any escaped characters. For example, if the string
 // 'Hello \"quotes\"' is pushed with the delimiter={"}, then the string will be
 // cleaned to 'Hello "quotes"'.
 void token_array_clean_and_push_string(TokenArray ta, const char *text,
-                                       size_t length);
+                                       size_t length, FileLocation location);
 // Push a simple token (operators, keywords, etc.) with no text content
-void token_array_push_simple(TokenArray ta, enum TOKEN token_type);
+void token_array_push_simple(TokenArray ta, enum TOKEN token_type,
+                             FileLocation location);
 
 // Returns the length of the TokenArray
 size_t token_array_length(const TokenArray ta);

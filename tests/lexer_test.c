@@ -1,4 +1,5 @@
 #include "../src/frontend/lexer/lexer.h"
+#include "token.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
 #include <stdio.h>
@@ -53,6 +54,30 @@ static void assert_tokens_equal(TokenArray ta, const enum TOKEN *expected,
     enum TOKEN actual = token_array_at(ta, i).type;
     cr_assert_eq(actual, expected[i], "Token %zu: expected %d, got %d", i,
                  expected[i], actual);
+  }
+}
+
+// Helper functions to compare FileLocations
+static void assert_filelocations_equal(const TokenArray ta,
+                                       const size_t *expected_line,
+                                       const size_t *expected_col,
+                                       const size_t expected_count) {
+  size_t actual_count = token_array_length(ta);
+  if (actual_count != expected_count) {
+    printf("\nToken acount mismatch - dumping arrays for debugging:");
+    dump_token_array(ta, "Actual Tokens");
+  }
+  cr_assert_eq(actual_count, expected_count, "Expected %zu tokens, got %zu",
+               expected_count, actual_count);
+
+  for (size_t i = 0; i < expected_count; i++) {
+    const FileLocation actual = token_array_at(ta, i).file_pos;
+    cr_assert_eq(actual.line, expected_line[i],
+                 "Token %zu: expected %ld:%ld, got %ld:%ld", i,
+                 expected_line[i], expected_col[i], actual.line, actual.col);
+    cr_assert_eq(actual.col, expected_col[i],
+                 "Token %zu: expected %ld:%ld, got %ld:%ld", i,
+                 expected_line[i], expected_col[i], actual.line, actual.col);
   }
 }
 
@@ -524,7 +549,7 @@ Test(lexer, token_array_operations) {
   cr_assert_eq(token_array_length(ta), 0, "New TokenArray should be empty");
   cr_assert(token_array_is_empty(ta), "New TokenArray should report as empty");
 
-  token_array_push_simple(ta, TOKEN_PLUS);
+  token_array_push_simple(ta, TOKEN_PLUS, (FileLocation){.col = 0, .line = 0});
   cr_assert_eq(token_array_length(ta), 1,
                "TokenArray should have 1 element after push");
   cr_assert(!token_array_is_empty(ta),
@@ -2018,6 +2043,30 @@ Test(lexer, strings_in_complex_program) {
   }
   cr_assert(found_hello, "Should find Hello string");
   cr_assert(found_world, "Should find World string");
+
+  token_array_destroy(&ta);
+}
+
+// ===============================
+// Test FileLocation API
+// ===============================
+
+Test(Lexer, basic_file_location_test) {
+  TokenArray ta = parse_string("Line one\nLines two\nLines three");
+  const size_t expected_col[] = {1, 6, 1, 7, 1, 7};
+  const size_t expected_line[] = {1, 1, 2, 2, 3, 3};
+  assert_filelocations_equal(ta, expected_line, expected_col,
+                             array_size(expected_line));
+
+  token_array_destroy(&ta);
+}
+
+Test(Lexer, file_location_eat_whitespace) {
+  TokenArray ta = parse_string("\n\n   Line three\n  Lines four\n\nLines five");
+  const size_t expected_col[] = {4, 9, 3, 9, 1, 7};
+  const size_t expected_line[] = {3, 3, 4, 4, 6, 6};
+  assert_filelocations_equal(ta, expected_line, expected_col,
+                             array_size(expected_line));
 
   token_array_destroy(&ta);
 }

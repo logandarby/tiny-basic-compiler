@@ -7,7 +7,6 @@
 // ------------------------------------
 
 #include "../../common/file_reader.h"
-#include "../../core/core.h"
 #include "token.h"
 
 // ------------------------------------

@@ -1,3 +1,7 @@
+# LSP Config 
+/compile_commands.json
+/.cache
+
 # Local Notes
 /notes/*
 
