@@ -38,3 +38,9 @@ bool er_has_errors(void);
 
 // Must be called ONLY at the very end of the program
 void er_free(void);
+
+#ifdef DZ_TESTING
+// Testing-only functions to access error details
+size_t er_get_error_count(void);
+CompilerError er_get_error_at(size_t index);
+#endif

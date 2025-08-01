@@ -59,3 +59,6 @@ size_t strspn_callback(const char *str, bool (*predicate)(char c));
 // Creates a new string and writes it into the buffer
 void strip_newline(const char *restrict str, char *restrict buffer,
                    size_t buffer_size);
+
+// Modify a string in place to get rid of tralining newlines (\n and \r)
+void strip_trailing_newlines(char *str, const size_t n);

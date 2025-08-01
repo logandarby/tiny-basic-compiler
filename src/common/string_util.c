@@ -99,3 +99,17 @@ void strip_newline(const char *restrict str, char *restrict buffer,
   }
   buffer[write_pos] = '\0';
 }
+
+void strip_trailing_newlines(char *str, const size_t n) {
+  if (!str)
+    return; // Handle null pointer
+  size_t len = strnlen(str, n);
+  if (len < n) {
+  }
+  if (len == 0)
+    return; // Handle empty string
+  // Work backwards from the end
+  while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r')) {
+    str[--len] = '\0';
+  }
+}

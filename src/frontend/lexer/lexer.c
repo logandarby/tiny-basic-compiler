@@ -115,9 +115,16 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
       const char delimiter_check[2] = {state.current_string_delim, '\0'};
       size_t string_start = pos;
       size_t current_pos = pos;
+      if (current_pos == line_length) {
+        // ERROR: Unterminated empty string at end of line
+        er_add_error(ERROR_LEXICAL, filename, line_number, pos,
+                     "Unterminated empty string. Remove the dangling delimiter "
+                     "(%s%c%s) at the end of the line.",
+                     KRED, state.current_string_delim, KNRM);
+      }
       while (current_pos < line_length) {
         current_pos += strcspn(line + current_pos, delimiter_check);
-        if (current_pos == line_length) {
+        if (current_pos >= line_length) {
           // ERROR: Unterminated string
           char *bad_string = malloc(line_length + 1);
           strip_newline(line + pos, bad_string, line_length + 1);
@@ -217,7 +224,7 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
     }
     // ERROR: Somehow the token is unknown. Report it.
     const char bad_char = line[pos];
-    er_add_error(ERROR_LEXICAL, filename, line_number, pos,
+    er_add_error(ERROR_LEXICAL, filename, line_number, pos + 1,
                  "Invalid character \"%s%c%s\" (hex code %02X) encountered. "
                  "Please only use basic ASCII characters in your code.",
                  KRED, bad_char, KNRM, (unsigned char)bad_char);

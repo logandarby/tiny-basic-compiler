@@ -68,4 +68,24 @@ void er_free(void) {
       free(err.file);
     }
   }
+  arrfree(ERROR_REPORTER.errors);
+  ERROR_REPORTER.errors = NULL;
 }
+
+#ifdef DZ_TESTING
+size_t er_get_error_count(void) {
+  if (!ERROR_REPORTER.errors) {
+    return 0;
+  }
+  return arrlen(ERROR_REPORTER.errors);
+}
+
+CompilerError er_get_error_at(size_t index) {
+  if (!ERROR_REPORTER.errors ||
+      index >= (size_t)arrlen(ERROR_REPORTER.errors)) {
+    CompilerError empty_error = {0};
+    return empty_error;
+  }
+  return ERROR_REPORTER.errors[index];
+}
+#endif

@@ -1,5 +1,6 @@
 #include "file_reader.h"
 #include "../debug/dz_debug.h"
+#include "string_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -122,6 +123,7 @@ void _filereader_debug_print(const FileReader fr) {
 // Reads the next line into the line buffer, and sets the
 // current word pointer to the start of the newline
 // If the file reaches the EOF, then both these are set to NULL
+// Strips the newlines at the end.
 bool _read_next_line(FileReader fr) {
   if (_filereader_is_eof(fr)) {
     fr->line_buffer[0] = '\0';
@@ -140,6 +142,7 @@ bool _read_next_line(FileReader fr) {
     fr->current_line_length = 0;
     return true;
   }
+  strip_trailing_newlines(fr->line_buffer, fr->line_buffer_size - 1);
   fr->current_line_length =
       bytes_read == -1 ? strlen(fr->line_buffer) : (size_t)bytes_read;
   return true;

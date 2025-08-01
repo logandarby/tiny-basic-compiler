@@ -92,7 +92,7 @@ Test(file_reader, basic_multiple_lines) {
       filereader_init_from_string("first line\nsecond line\nthird line");
   LineList *words = read_all_lines(fr);
 
-  const char *expected[] = {"first line\n", "second line\n", "third line"};
+  const char *expected[] = {"first line", "second line", "third line"};
   assert_lines_equal(words, expected, array_size(expected));
 
   linelist_destroy(words);
