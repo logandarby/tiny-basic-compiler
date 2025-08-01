@@ -86,3 +86,16 @@ size_t strspn_callback(const char *str, bool (*predicate)(char c)) {
   }
   return count;
 }
+
+void strip_newline(const char *restrict str, char *restrict buffer,
+                   size_t buffer_size) {
+  DZ_ASSERT(str && buffer && buffer_size > 0);
+  size_t write_pos = 0;
+  for (size_t read_pos = 0;
+       str[read_pos] != '\0' && write_pos < buffer_size - 1; read_pos++) {
+    if (str[read_pos] != '\n' && str[read_pos] != '\r') {
+      buffer[write_pos++] = str[read_pos];
+    }
+  }
+  buffer[write_pos] = '\0';
+}

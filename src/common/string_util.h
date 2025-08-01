@@ -55,3 +55,7 @@ bool string_slice_equals(const char *str_slice, const size_t str_length,
 
 // Custom version of strcpn using a callback instead of a list of characters
 size_t strspn_callback(const char *str, bool (*predicate)(char c));
+
+// Creates a new string and writes it into the buffer
+void strip_newline(const char *restrict str, char *restrict buffer,
+                   size_t buffer_size);

@@ -1,6 +1,8 @@
 #include "lexer.h"
+#include "../../common/error_reporter.h"
 #include "../../common/file_reader.h"
 #include "../../common/string_util.h"
+#include "dz_debug.h"
 #include <assert.h>
 #include <string.h>
 
@@ -89,8 +91,11 @@ enum TOKEN get_token_from_string(const char *str_slice, const size_t str_length,
 }
 
 // Parses tokens from the line, and adds them to the TokenArray
-void _lexer_parse_line(const char *const line, const size_t max_line_length,
-                       const size_t line_number, TokenArray ta) {
+void _lexer_parse_line(const char *const line, const FileReader fr,
+                       TokenArray ta) {
+  const size_t max_line_length = filereader_get_linebuffer_length(fr);
+  const size_t line_number = filereader_get_current_line_number(fr);
+  const char *filename = filereader_get_filename_ref(fr);
   // FSM State
   LexerState state = {
       .current_string_delim = '\0',
@@ -113,7 +118,14 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
       while (current_pos < line_length) {
         current_pos += strcspn(line + current_pos, delimiter_check);
         if (current_pos == line_length) {
-          // Unterminated string
+          // ERROR: Unterminated string
+          char *bad_string = malloc(line_length + 1);
+          strip_newline(line + pos, bad_string, line_length + 1);
+          er_add_error(ERROR_LEXICAL, filename, line_number, pos,
+                       "Unterminated string \"%s\". Make sure to end your "
+                       "strings with the delimiter %c",
+                       bad_string, state.current_string_delim);
+          free(bad_string);
           break;
         }
         // Check if the delimiter is escaped
@@ -135,6 +147,7 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
       // If it reached the end of line, it didn't find the delimiter, so the
       // token is unknown
       if (pos + string_length == line_length) {
+        // Error reporting handled earlier
         token_array_push_simple(ta, TOKEN_UNKNOWN, file_location);
       } else {
         // Clean string of any escaped characters, and push the string
@@ -202,6 +215,12 @@ void _lexer_parse_line(const char *const line, const size_t max_line_length,
       pos += word_length;
       continue;
     }
+    // ERROR: Somehow the token is unknown. Report it.
+    const char bad_char = line[pos];
+    er_add_error(ERROR_LEXICAL, filename, line_number, pos,
+                 "Invalid character \"%s%c%s\" (hex code %02X) encountered. "
+                 "Please only use basic ASCII characters in your code.",
+                 KRED, bad_char, KNRM, (unsigned char)bad_char);
     token_array_push_simple(ta, TOKEN_UNKNOWN, file_location);
     pos += 1;
   }
@@ -219,8 +238,7 @@ TokenArray lexer_parse(FileReader filereader) {
     if (!line) {
       break; // EOF reached
     }
-    _lexer_parse_line(line, filereader_get_linebuffer_length(filereader),
-                      filereader_get_current_line_number(filereader), ta);
+    _lexer_parse_line(line, filereader, ta);
   }
   return ta;
 }

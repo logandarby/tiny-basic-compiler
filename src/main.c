@@ -35,6 +35,10 @@ int main(const int argc, const char **argv) {
   ast_destroy(&ast);
   token_array_destroy(&tokens);
 
+  if (er_has_errors()) {
+    er_print_all_errors();
+  }
+
   er_free();
 
   return EXIT_SUCCESS;

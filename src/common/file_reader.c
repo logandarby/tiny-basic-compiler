@@ -270,3 +270,7 @@ size_t filereader_get_linebuffer_length(const FileReader fr) {
 size_t filereader_get_current_line_number(FileReader fr) {
   return fr->cursor_pos.line;
 }
+
+const char *filereader_get_filename_ref(const FileReader fr) {
+  return fr->filename;
+}

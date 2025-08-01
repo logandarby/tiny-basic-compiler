@@ -95,6 +95,8 @@ const char *filereader_get_current_line(const FileReader fr);
 
 size_t filereader_get_linebuffer_length(const FileReader fr);
 
+const char *filereader_get_filename_ref(const FileReader fr);
+
 // Frees and closes any files associated with the file reader
 // Sets the pointer to NULL to prevent double-free
 void filereader_destroy(FileReader *fr);
