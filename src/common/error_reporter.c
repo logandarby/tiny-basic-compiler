@@ -29,12 +29,17 @@ void er_add_error(ERROR_TYPE error, const char *file, size_t line, size_t col,
                   const char *msg, ...) {
   va_list args;
   va_start(args, msg);
+  er_add_error_v(error, file, line, col, msg, args);
+  va_end(args);
+}
+
+void er_add_error_v(ERROR_TYPE error, const char *file, size_t line, size_t col,
+                    const char *msg, va_list args) {
   char *formatted_msg = NULL;
   const int bytes_read = vasprintf(&formatted_msg, msg, args);
   if (!bytes_read) {
     DZ_THROW("Could not vasprintf -- out of memory");
   }
-  va_end(args);
 
   CompilerError new_error = {
       .col = col,

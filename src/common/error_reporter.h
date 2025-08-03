@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/core.h"
+#include <stdarg.h>
 
 #define ERROR_TYPE_X_VALUES                                                    \
   X(ERROR_LEXICAL, "Lexical")                                                  \
@@ -31,6 +32,10 @@ extern struct ErrorReporter ERROR_REPORTER;
 // Add an error. Takes a printf style format string.
 void er_add_error(ERROR_TYPE error, const char *file, size_t line, size_t col,
                   const char *msg, ...) FORMAT_PRINTF(5, 6);
+
+// Add an error. Takes a va_list for variadic arguments.
+void er_add_error_v(ERROR_TYPE error, const char *file, size_t line, size_t col,
+                    const char *msg, va_list args);
 
 void er_print_all_errors(void);
 
