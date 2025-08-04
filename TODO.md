@@ -1,17 +1,24 @@
 - [ ] implement basic emitter
   - After some basic research, it seems like x86-64 assembly might be the best
+- [ ] *IMPORTANT:* Looks like the next step is that we need proper semantic analysis for better error handling. We need:
+    - Variable analysis (avoid use before defined)
+    - Valid expression Analysis (for this, we need static typing)
+    - Type analysis (variables will be statically typed to avoid overhead at runtime)
+
 - [ ] Create basic semantic analyzer for variables
-- [ ] add labels and comments to lexer
+- [ ] add comments to lexer
 - [ ] right now, the contiguous array of nodes doesn't support deletion without collecting garbage. Depending on the optimizations I do, I might need to clean this up
   - This means implementing something like a freelist (set) of holes in the contiguous array
 - [ ] string pool (arena) should be interned using a hashmap inside the lexer to avoid duplicate identifiers being used
-- [ ] Implement a proper error handling approach with error reporter that pushes errors
+    - Make sure the API has const pointers and crap
 - [ ] maybe come up with better way to handle token array shared memory
   - really, its a problem of ownership of memory-- right now the architecture works fine so long as the ownership doesn't get more complicated
 - [ ] implement some basic optimizations (tail end recursion, constexpr with constant folding, etc.)
 - [ ] optimize hot paths w/ compiler attributes perchance
 - [ ] USE GPERF -- seems to be the standard for compiler hash tables
 
+- [x] add labels to lexer
+- [x] Implement a proper error handling approach with error reporter that pushes errors
 - [x] implement parser ast from tokenarray
 - [x] make ast nodeIDs a linked list I think.
   - I don't necessarily need pointers, since I already have nodeIDs.
