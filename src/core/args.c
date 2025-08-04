@@ -52,7 +52,6 @@ Args parse_args(const int argc, const char **argv) {
     if (is_flag(argv[1])) {
       panic_with_error(ARG_ERR_INCORRECT_ARGS);
     }
-    DZ_INFO("Parsing filename");
     struct Args *return_value = malloc(sizeof(struct Args));
     *return_value =
         (struct Args){.argType = ARG_TYPE_FILENAME, .filename = argv[1]};
@@ -64,7 +63,6 @@ Args parse_args(const int argc, const char **argv) {
   }
   // If its 3 args, then make sure the option flag is correct, and that the
   // proceeding code is literal code
-  DZ_INFO("Parsing literal code");
   struct Args *return_value = malloc(sizeof(struct Args));
   *return_value =
       (struct Args){.argType = ARG_TYPE_LITERAL, .code_literal = argv[2]};

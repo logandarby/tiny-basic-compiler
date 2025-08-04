@@ -1,6 +1,9 @@
 #include "../src/common/error_reporter.h"
 #include <criterion/criterion.h>
-#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "test_util.h"
 
 Test(error_reporter, basic_error_reporting) {
   // Add multiple different error types
@@ -17,9 +20,20 @@ Test(error_reporter, basic_error_reporting) {
   cr_assert(er_has_errors(), "Should have errors after adding multiple");
 
   // Print errors to verify output
-  printf("\n--- Testing multiple error output ---\n");
-  er_print_all_errors();
-  printf("--- End error output ---\n");
+  char *output = capture_fd_output(STDERR_FILENO, er_print_all_errors);
+  cr_assert_not_null(strstr(output, "test.c:10:5"),
+                     "Error output contains correct filename with column and "
+                     "line information");
+  cr_assert_not_null(strstr(output, "main.c:25:12"),
+                     "Error output contains correct filename with column and "
+                     "line information");
+  cr_assert_not_null(strstr(output, "parser.c:42:8"),
+                     "Error output contains correct filename with column and "
+                     "line information");
+  cr_assert_not_null(strstr(output, "input.txt:1:1"),
+                     "Error output contains correct filename with column and "
+                     "line information");
+  free(output);
 
   // Clean up
   er_free();

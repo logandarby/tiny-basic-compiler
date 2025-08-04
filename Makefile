@@ -28,14 +28,14 @@ C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
 
 # Debug build flags  
 DEBUG_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
-	-MMD -MP -fsanitize=address -g -O0 -fno-omit-frame-pointer -DDZ_DEBUG                          # Enable debug macros
+	-MMD -MP -fsanitize=undefined,address -g -O0 -fno-omit-frame-pointer -DDZ_DEBUG                          # Enable debug macros
 
 # Test build flags
 TEST_C_FLAGS := $(DEBUG_C_FLAGS) -DDZ_TESTING=1  # Debug flags + testing macros
 
 # Linker flags
-LD_FLAGS := -fsanitize=address                   # Link AddressSanitizer
-DEBUG_LD_FLAGS := -fsanitize=address -rdynamic   # AddressSanitizer + export symbols for backtraces
+LD_FLAGS := -fsanitize=undefined,address                   # Link AddressSanitizer
+DEBUG_LD_FLAGS := -fsanitize=undefined,address -rdynamic   # AddressSanitizer + export symbols for backtraces
 
 
 # =========================
@@ -69,7 +69,7 @@ TEST_DIR := ./tests
 TEST_BUILD_DIR := ./builds/tests
 TEST_EXEC ?= teeny-tests
 
-TEST_SRCS := $(shell find $(TEST_DIR) -name *_test.c)
+TEST_SRCS := $(shell find $(TEST_DIR) -name *_test.c -o -name test_util.c)
 PROD_SRCS_NO_MAIN := $(filter-out ./src/main.c,$(SRCS))
 TEST_OBJS := $(TEST_SRCS:%=$(TEST_BUILD_DIR)/%.o)
 PROD_TEST_OBJS := $(PROD_SRCS_NO_MAIN:%=$(TEST_BUILD_DIR)/%.o)

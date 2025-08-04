@@ -1,4 +1,5 @@
 #include "../src/core/args.h"
+#include "test_util.h"
 #include <criterion/criterion.h>
 
 // =========================
@@ -75,22 +76,20 @@ Test(args, parse_empty_code_literal) {
 Test(args, no_arguments_causes_exit, .exit_code = 1) {
   const char *argv[] = {"teeny"};
   const int argc = 1;
-
-  parse_args(argc, argv);
+  MUTED_OUTPUT { parse_args(argc, argv); }
 }
 
 Test(args, too_many_arguments_causes_exit, .exit_code = 1) {
   const char *argv[] = {"teeny", "-c", "code", "extra"};
   const int argc = 4;
 
-  parse_args(argc, argv);
+  MUTED_OUTPUT { parse_args(argc, argv); }
 }
 
 Test(args, wrong_flag_causes_exit, .exit_code = 1) {
   const char *argv[] = {"teeny", "-x", "code"};
   const int argc = 3;
-
-  parse_args(argc, argv);
+  MUTED_OUTPUT { parse_args(argc, argv); }
 }
 
 Test(args, missing_code_after_flag_causes_exit, .exit_code = 1) {
@@ -99,7 +98,7 @@ Test(args, missing_code_after_flag_causes_exit, .exit_code = 1) {
 
   // This should fail because -c requires an argument but we only have 2 args
   // total
-  parse_args(argc, argv);
+  MUTED_OUTPUT { parse_args(argc, argv); }
 }
 
 // =========================
