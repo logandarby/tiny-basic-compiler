@@ -40,13 +40,50 @@ const char *PRINT_STRING_HELPER = "# Given a string addr in rdi, prints it\n"
                                   "\tleave \n"
                                   "\tret\n";
 
-const char *LITERAL_DELIMITER = "_static_";
-const char *SYMBOL_DELIMITER = "_var_";
+// Safely prompts the user for an integer input. If a string is entered, it
+// Inteprets the first character as an ASCII integer
+const char *INPUT_INTEGER_HELPER = "input_integer:\n"
+                                   "\tsub     rsp, 56\n"
+                                   "\tmov     rdi, QWORD PTR stdout[rip]\n"
+                                   "\tcall    fflush\n"
+                                   "\tmov     esi, 32\n"
+                                   "\tlea     rdi, [rsp+16]\n"
+                                   "\tmov     rdx, QWORD PTR stdin[rip]\n"
+                                   "\tcall    fgets\n"
+                                   "\ttest    rax, rax\n"
+                                   "\tje      .input_integer_5\n"
+                                   "\tlea     rsi, [rsp+8]\n"
+                                   "\tmov     edx, 10\n"
+                                   "\tlea     rdi, [rsp+16]\n"
+                                   "\tcall    strtol\n"
+                                   "\tlea     rcx, [rsp+16]\n"
+                                   "\tcmp     QWORD PTR [rsp+8], rcx\n"
+                                   "\tje      .input_integer_8\n"
+                                   "\tmov     edx, 2147483648\n"
+                                   "\tadd     rdx, rax\n"
+                                   "\tshr     rdx, 32\n"
+                                   "\tjne     .input_integer_5\n"
+                                   "\tadd     rsp, 56\n"
+                                   "\tret\n"
+                                   ".input_integer_5:\n"
+                                   "\txor     eax, eax\n"
+                                   "\tadd     rsp, 56\n"
+                                   "\tret\n"
+                                   ".input_integer_8:\n"
+                                   "\tmovsx   eax, BYTE PTR [rsp+16]\n"
+                                   "\tadd     rsp, 56\n"
+                                   "\tret\n";
+
 const char *PRINT_INTEGER = "print_integer";
 const char *PRINT_STRING = "print_string";
+const char *INPUT_INTEGER = "input_integer";
+
+const char *LITERAL_DELIMITER = "_static_";
+const char *SYMBOL_DELIMITER = "_var_";
+const char *LABEL_DELIMITER = ".L";
 
 void _emit_literals(FILE *file, const LiteralTable literals) {
-  const size_t literal_len = (size_t)shlen(literals);
+  const size_t literal_len = shlenu(literals);
   for (size_t i = 0; i < literal_len; i++) {
     const LiteralHash lit = literals[i];
     fprintf(file, "\t%s%ld: .string \"%s\"\n", LITERAL_DELIMITER,
@@ -59,7 +96,7 @@ void _emit_literals(FILE *file, const LiteralTable literals) {
 // This initialized 4 bytes of memory (DWORD) which can be referenced later
 // using mov DWORD PTR var_name[rip], 10
 void _emit_symbols(FILE *file, const SymbolTable symbol_table) {
-  const size_t symbol_len = (size_t)shlen(symbol_table);
+  const size_t symbol_len = (size_t)shlenu(symbol_table);
   for (size_t i = 0; i < symbol_len; i++) {
     const SymbolHash sym = symbol_table[i];
     fprintf(file, "\t%s%s: .skip 8\n", SYMBOL_DELIMITER, sym.key);
@@ -220,6 +257,34 @@ void _emit_statement(FILE *file, AST *ast, NodeID statement_node,
     fprintf(file, "\tmov QWORD PTR %s%s[rip], rax\n", SYMBOL_DELIMITER,
             ident_token->text);
     return;
+  } else if (token->type == TOKEN_INPUT) {
+    // "INPUT" ident nl
+    const NodeID ident_node = ast_get_next_sibling(ast, first_child);
+    if (ident_node == NO_NODE)
+      return;
+    const Token *ident_token = ast_node_get_token(ast, ident_node);
+    DZ_ASSERT(ident_token->type == TOKEN_IDENT);
+    fprintf(file, "\tcall %s\n", INPUT_INTEGER);
+    fprintf(file, "\tmov QWORD PTR %s%s[rip], rax\n", SYMBOL_DELIMITER,
+            ident_token->text);
+    return;
+  } else if (token->type == TOKEN_LABEL) {
+    // LABEL ident
+    const NodeID label_ident_node = ast_get_next_sibling(ast, first_child);
+    if (label_ident_node == NO_NODE)
+      return;
+    const Token *ident_token = ast_node_get_token(ast, label_ident_node);
+    DZ_ASSERT(ident_token->type == TOKEN_IDENT);
+    fprintf(file, "%s%s:\n", LABEL_DELIMITER, ident_token->text);
+    return;
+  } else if (token->type == TOKEN_GOTO) {
+    const NodeID label_ident_node = ast_get_next_sibling(ast, first_child);
+    if (label_ident_node == NO_NODE)
+      return;
+    const Token *ident_token = ast_node_get_token(ast, label_ident_node);
+    DZ_ASSERT(ident_token->type == TOKEN_IDENT);
+    fprintf(file, "\tjmp %s%s\n", LABEL_DELIMITER, ident_token->text);
+    return;
   }
 }
 
@@ -248,6 +313,7 @@ void emit_x86(FILE *file, AST *ast, VariableTable *table) {
   fprintf(file, "%s", FUNC_POSTAMBLE);
   fprintf(file, "%s", PRINT_INT_HELPER);
   fprintf(file, "%s", PRINT_STRING_HELPER);
+  fprintf(file, "%s", INPUT_INTEGER_HELPER);
   fprintf(file, "%s", POSTAMBLE);
   return;
 }

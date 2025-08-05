@@ -13,8 +13,8 @@ typedef struct {
 AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
                                  AstTraversalGenericContext gen_ctx,
                                  void *ctx_void) {
-  // If the token is "LET" -- looks for sibling with identifier and adds it
-  // Id the token is a string -- adds literal to table
+  // If the token is a let statement, then sees if next is identifier and adds
+  // it Id the token is a string -- adds literal to table
   Ctx *ctx = (Ctx *)ctx_void;
   VariableTable *table = ctx->table;
   // Add string token
