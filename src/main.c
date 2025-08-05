@@ -9,6 +9,7 @@
 // -------------------------------------
 
 #include "ast/ast_utils.h"
+#include "backend/emitter-x86.h"
 #include "common/error_reporter.h"
 #include "common/file_reader.h"
 #include "common/symbol_table.h"
@@ -17,6 +18,7 @@
 #include "frontend/lexer/lexer.h"
 #include "frontend/parser/parser.h"
 #include <stb_ds.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 int main(const int argc, const char **argv) {
@@ -54,6 +56,8 @@ int main(const int argc, const char **argv) {
   printf("%s AST PRINT %s\n", SEP, SEP);
   ast_print(&ast);
 
+  // Debug print symbol tables
+
   VariableTable *vars = variables_collect_from_ast(&ast);
   printf("%s SYMBOL TABLE %s\n", SEP, SEP);
   for (size_t i = 0; i < (size_t)shlen(vars->symbol_table); i++) {
@@ -65,8 +69,16 @@ int main(const int argc, const char **argv) {
     LiteralHash lit = vars->literal_table[i];
     printf("Key: %s,\tValue: %ld\n", lit.key, lit.value.label);
   }
-  UNUSED(vars);
-  printf("%s END OUTPUT %s\n", SEP, SEP);
+
+  // Debug print generated ASM
+  printf("%s EMITTED ASM %s\n", SEP, SEP);
+  emit_x86(stdout, &ast, vars);
+  printf("%s END DEBUG OUTPUT %s\n", SEP, SEP);
+
+  // Open file and emit asm
+  FILE *out_file = fopen("out.s", "w");
+  emit_x86(out_file, &ast, vars);
+  fclose(out_file);
 
   variables_destroy(vars);
   ast_destroy(&ast);

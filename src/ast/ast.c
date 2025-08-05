@@ -192,6 +192,8 @@ NodeID ast_get_first_child(AST *ast, NodeID node) {
 }
 
 NodeID ast_get_next_sibling(AST *ast, NodeID node) {
+  if (node == NO_NODE)
+    return NO_NODE;
   return ast->node_array[node].next_sibling;
 }
 
