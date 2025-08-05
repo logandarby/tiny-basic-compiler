@@ -73,7 +73,7 @@ struct ASTNode {
 
 void ast_destroy(AST *ast);
 // The root of the ast
-NodeID ast_head(AST ast);
+NodeID ast_head(AST *ast);
 bool ast_is_empty(AST *ast);
 // Creates an empty Abstract Syntax Tree, used only for testing really
 AST ast_init(void);

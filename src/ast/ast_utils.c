@@ -8,8 +8,9 @@ static void _print_indent_with_tree(size_t indent) {
 }
 
 static AST_TRAVERSAL_ACTION
-_print_token(const Token *token, AstTraversalGenericContext generic_context,
-             void *context) {
+_print_token(const Token *token, NodeID node_id,
+             AstTraversalGenericContext generic_context, void *context) {
+  UNUSED(node_id);
   UNUSED(generic_context);
   size_t indent = *(size_t *)context;
   _print_indent_with_tree(indent);
@@ -55,7 +56,7 @@ void ast_print(AST *ast) {
   if (ast_is_empty(ast)) {
     printf("<EMPTY>\n");
   } else {
-    ast_traverse(ast, ast_head(*ast), &visitor, &indent);
+    ast_traverse(ast, ast_head(ast), &visitor, &indent);
   }
 }
 
@@ -112,10 +113,11 @@ _print_bracket_grammar_exit(GrammarNode *grammar, NodeID node_id,
 }
 
 static AST_TRAVERSAL_ACTION
-_print_bracket_token(const Token *token,
+_print_bracket_token(const Token *token, NodeID node_id,
                      AstTraversalGenericContext generic_context,
                      void *context) {
   UNUSED(generic_context);
+  UNUSED(node_id);
   BracketPrintContext *ctx = (BracketPrintContext *)context;
   const char *token_str = token_type_to_string(token->type);
   _write_to_bracket_context(ctx, token_str);
@@ -142,7 +144,7 @@ char *ast_bracket_print(AST *ast) {
   if (ast_is_empty(ast)) {
     return strdup("<EMPTY>");
   }
-  ast_traverse(ast, ast_head(*ast), &visitor, &ctx);
+  ast_traverse(ast, ast_head(ast), &visitor, &ctx);
   return ctx.str;
 }
 

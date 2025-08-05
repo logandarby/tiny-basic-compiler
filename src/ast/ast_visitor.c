@@ -1,4 +1,5 @@
 #include "ast_visitor.h"
+#include "ast.h"
 
 // ====================
 // TRAVERSAL UTILITIES
@@ -13,10 +14,11 @@ _ast_traverse_with_context(AST *ast, NodeID current_node,
   // Visit the current node
   AST_TRAVERSAL_ACTION action = AST_TRAVERSAL_CONTINUE;
 
-  if (ast_node_is_token(ast, current_node)) {
+  if (ast_node_is_token(ast, current_node) && visitor->visit_token != NULL) {
     action = visitor->visit_token(ast_node_get_token(ast, current_node),
-                                  generic_context, context);
-  } else {
+                                  current_node, generic_context, context);
+  } else if (ast_node_is_grammar(ast, current_node) &&
+             visitor->visit_grammar_enter != NULL) {
     action = visitor->visit_grammar_enter(
         ast_node_get_grammar_mut(ast, current_node), current_node,
         generic_context, context);
@@ -48,7 +50,8 @@ _ast_traverse_with_context(AST *ast, NodeID current_node,
   }
 
   // Exit grammar node
-  if (ast_node_is_grammar(ast, current_node)) {
+  if (ast_node_is_grammar(ast, current_node) &&
+      visitor->visit_grammar_exit != NULL) {
     action =
         visitor->visit_grammar_exit(ast_node_get_grammar_mut(ast, current_node),
                                     current_node, generic_context, context);

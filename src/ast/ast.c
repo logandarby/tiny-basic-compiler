@@ -169,10 +169,11 @@ AST ast_init(void) {
   return ast;
 }
 
-NodeID ast_head(AST ast) {
-  DZ_ASSERT(ast.node_array_size > 0,
+NodeID ast_head(AST *ast) {
+  DZ_ASSERT(ast);
+  DZ_ASSERT(ast->node_array_size > 0,
             "Tried to access AST head, when none exists");
-  return ast._head;
+  return ast->_head;
 }
 
 void ast_destroy(AST *ast) {

@@ -220,7 +220,8 @@ bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
     } else {
       const bool expr_success = _parse_expression(ast, statement_node, pc);
       if (!expr_success) {
-        pc_error_current_token(pc, "Expected expression after token PRINT");
+        pc_error_current_token(
+            pc, "Expected expression or string literal after PRINT statement");
       }
       return expr_success;
     }
@@ -424,6 +425,6 @@ AST ast_parse(const TokenArray ta) {
     return ast;
   }
   ParseContext pc = pc_init(ta);
-  _parse_program(&ast, ast_head(ast), &pc);
+  _parse_program(&ast, ast_head(&ast), &pc);
   return ast;
 }

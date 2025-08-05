@@ -768,7 +768,7 @@ Test(AST_Parse, complex_nested_program) {
   // produces a non-empty AST
   cr_assert(!ast_is_empty(&ast),
             "Complex nested program should parse successfully");
-  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(ast)), GRAMMAR_TYPE_PROGRAM,
+  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(&ast)), GRAMMAR_TYPE_PROGRAM,
                "Root should be PROGRAM node");
 
   ast_destroy(&ast);
@@ -806,7 +806,7 @@ Test(AST_Parse, all_comparison_operators) {
   // Verify that all comparison operators are parsed
   cr_assert(!ast_is_empty(&ast),
             "Program with all comparison operators should parse");
-  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(ast)), GRAMMAR_TYPE_PROGRAM,
+  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(&ast)), GRAMMAR_TYPE_PROGRAM,
                "Root should be PROGRAM node");
 
   ast_destroy(&ast);
@@ -874,7 +874,7 @@ Test(AST_Parse, fibonacci_like_program) {
 
   cr_assert(!ast_is_empty(&ast),
             "Fibonacci-like program should parse successfully");
-  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(ast)), GRAMMAR_TYPE_PROGRAM,
+  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(&ast)), GRAMMAR_TYPE_PROGRAM,
                "Root should be PROGRAM node");
 
   ast_destroy(&ast);
@@ -901,7 +901,7 @@ Test(AST_Parse, number_guessing_game) {
 
   cr_assert(!ast_is_empty(&ast),
             "Number guessing game should parse successfully");
-  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(ast)), GRAMMAR_TYPE_PROGRAM,
+  cr_assert_eq(ast_node_get_grammar(&ast, ast_head(&ast)), GRAMMAR_TYPE_PROGRAM,
                "Root should be PROGRAM node");
 
   ast_destroy(&ast);

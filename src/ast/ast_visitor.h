@@ -31,8 +31,8 @@ typedef struct {
 // is passed to the visitor.
 typedef struct {
   AST_TRAVERSAL_ACTION(*visit_token)
-  (const Token *token, AstTraversalGenericContext generic_context,
-   void *context);
+  (const Token *token, NodeID node_id,
+   AstTraversalGenericContext generic_context, void *context);
   AST_TRAVERSAL_ACTION(*visit_grammar_enter)
   (GrammarNode *grammar, NodeID node_id,
    AstTraversalGenericContext generic_context, void *context);
