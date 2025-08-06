@@ -18,6 +18,7 @@
 #include "dz_debug.h"
 #include "frontend/lexer/lexer.h"
 #include "frontend/parser/parser.h"
+#include "platform.h"
 #include <stb_ds.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +26,22 @@
 static const bool VERBOSE = false;
 
 int main(const int argc, const char **argv) {
+
+  if (HOST_INFO.os != OS_WINDOWS && HOST_INFO.os != OS_LINUX) {
+    fprintf(stderr,
+            "%s[ERROR]%s Target OS is not supported. Teeny may be used with "
+            "either %sLinux%s or %sWindows%s\n",
+            KRED, KNRM, KCYN, KNRM, KCYN, KNRM);
+    return EXIT_FAILURE;
+  }
+  if (HOST_INFO.arch != ARCH_X86_64) {
+    fprintf(stderr,
+            "%s[ERROR]%s Target architecture is not supported. Teeny can be "
+            "used only with 64 bit x86 architecture\n",
+            KRED, KNRM);
+    return EXIT_FAILURE;
+  }
+
   static int exit_code = EXIT_SUCCESS;
   static const char *SEP = "-------------------";
   Args args = parse_args(argc, argv);

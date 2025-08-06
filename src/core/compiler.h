@@ -14,6 +14,8 @@
 /*                              COMPILER DETECTION                           */
 /* ========================================================================== */
 
+// Define the COMPILER as either of these
+
 #define COMPILER_GCC 1
 #define COMPILER_CLANG 2
 #define COMPILER_MSVC 3

@@ -16,6 +16,7 @@
 
 #include "../debug/dz_debug.h"
 #include "compiler.h"
+#include "platform.h"
 #include "portability.h"
 
 // =================
