@@ -25,7 +25,7 @@ void verify_and_free(char *str, const char *expected, const char *test_name) {
 
 // Helper to verify string with embedded nulls
 void verify_with_length_and_free(char *str, const char *expected,
-                                 size_t expected_len, const char *test_name) {
+                                 uint32_t expected_len, const char *test_name) {
   cr_assert_eq(memcmp(str, expected, expected_len), 0, "Test failed: %s",
                test_name);
   free(str);
@@ -319,11 +319,11 @@ Test(memory_tests, modification_in_place) {
 
 Test(memory_tests, string_shortening) {
   char *str = make_test_string("\\n\\t\\r\\\\"); // 8 chars -> 4 chars
-  size_t original_len = strlen(str);
+  uint32_t original_len = strlen(str);
 
   string_clean_escape_sequences(str, &DEFAULT_ESCAPE_CONFIG);
 
-  size_t new_len = strlen(str);
+  uint32_t new_len = strlen(str);
   cr_assert(new_len < original_len,
             "String should be shorter after processing");
   cr_assert_eq(new_len, 4, "Should be exactly 4 characters");

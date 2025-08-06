@@ -5,6 +5,7 @@
 // -------------------------------------
 
 #include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -21,8 +22,8 @@
 // =================
 
 // Like malloc, but panics on failure, and prints an error message
-extern void *xmalloc(const size_t size);
+extern void *xmalloc(const uint32_t size);
 // Like calloc, but panics on failure and prints an error message
-extern void *xcalloc(const size_t n, const size_t size);
+extern void *xcalloc(const uint32_t n, const uint32_t size);
 // Like realloc, but panics on failure and prints an error message
-extern void *xrealloc(void *old_ptr, const size_t new_size);
+extern void *xrealloc(void *old_ptr, const uint32_t new_size);

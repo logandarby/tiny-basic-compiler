@@ -22,7 +22,7 @@ typedef struct Arena {
 Arena arena_init(void);
 
 // Allocates memory from the arena
-void *arena_alloc(Arena *a, size_t size);
+void *arena_alloc(Arena *a, uint32_t size);
 
 // Frees the entire arena and all its regions
 void arena_destroy(Arena *a);

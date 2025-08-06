@@ -21,7 +21,7 @@ static Token create_test_token(enum TOKEN type, const char *text) {
 
   // For tokens that should have text, allocate and copy
   if (text != NULL) {
-    size_t len = strlen(text);
+    uint32_t len = strlen(text);
     token.text = malloc(len + 1);
     strcpy(token.text, text);
   }
@@ -612,13 +612,14 @@ Test(AST, ast_node_access_all_grammar_types) {
                           GRAMMAR_TYPE_EXPRESSION, GRAMMAR_TYPE_TERM,
                           GRAMMAR_TYPE_UNARY,      GRAMMAR_TYPE_PRIMARY};
 
-  size_t num_types = sizeof(types) / sizeof(types[0]);
+  uint32_t num_types = sizeof(types) / sizeof(types[0]);
 
-  for (size_t i = 0; i < num_types && i < TEST_MAX_CHILDREN; i++) {
+  for (uint32_t i = 0; i < num_types && i < TEST_MAX_CHILDREN; i++) {
     ast_node_add_child_grammar(&ast, root, types[i]);
     NodeID child = ast_node_get_child(&ast, root, (short)i);
     GRAMMAR_TYPE retrieved_type = ast_node_get_grammar(&ast, child);
-    cr_assert_eq(retrieved_type, types[i], "Grammar type %zu should match", i);
+    cr_assert_eq(retrieved_type, types[i],
+                 "Grammar type %" PRIu32 " should match", i);
   }
 
   ast_destroy(&ast);
@@ -638,9 +639,9 @@ Test(AST, ast_node_access_all_token_types) {
                      {TOKEN_PLUS, NULL},
                      {TOKEN_IF, NULL}};
 
-  size_t num_tokens = sizeof(test_tokens) / sizeof(test_tokens[0]);
+  uint32_t num_tokens = sizeof(test_tokens) / sizeof(test_tokens[0]);
 
-  for (size_t i = 0; i < num_tokens && i < TEST_MAX_CHILDREN; i++) {
+  for (uint32_t i = 0; i < num_tokens && i < TEST_MAX_CHILDREN; i++) {
     Token token = create_test_token(test_tokens[i].type, test_tokens[i].text);
     ast_node_add_child_token(&ast, root, token);
 
@@ -648,12 +649,13 @@ Test(AST, ast_node_access_all_token_types) {
     const Token *retrieved_token = ast_node_get_token(&ast, child);
 
     cr_assert_eq(retrieved_token->type, test_tokens[i].type,
-                 "Token type %zu should match", i);
+                 "Token type %" PRIu32 " should match", i);
     if (test_tokens[i].text) {
       cr_assert_str_eq(retrieved_token->text, test_tokens[i].text,
-                       "Token text %zu should match", i);
+                       "Token text %" PRIu32 " should match", i);
     } else {
-      cr_assert_null(retrieved_token->text, "Token text %zu should be NULL", i);
+      cr_assert_null(retrieved_token->text,
+                     "Token text %" PRIu32 " should be NULL", i);
     }
 
     destroy_test_token(&token);
@@ -670,7 +672,7 @@ Test(AST, ast_handles_node_array_growth) {
   AST ast = ast_init();
   NodeID root = create_root_node(&ast, GRAMMAR_TYPE_PROGRAM);
 
-  size_t initial_capacity = ast.node_array_capacity;
+  uint32_t initial_capacity = ast.node_array_capacity;
 
   // Create a deep tree to exceed initial capacity and trigger reallocation
   // We'll create a chain: root -> grammar -> grammar -> ... -> token
@@ -731,11 +733,11 @@ Test(AST, ast_maintains_integrity_after_reallocation) {
 
   // Build a deep tree from the expression node to force multiple reallocations
   NodeID current_node = expr_node;
-  size_t initial_capacity = ast.node_array_capacity;
+  uint32_t initial_capacity = ast.node_array_capacity;
 
   // Create enough nodes to trigger reallocation (respecting NodeID limit)
-  const size_t limit = ast.node_array_capacity * 3;
-  for (size_t i = 0; i < limit; i++) {
+  const uint32_t limit = ast.node_array_capacity * 3;
+  for (uint32_t i = 0; i < limit; i++) {
     ast_node_add_child_grammar(&ast, current_node, GRAMMAR_TYPE_TERM);
     current_node = ast_node_get_child(&ast, current_node, 0);
   }
@@ -834,14 +836,14 @@ Test(AST, ast_handles_deeply_nested_structure) {
                           GRAMMAR_TYPE_PRIMARY};
 
   NodeID current = root;
-  for (size_t i = 0; i < sizeof(types) / sizeof(types[0]); i++) {
+  for (uint32_t i = 0; i < sizeof(types) / sizeof(types[0]); i++) {
     ast_node_add_child_grammar(&ast, current, types[i]);
     current = ast_node_get_child(&ast, current, 0);
 
     // Verify the grammar type
     GRAMMAR_TYPE actual_type = ast_node_get_grammar(&ast, current);
     cr_assert_eq(actual_type, types[i],
-                 "Grammar type at depth %zu should match", i);
+                 "Grammar type at depth %" PRIu32 " should match", i);
   }
 
   // Add final token at the deepest level

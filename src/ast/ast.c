@@ -5,7 +5,7 @@
 // ====================
 
 #define INIT_NODE_ARRAY_SIZE 512
-const size_t AST_RESIZE_FACTOR = 2;
+const uint32_t AST_RESIZE_FACTOR = 2;
 const NodeID NO_NODE = ((NodeID)-1);
 
 // ====================
@@ -201,11 +201,11 @@ NodeID ast_get_next_sibling(AST *ast, NodeID node) {
 // TESTING UTIL IMPLEMENTATION
 // ====================
 
-size_t ast_node_get_child_count(AST *ast, NodeID node_id) {
+uint32_t ast_node_get_child_count(AST *ast, NodeID node_id) {
   if (ast_node_is_grammar(ast, node_id)) {
     ASTNode *node = _get_node(ast, node_id);
     NodeID current_child = node->node.grammar.first_child;
-    size_t total_children = 0;
+    uint32_t total_children = 0;
     while (current_child != NO_NODE) {
       total_children++;
       current_child = ast_get_next_sibling(ast, current_child);

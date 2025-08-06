@@ -54,8 +54,8 @@ enum TOKEN {
 };
 
 typedef struct FileLocation {
-  size_t line;
-  size_t col;
+  uint32_t line;
+  uint32_t col;
 } FileLocation;
 
 typedef struct {
@@ -74,7 +74,7 @@ typedef struct TokenArrayHandle *TokenArray;
 
 // Create token. Must call token_destroy afterwards
 Token token_create(TokenArray ta, enum TOKEN type, const char *text,
-                   size_t length, FileLocation location);
+                   uint32_t length, FileLocation location);
 // Create token. Must call token_destroy afterwards
 Token token_create_simple(enum TOKEN type, FileLocation location);
 
@@ -104,28 +104,28 @@ TokenArray token_array_init(void);
 
 // Push a token with text content
 void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
-                      size_t length, FileLocation location);
+                      uint32_t length, FileLocation location);
 // Pushes a string token with string content
 // First cleans the string of any escaped characters. For example, if the string
 // 'Hello \"quotes\"' is pushed with the delimiter={"}, then the string will be
 // cleaned to 'Hello "quotes"'.
 void token_array_clean_and_push_string(TokenArray ta, const char *text,
-                                       size_t length, FileLocation location);
+                                       uint32_t length, FileLocation location);
 // Push a simple token (operators, keywords, etc.) with no text content
 void token_array_push_simple(TokenArray ta, enum TOKEN token_type,
                              FileLocation location);
 
 // Returns the length of the TokenArray
-size_t token_array_length(const TokenArray ta);
+uint32_t token_array_length(const TokenArray ta);
 
 // Returns the capacity of the TokenArray
-size_t token_array_capacity(const TokenArray ta);
+uint32_t token_array_capacity(const TokenArray ta);
 
 // Returns if the array is empty
 bool token_array_is_empty(const TokenArray ta);
 
 // Returns token at a location
-Token token_array_at(const TokenArray ta, size_t index);
+Token token_array_at(const TokenArray ta, uint32_t index);
 
 // Destroys a TokenArray, all the tokens within it, and sets the pointer to NULL
 void token_array_destroy(TokenArray *ta);

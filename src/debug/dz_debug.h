@@ -15,6 +15,7 @@
 
 #include "../core/compiler.h"
 #include <execinfo.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,11 +41,11 @@ extern const char *KMAG;
 extern const char *KCYN;
 
 // More readable strcmp == 0 call
-extern bool str_eq(const char *s1, const char *s2, size_t n);
+extern bool str_eq(const char *s1, const char *s2, uint32_t n);
 
 // More readable memvmp == 0
-extern bool mem_eq(const void *s1, const void *s2, size_t s1_size,
-                   size_t s2_size);
+extern bool mem_eq(const void *s1, const void *s2, uint32_t s1_size,
+                   uint32_t s2_size);
 
 // Util Macros
 #define DZ_EXPAND_MACRO(x) x

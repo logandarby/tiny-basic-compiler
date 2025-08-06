@@ -16,7 +16,7 @@
 
 typedef struct ASTNode ASTNode;
 // Index into out-of-band array with ASTNode struct
-typedef size_t NodeID;
+typedef uint32_t NodeID;
 // Represents when no node is present
 extern const NodeID NO_NODE;
 ;
@@ -48,8 +48,8 @@ typedef struct {
   NodeID _head;
   // Stores the ASTNodes out of band -- dynamically reallocates
   ASTNode *node_array;
-  size_t node_array_capacity;
-  size_t node_array_size;
+  uint32_t node_array_capacity;
+  uint32_t node_array_size;
 } AST;
 
 typedef enum AST_NODE_TYPE {
@@ -113,5 +113,5 @@ const char *grammar_type_to_string(GRAMMAR_TYPE type);
 // the node is a grammar node before calling thing
 NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number);
 // Get the # of children the node has
-size_t ast_node_get_child_count(AST *ast, NodeID node_id);
+uint32_t ast_node_get_child_count(AST *ast, NodeID node_id);
 #endif

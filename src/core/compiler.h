@@ -153,7 +153,7 @@
 
 /* Offset of member in struct */
 #ifndef offsetof
-#define offsetof(type, member) ((size_t) & ((type *)0)->member)
+#define offsetof(type, member) ((uint32_t) & ((type *)0)->member)
 #endif
 
 /* Container_of pattern */

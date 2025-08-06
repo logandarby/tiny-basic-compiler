@@ -16,8 +16,8 @@ typedef enum {
 
 typedef struct {
   ERROR_TYPE type;
-  size_t line;
-  size_t col;
+  uint32_t line;
+  uint32_t col;
   char *message;
   char *file;
 } CompilerError;
@@ -30,12 +30,12 @@ extern struct ErrorReporter ERROR_REPORTER;
 // Public API
 
 // Add an error. Takes a printf style format string.
-void er_add_error(ERROR_TYPE error, const char *file, size_t line, size_t col,
-                  const char *msg, ...) FORMAT_PRINTF(5, 6);
+void er_add_error(ERROR_TYPE error, const char *file, uint32_t line,
+                  uint32_t col, const char *msg, ...) FORMAT_PRINTF(5, 6);
 
 // Add an error. Takes a va_list for variadic arguments.
-void er_add_error_v(ERROR_TYPE error, const char *file, size_t line, size_t col,
-                    const char *msg, va_list args);
+void er_add_error_v(ERROR_TYPE error, const char *file, uint32_t line,
+                    uint32_t col, const char *msg, va_list args);
 
 void er_print_all_errors(void);
 
@@ -46,6 +46,6 @@ void er_free(void);
 
 #ifdef DZ_TESTING
 // Testing-only functions to access error details
-size_t er_get_error_count(void);
-CompilerError er_get_error_at(size_t index);
+uint32_t er_get_error_count(void);
+CompilerError er_get_error_at(uint32_t index);
 #endif

@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <execinfo.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,12 +52,12 @@ static void get_formatted_time(char *buffer, const ssize_t buffer_size) {
   time_t rawtime;
   time(&rawtime);
   struct tm *timeinfo = localtime(&rawtime);
-  strftime(buffer, (size_t)buffer_size, "%Y-%m-%d - %H:%M:%S", timeinfo);
+  strftime(buffer, (uint32_t)buffer_size, "%Y-%m-%d - %H:%M:%S", timeinfo);
 }
 
 static const char *strrstr(const char *string, const char *find) {
-  const size_t find_len = strlen(find);
-  const size_t string_len = strlen(string);
+  const uint32_t find_len = strlen(find);
+  const uint32_t string_len = strlen(string);
   for (const char *cp = string + string_len - find_len; cp >= string; cp--) {
     if (strncmp(cp, find, find_len) == 0)
       return cp;
@@ -64,11 +65,12 @@ static const char *strrstr(const char *string, const char *find) {
   return NULL;
 }
 
-bool str_eq(const char *s1, const char *s2, size_t n) {
+bool str_eq(const char *s1, const char *s2, uint32_t n) {
   return strncmp(s1, s2, n) == 0;
 }
 
-bool mem_eq(const void *s1, const void *s2, size_t s1_size, size_t s2_size) {
+bool mem_eq(const void *s1, const void *s2, uint32_t s1_size,
+            uint32_t s2_size) {
   if (s1_size != s2_size) {
     return false;
   }

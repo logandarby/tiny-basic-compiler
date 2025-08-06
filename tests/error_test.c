@@ -19,12 +19,12 @@ static TokenArray parse_string_with_errors(const char *input) {
 }
 
 // Helper function to get error count
-static size_t get_error_count(void) { return er_get_error_count(); }
+static uint32_t get_error_count(void) { return er_get_error_count(); }
 
 // Helper function to get specific error
-static CompilerError get_error_at(size_t index) {
-  cr_assert_lt(index, get_error_count(), "Error index %zu out of bounds",
-               index);
+static CompilerError get_error_at(uint32_t index) {
+  cr_assert_lt(index, get_error_count(),
+               "Error index %" PRIu32 " out of bounds", index);
   return er_get_error_at(index);
 }
 
@@ -35,10 +35,10 @@ static bool error_contains_text(const CompilerError *error, const char *text) {
 
 // Helper function to find error with specific characteristics
 static bool find_error_with_text_and_position(const char *text,
-                                              size_t expected_line,
-                                              size_t expected_col) {
-  size_t count = get_error_count();
-  for (size_t i = 0; i < count; i++) {
+                                              uint32_t expected_line,
+                                              uint32_t expected_col) {
+  uint32_t count = get_error_count();
+  for (uint32_t i = 0; i < count; i++) {
     CompilerError error = get_error_at(i);
     if (error_contains_text(&error, text) && error.line == expected_line &&
         error.col == expected_col) {
@@ -88,10 +88,11 @@ Test(error_test, unknown_character_multiple) {
                "Should have exactly 4 errors for 4 unknown characters");
 
   // All errors should be lexical
-  for (size_t i = 0; i < get_error_count(); i++) {
+  for (uint32_t i = 0; i < get_error_count(); i++) {
     CompilerError error = get_error_at(i);
-    cr_assert_eq(error.type, ERROR_LEXICAL, "Error %zu should be lexical", i);
-    cr_assert_eq(error.line, 1, "Error %zu should be on line 1", i);
+    cr_assert_eq(error.type, ERROR_LEXICAL,
+                 "Error %" PRIu32 " should be lexical", i);
+    cr_assert_eq(error.line, 1, "Error %" PRIu32 " should be on line 1", i);
   }
 
   // Check specific positions (1-indexed)
@@ -106,9 +107,9 @@ Test(error_test, unknown_character_multiple) {
 
   // Should produce 4 TOKEN_UNKNOWN
   cr_assert_eq(token_array_length(ta), 4, "Should produce 4 tokens");
-  for (size_t i = 0; i < token_array_length(ta); i++) {
+  for (uint32_t i = 0; i < token_array_length(ta); i++) {
     cr_assert_eq(token_array_at(ta, i).type, TOKEN_UNKNOWN,
-                 "Token %zu should be TOKEN_UNKNOWN", i);
+                 "Token %" PRIu32 " should be TOKEN_UNKNOWN", i);
   }
 
   token_array_destroy(&ta);
@@ -170,10 +171,11 @@ Test(error_test, unknown_character_special_chars) {
                "Should have 6 errors for special characters");
 
   // All should be lexical errors on line 1
-  for (size_t i = 0; i < get_error_count(); i++) {
+  for (uint32_t i = 0; i < get_error_count(); i++) {
     CompilerError error = get_error_at(i);
-    cr_assert_eq(error.type, ERROR_LEXICAL, "Error %zu should be lexical", i);
-    cr_assert_eq(error.line, 1, "Error %zu should be on line 1", i);
+    cr_assert_eq(error.type, ERROR_LEXICAL,
+                 "Error %" PRIu32 " should be lexical", i);
+    cr_assert_eq(error.line, 1, "Error %" PRIu32 " should be on line 1", i);
   }
 
   token_array_destroy(&ta);
@@ -352,7 +354,7 @@ Test(error_test, mixed_unknown_char_and_unterminated_string) {
 
   // Check unterminated string error
   bool found_unterminated = false;
-  for (size_t i = 0; i < get_error_count(); i++) {
+  for (uint32_t i = 0; i < get_error_count(); i++) {
     CompilerError error = get_error_at(i);
     if (error_contains_text(&error, "Unterminated string")) {
       found_unterminated = true;
@@ -383,7 +385,7 @@ Test(error_test, errors_with_correct_file_position_complex) {
 
   // Unterminated string starts after "42   "
   bool found_unterminated = false;
-  for (size_t i = 0; i < get_error_count(); i++) {
+  for (uint32_t i = 0; i < get_error_count(); i++) {
     CompilerError error = get_error_at(i);
     if (error_contains_text(&error, "Unterminated string")) {
       found_unterminated = true;
@@ -426,7 +428,7 @@ Test(error_test, error_positions_across_multiple_lines) {
 
   // Check unterminated string error on line 3, column 5
   bool found_unterminated = false;
-  for (size_t i = 0; i < get_error_count(); i++) {
+  for (uint32_t i = 0; i < get_error_count(); i++) {
     CompilerError error = get_error_at(i);
     if (error_contains_text(&error, "Unterminated string")) {
       found_unterminated = true;

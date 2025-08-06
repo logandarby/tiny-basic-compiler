@@ -124,7 +124,7 @@ Test(arena, arena_alloc_triggers_growth) {
 
   // Fill up the initial arena
   void *ptrs[10];
-  size_t allocation_size = INITIAL_ARENA_SIZE / 8;
+  uint32_t allocation_size = INITIAL_ARENA_SIZE / 8;
 
   for (int i = 0; i < 8; i++) {
     ptrs[i] = arena_alloc(&a, allocation_size);
@@ -355,7 +355,7 @@ Test(arena, arena_alternating_sizes) {
 
   // Alternate between small and large allocations
   for (int i = 0; i < 50; i++) {
-    size_t size = (i % 2 == 0) ? 8 : INITIAL_ARENA_SIZE / 4;
+    uint32_t size = (i % 2 == 0) ? 8 : INITIAL_ARENA_SIZE / 4;
     void *ptr = arena_alloc(&a, size);
     cr_assert_not_null(ptr, "Alternating allocation %d should succeed", i);
   }
@@ -502,7 +502,7 @@ Test(arena, arena_region_large_immediate_allocation) {
   Arena a = arena_init();
 
   // Allocate something larger than initial capacity as first allocation
-  size_t large_size = INITIAL_ARENA_SIZE * 3;
+  uint32_t large_size = INITIAL_ARENA_SIZE * 3;
   void *ptr1 = arena_alloc(&a, large_size);
   cr_assert_not_null(ptr1, "Large initial allocation should succeed");
 
@@ -529,17 +529,18 @@ Test(arena, arena_region_chain_multiple_growths) {
 
     // Write test data to verify memory integrity (only write to first 32 bytes
     // for safety)
-    size_t write_size = INITIAL_ARENA_SIZE > 32 ? 32 : INITIAL_ARENA_SIZE;
+    uint32_t write_size = INITIAL_ARENA_SIZE > 32 ? 32 : INITIAL_ARENA_SIZE;
     memset(ptrs[i], (char)('A' + i), write_size);
   }
 
   // Verify memory integrity across all regions
   for (int i = 0; i < 10; i++) {
     char *data = (char *)ptrs[i];
-    size_t check_size = INITIAL_ARENA_SIZE > 32 ? 32 : INITIAL_ARENA_SIZE;
-    for (size_t j = 0; j < check_size; j++) {
+    uint32_t check_size = INITIAL_ARENA_SIZE > 32 ? 32 : INITIAL_ARENA_SIZE;
+    for (uint32_t j = 0; j < check_size; j++) {
       cr_assert_eq(data[j], (char)('A' + i),
-                   "Memory corruption in allocation %d at byte %zu", i, j);
+                   "Memory corruption in allocation %d at byte %" PRIu32 "", i,
+                   j);
     }
   }
 
@@ -550,23 +551,24 @@ Test(arena, arena_region_mixed_allocation_sizes) {
   Arena a = arena_init();
 
   void *ptrs[50];
-  size_t sizes[] = {8,
-                    16,
-                    32,
-                    64,
-                    128,
-                    256,
-                    512,
-                    1024,
-                    INITIAL_ARENA_SIZE / 2,
-                    INITIAL_ARENA_SIZE};
-  size_t num_sizes = sizeof(sizes) / sizeof(sizes[0]);
+  uint32_t sizes[] = {8,
+                      16,
+                      32,
+                      64,
+                      128,
+                      256,
+                      512,
+                      1024,
+                      INITIAL_ARENA_SIZE / 2,
+                      INITIAL_ARENA_SIZE};
+  uint32_t num_sizes = sizeof(sizes) / sizeof(sizes[0]);
 
   // Mix small and large allocations to test region management
   for (int i = 0; i < 50; i++) {
-    size_t size = sizes[(size_t)i % num_sizes];
+    uint32_t size = sizes[(uint32_t)i % num_sizes];
     ptrs[i] = arena_alloc(&a, size);
-    cr_assert_not_null(ptrs[i], "Mixed allocation %d (size %zu) should succeed",
+    cr_assert_not_null(ptrs[i],
+                       "Mixed allocation %d (size %" PRIu32 ") should succeed",
                        i, size);
   }
 
@@ -608,21 +610,22 @@ Test(arena, arena_growth_exact_boundary_conditions) {
 Test(arena, arena_growth_progressive_doubling) {
   Arena a = arena_init();
 
-  size_t expected_capacities[] = {INITIAL_ARENA_SIZE, INITIAL_ARENA_SIZE * 2,
-                                  INITIAL_ARENA_SIZE * 4,
-                                  INITIAL_ARENA_SIZE * 8};
+  uint32_t expected_capacities[] = {INITIAL_ARENA_SIZE, INITIAL_ARENA_SIZE * 2,
+                                    INITIAL_ARENA_SIZE * 4,
+                                    INITIAL_ARENA_SIZE * 8};
 
   // Force progressive region doubling
-  for (size_t i = 0; i < 4; i++) {
+  for (uint32_t i = 0; i < 4; i++) {
     void *ptr = arena_alloc(&a, expected_capacities[i]);
-    cr_assert_not_null(ptr, "Progressive allocation %zu should succeed", i);
+    cr_assert_not_null(ptr, "Progressive allocation %" PRIu32 " should succeed",
+                       i);
 
     // Write and verify data
     memset(ptr, (char)('X' + i), 100);
     char *data = (char *)ptr;
     for (int j = 0; j < 100; j++) {
       cr_assert_eq(data[j], (char)('X' + i),
-                   "Data corruption in progressive allocation %zu", i);
+                   "Data corruption in progressive allocation %" PRIu32 "", i);
     }
   }
 
@@ -702,19 +705,20 @@ Test(arena, arena_growth_stress_random_sizes) {
   Arena a = arena_init();
 
   void *ptrs[200];
-  size_t sizes[200];
+  uint32_t sizes[200];
 
   // Generate random-ish sizes for stress testing
   for (int i = 0; i < 200; i++) {
     // Use a pseudo-random pattern based on index
-    sizes[i] = (size_t)(((i * 17 + 23) % 1000) + 1); // 1 to 1000 bytes
+    sizes[i] = (uint32_t)(((i * 17 + 23) % 1000) + 1); // 1 to 1000 bytes
     if (i % 10 == 0) {
       sizes[i] = INITIAL_ARENA_SIZE / 4; // Occasional large allocation
     }
 
     ptrs[i] = arena_alloc(&a, sizes[i]);
-    cr_assert_not_null(
-        ptrs[i], "Random allocation %d (size %zu) should succeed", i, sizes[i]);
+    cr_assert_not_null(ptrs[i],
+                       "Random allocation %d (size %" PRIu32 ") should succeed",
+                       i, sizes[i]);
 
     // Write pattern to detect corruption
     memset(ptrs[i], (char)(i % 256), sizes[i] > 100 ? 100 : sizes[i]);
@@ -723,10 +727,11 @@ Test(arena, arena_growth_stress_random_sizes) {
   // Verify memory integrity
   for (int i = 0; i < 200; i++) {
     char *data = (char *)ptrs[i];
-    size_t check_size = sizes[i] > 100 ? 100 : sizes[i];
-    for (size_t j = 0; j < check_size; j++) {
+    uint32_t check_size = sizes[i] > 100 ? 100 : sizes[i];
+    for (uint32_t j = 0; j < check_size; j++) {
       cr_assert_eq(data[j], (char)(i % 256),
-                   "Memory corruption in allocation %d at byte %zu", i, j);
+                   "Memory corruption in allocation %d at byte %" PRIu32 "", i,
+                   j);
     }
   }
 
@@ -738,7 +743,7 @@ Test(arena, arena_growth_stress_random_sizes) {
 // =========================
 
 struct allocation_size_params {
-  size_t size;
+  uint32_t size;
   const char *description;
 };
 
@@ -755,7 +760,7 @@ ParameterizedTestParameters(arena, arena_alloc_various_sizes) {
       {INITIAL_ARENA_SIZE * 2, "double arena size"},
       {INITIAL_ARENA_SIZE * 4, "quadruple arena size"}};
 
-  size_t nb_params = sizeof(params) / sizeof(struct allocation_size_params);
+  uint32_t nb_params = sizeof(params) / sizeof(struct allocation_size_params);
   return cr_make_param_array(struct allocation_size_params, params, nb_params);
 }
 

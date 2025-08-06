@@ -5,8 +5,8 @@
 
 typedef struct {
   char *buffer;
-  size_t size;
-  size_t capacity;
+  uint32_t size;
+  uint32_t capacity;
 } capture_buffer_t;
 
 char *capture_fd_output(int fd, void (*func)(void)) {
@@ -31,8 +31,8 @@ char *capture_fd_output(int fd, void (*func)(void)) {
 
   // Read all output (handle large outputs)
   char *buffer = malloc(4096);
-  size_t total_read = 0;
-  size_t capacity = 4096;
+  uint32_t total_read = 0;
+  uint32_t capacity = 4096;
   ssize_t bytes_read;
 
   while ((bytes_read = read(pipefd[0], buffer + total_read,

@@ -3,14 +3,14 @@
 #include "../../common/string_util.h"
 
 // Token Array Definitions
-const size_t INIT_CAPACITY = 512;
+const uint32_t INIT_CAPACITY = 512;
 const unsigned int CAPACITY_MULTIPLIER = 2;
 
 struct TokenArrayHandle {
   Token *head;
-  size_t size;     // # of elements stored
-  size_t capacity; // Total Capacity
-  Arena arena;     // Arena allocator for strings
+  uint32_t size;     // # of elements stored
+  uint32_t capacity; // Total Capacity
+  Arena arena;       // Arena allocator for strings
 };
 
 // ------------------------------------
@@ -18,7 +18,7 @@ struct TokenArrayHandle {
 // ------------------------------------
 
 Token token_create(TokenArray ta, enum TOKEN type, const char *text,
-                   size_t length, const FileLocation location) {
+                   uint32_t length, const FileLocation location) {
   Token t = {.type = type, .text = NULL, .file_pos = location};
   if (text) {
     t.text = arena_allocate_string(&ta->arena, text, text + length);
@@ -50,7 +50,7 @@ void token_destroy(Token token) { UNUSED(token); }
 // Token Array Implementation
 // ------------------------------------
 
-void _resize_token_array(TokenArray ta, const size_t new_size) {
+void _resize_token_array(TokenArray ta, const uint32_t new_size) {
   ta->head = xrealloc(ta->head, new_size * sizeof(Token));
   ta->capacity = new_size;
 }
@@ -76,7 +76,7 @@ void token_array_push_simple(TokenArray ta, enum TOKEN token_type,
 }
 
 void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
-                      size_t length, const FileLocation location) {
+                      uint32_t length, const FileLocation location) {
   if (ta->size == ta->capacity) {
     _resize_token_array(ta, ta->capacity * CAPACITY_MULTIPLIER);
   }
@@ -85,7 +85,7 @@ void token_array_push(TokenArray ta, enum TOKEN token_type, const char *text,
 }
 
 void token_array_clean_and_push_string(TokenArray ta, const char *text,
-                                       const size_t length,
+                                       const uint32_t length,
                                        const FileLocation location) {
 
   // Push the string
@@ -96,13 +96,13 @@ void token_array_clean_and_push_string(TokenArray ta, const char *text,
   string_clean_escape_sequences(token_text, NULL);
 }
 
-size_t token_array_length(const TokenArray ta) { return ta->size; }
+uint32_t token_array_length(const TokenArray ta) { return ta->size; }
 
-size_t token_array_capacity(const TokenArray ta) { return ta->capacity; }
+uint32_t token_array_capacity(const TokenArray ta) { return ta->capacity; }
 
 bool token_array_is_empty(const TokenArray ta) { return ta->size == 0; }
 
-Token token_array_at(const TokenArray ta, const size_t i) {
+Token token_array_at(const TokenArray ta, const uint32_t i) {
   return ta->head[i];
 }
 

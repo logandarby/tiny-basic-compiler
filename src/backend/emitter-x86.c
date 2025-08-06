@@ -89,10 +89,10 @@ const char *INTERNAL_LABEL_DELIMITER = ".IL";
 
 typedef struct {
   FILE *output;
-  size_t control_flow_label; // Used to create unique labels for IF and WHILE
-                             // statement
-  VariableTable *table;      // Non-owning reference
-  AST *ast;                  // Non-owning reference
+  uint32_t control_flow_label; // Used to create unique labels for IF and WHILE
+                               // statement
+  VariableTable *table;        // Non-owning reference
+  AST *ast;                    // Non-owning reference
 } Emitter;
 
 Emitter emitter_init(FILE *file, AST *ast, VariableTable *table) {
@@ -104,15 +104,15 @@ Emitter emitter_init(FILE *file, AST *ast, VariableTable *table) {
   };
 }
 
-size_t emitter_get_label(Emitter *emit) { return emit->control_flow_label++; }
+uint32_t emitter_get_label(Emitter *emit) { return emit->control_flow_label++; }
 
 void _emit_literals(Emitter *emit) {
   const LiteralTable literals = emit->table->literal_table;
-  const size_t literal_len = shlenu(literals);
-  for (size_t i = 0; i < literal_len; i++) {
+  const uint32_t literal_len = shlenu(literals);
+  for (uint32_t i = 0; i < literal_len; i++) {
     const LiteralHash lit = literals[i];
-    fprintf(emit->output, "\t%s%ld: .string \"%s\"\n", LITERAL_DELIMITER,
-            lit.value.label, lit.key);
+    fprintf(emit->output, "\t%s%" PRIu32 ": .string \"%s\"\n",
+            LITERAL_DELIMITER, lit.value.label, lit.key);
   }
 }
 
@@ -122,8 +122,8 @@ void _emit_literals(Emitter *emit) {
 // using mov DWORD PTR var_name[rip], 10
 void _emit_symbols(Emitter *emit) {
   const SymbolTable symbol_table = emit->table->symbol_table;
-  const size_t symbol_len = (size_t)shlenu(symbol_table);
-  for (size_t i = 0; i < symbol_len; i++) {
+  const uint32_t symbol_len = (uint32_t)shlenu(symbol_table);
+  for (uint32_t i = 0; i < symbol_len; i++) {
     const SymbolHash sym = symbol_table[i];
     fprintf(emit->output, "\t%s%s: .skip 8\n", SYMBOL_DELIMITER, sym.key);
   }
@@ -292,8 +292,8 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
         ast_node_get_token(ast, expr_or_str)->type == TOKEN_STRING) {
       const Token *string = ast_node_get_token(ast, expr_or_str);
       LiteralInfo literal = shget(emit->table->literal_table, string->text);
-      fprintf(emit->output, "\tlea rdi, %s%ld[rip]\n", LITERAL_DELIMITER,
-              literal.label);
+      fprintf(emit->output, "\tlea rdi, %s%" PRIu32 "[rip]\n",
+              LITERAL_DELIMITER, literal.label);
       fprintf(emit->output, "\tcall %s\n", PRINT_STRING);
       return;
     }
@@ -357,9 +357,9 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     NodeID op_node = _emit_comparison(emit, comp_node);
     const char *jmp_inst = _get_jump_instruction_from_operation(
         ast_node_get_token(ast, op_node)->type);
-    const size_t label_number = emitter_get_label(emit);
-    fprintf(emit->output, "\t%s %s%ld\n", jmp_inst, INTERNAL_LABEL_DELIMITER,
-            label_number);
+    const uint32_t label_number = emitter_get_label(emit);
+    fprintf(emit->output, "\t%s %s%" PRIu32 "\n", jmp_inst,
+            INTERNAL_LABEL_DELIMITER, label_number);
     // Emit THEN body
     const NodeID then_node = ast_get_next_sibling(ast, comp_node);
     DZ_ASSERT(ast_node_get_token(ast, then_node)->type == TOKEN_THEN);
@@ -367,32 +367,34 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     const NodeID end_if_node = _emit_statement_block(emit, possible_statement);
     DZ_ASSERT(ast_node_get_token(ast, end_if_node)->type == TOKEN_ENDIF);
     UNUSED(end_if_node);
-    fprintf(emit->output, "%s%ld:", INTERNAL_LABEL_DELIMITER, label_number);
+    fprintf(emit->output, "%s%" PRIu32 ":", INTERNAL_LABEL_DELIMITER,
+            label_number);
     return;
   } else if (token->type == TOKEN_WHILE) {
     // "WHILE" comparison "REPEAT" nl {statement}* "ENDWHILE" nl
     const NodeID comp_node = ast_get_next_sibling(ast, first_child);
     if (comp_node == NO_NODE)
       return;
-    const size_t loop_start_label = emitter_get_label(emit);
-    const size_t loop_end_label = emitter_get_label(emit);
-    fprintf(emit->output, "%s%ld:\n", INTERNAL_LABEL_DELIMITER,
+    const uint32_t loop_start_label = emitter_get_label(emit);
+    const uint32_t loop_end_label = emitter_get_label(emit);
+    fprintf(emit->output, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
             loop_start_label);
     NodeID op_node = _emit_comparison(emit, comp_node);
     const char *jmp_inst = _get_jump_instruction_from_operation(
         ast_node_get_token(ast, op_node)->type);
-    fprintf(emit->output, "\t%s %s%ld\n", jmp_inst, INTERNAL_LABEL_DELIMITER,
-            loop_end_label);
+    fprintf(emit->output, "\t%s %s%" PRIu32 "\n", jmp_inst,
+            INTERNAL_LABEL_DELIMITER, loop_end_label);
 
     const NodeID repeat_node = ast_get_next_sibling(ast, comp_node);
     DZ_ASSERT(ast_node_get_token(ast, repeat_node)->type == TOKEN_REPEAT);
     const NodeID endwhile_node =
         _emit_statement_block(emit, ast_get_next_sibling(ast, repeat_node));
-    fprintf(emit->output, "\tjmp %s%ld\n", INTERNAL_LABEL_DELIMITER,
+    fprintf(emit->output, "\tjmp %s%" PRIu32 "\n", INTERNAL_LABEL_DELIMITER,
             loop_start_label);
     UNUSED(endwhile_node);
     DZ_ASSERT(ast_node_get_token(ast, endwhile_node)->type == TOKEN_ENDWHILE);
-    fprintf(emit->output, "%s%ld:\n", INTERNAL_LABEL_DELIMITER, loop_end_label);
+    fprintf(emit->output, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
+            loop_end_label);
   }
 }
 

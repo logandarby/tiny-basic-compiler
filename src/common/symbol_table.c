@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 typedef struct {
-  size_t counter;
+  uint32_t counter;
   VariableTable *table;
 } Ctx;
 

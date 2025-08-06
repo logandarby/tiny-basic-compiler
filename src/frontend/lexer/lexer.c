@@ -79,10 +79,12 @@ bool _is_variable_char(const char c) {
 
 bool _is_string_delim(const char c) { return strchr(STRING_DELIMS, c) != NULL; }
 
-enum TOKEN get_token_from_string(const char *str_slice, const size_t str_length,
-                                 const char *const map[], const size_t map_size,
-                                 const size_t token_offset) {
-  for (size_t i = _index_of(token_offset); i < map_size; i++) {
+enum TOKEN get_token_from_string(const char *str_slice,
+                                 const uint32_t str_length,
+                                 const char *const map[],
+                                 const uint32_t map_size,
+                                 const uint32_t token_offset) {
+  for (uint32_t i = _index_of(token_offset); i < map_size; i++) {
     if (string_slice_equals(str_slice, str_length, map[i])) {
       return (enum TOKEN)(i + token_offset);
     }
@@ -93,19 +95,19 @@ enum TOKEN get_token_from_string(const char *str_slice, const size_t str_length,
 // Parses tokens from the line, and adds them to the TokenArray
 void _lexer_parse_line(const char *const line, const FileReader fr,
                        TokenArray ta) {
-  const size_t max_line_length = filereader_get_linebuffer_length(fr);
-  const size_t line_number = filereader_get_current_line_number(fr);
+  const uint32_t max_line_length = filereader_get_linebuffer_length(fr);
+  const uint32_t line_number = filereader_get_current_line_number(fr);
   const char *filename = filereader_get_filename_ref(fr);
   // FSM State
   LexerState state = {
       .current_string_delim = '\0',
       .state = LEXER_STATE_NORMAL,
   };
-  const size_t line_length = strnlen(line, max_line_length);
+  const uint32_t line_length = strnlen(line, max_line_length);
   if (line_length == 0) {
     return;
   }
-  size_t pos = 0;
+  uint32_t pos = 0;
   // FSM For line
   while (pos < line_length) {
     // If in string state, look for next delimiter
@@ -113,8 +115,8 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
       // Skip first delimiter
       pos++;
       const char delimiter_check[2] = {state.current_string_delim, '\0'};
-      size_t string_start = pos;
-      size_t current_pos = pos;
+      uint32_t string_start = pos;
+      uint32_t current_pos = pos;
       if (current_pos == line_length) {
         // ERROR: Unterminated empty string at end of line
         er_add_error(ERROR_LEXICAL, filename, line_number, pos,
@@ -145,7 +147,7 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
         // Found closing delimiter
         break;
       }
-      const size_t string_length = current_pos - string_start;
+      const uint32_t string_length = current_pos - string_start;
       // Get line:col of file (1-indexed)
       const FileLocation file_location = {
           .line = line_number,
@@ -176,7 +178,7 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
     };
     // Eat Whitespace
     if (_is_whitespace_char(line[pos])) {
-      const size_t whitespace_len = strspn(line + pos, WHITESPACE_CHARS);
+      const uint32_t whitespace_len = strspn(line + pos, WHITESPACE_CHARS);
       pos += whitespace_len;
       continue;
     }
@@ -188,7 +190,7 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
     }
     // Check for an operation (single or double char)
     if (_is_operator_char(line[pos])) {
-      const size_t operator_length = strspn(line + pos, OPERATOR_CHARS);
+      const uint32_t operator_length = strspn(line + pos, OPERATOR_CHARS);
       const enum TOKEN token =
           get_token_from_string(line + pos, operator_length, OPERATOR_MAP,
                                 array_size(OPERATOR_MAP), OPERATOR_START);
@@ -198,7 +200,7 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
     }
     // Check for a number
     if (_is_numeric_char(line[pos])) {
-      const size_t number_length =
+      const uint32_t number_length =
           strspn_callback(line + pos, _is_numeric_char);
       token_array_push(ta, TOKEN_NUMBER, line + pos, number_length,
                        file_location);
@@ -207,7 +209,8 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
     }
     // Check for an identifier or keyword
     if (_is_alpha_char(line[pos])) {
-      const size_t word_length = strspn_callback(line + pos, _is_variable_char);
+      const uint32_t word_length =
+          strspn_callback(line + pos, _is_variable_char);
       const enum TOKEN token =
           get_token_from_string(line + pos, word_length, KEYWORD_MAP,
                                 array_size(KEYWORD_MAP), KEYWORD_START);

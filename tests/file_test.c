@@ -8,8 +8,8 @@
 // Test helper function to collect all words from a FileReader
 typedef struct {
   char **lines;
-  size_t count;
-  size_t capacity;
+  uint32_t count;
+  uint32_t capacity;
 } LineList;
 
 static LineList *linelist_create(void) {
@@ -33,7 +33,7 @@ static void linelist_add(LineList *wl, const char *line) {
 static void linelist_destroy(LineList *wl) {
   if (!wl)
     return;
-  for (size_t i = 0; i < wl->count; i++) {
+  for (uint32_t i = 0; i < wl->count; i++) {
     free(wl->lines[i]);
   }
   free(wl->lines);
@@ -50,14 +50,15 @@ static LineList *read_all_lines(FileReader fr) {
 }
 
 static void assert_lines_equal(LineList *actual, const char **expected,
-                               size_t expected_count) {
-  cr_assert_eq(actual->count, expected_count, "Expected %zu lines, got %zu",
-               expected_count, actual->count);
+                               uint32_t expected_count) {
+  cr_assert_eq(actual->count, expected_count,
+               "Expected %" PRIu32 " lines, got %" PRIu32 "", expected_count,
+               actual->count);
 
-  for (size_t i = 0; i < expected_count; i++) {
+  for (uint32_t i = 0; i < expected_count; i++) {
     cr_assert_str_eq(actual->lines[i], expected[i],
-                     "Line %zu: expected '%s', got '%s'", i, expected[i],
-                     actual->lines[i]);
+                     "Line %" PRIu32 ": expected '%s', got '%s'", i,
+                     expected[i], actual->lines[i]);
   }
 }
 
@@ -106,7 +107,7 @@ Test(file_reader, basic_multiple_lines) {
 Test(file_reader, basic_line_index) {
   FileReader fr =
       filereader_init_from_string("first line\bsecond line\nthird line\n");
-  size_t line_num = filereader_get_current_line_number(fr);
+  uint32_t line_num = filereader_get_current_line_number(fr);
   cr_assert_eq(
       line_num, NO_LINE_NUMBER,
       "FileReader line number should be initialized with sentinel error value");

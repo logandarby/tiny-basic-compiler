@@ -18,7 +18,7 @@
 // -----------
 
 typedef struct SymbolInfo {
-  size_t
+  uint32_t
       label; // Label is an integer, but will be translated to ".L<int>" in asm
 } SymbolInfo;
 
@@ -35,7 +35,7 @@ typedef SymbolHash *SymbolTable;
 // -----------
 
 typedef struct LiteralInfo {
-  size_t
+  uint32_t
       label; // Label is an integer, but will be translated to ".L<int>" in asm
 } LiteralInfo;
 

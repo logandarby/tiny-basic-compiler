@@ -15,10 +15,10 @@ static TokenArray parse_string(const char *input) {
 
 // Helper function to print token array for debugging
 static void dump_token_array(TokenArray ta, const char *label) {
-  printf("%s (%zu tokens):\n", label, token_array_length(ta));
-  for (size_t i = 0; i < token_array_length(ta); i++) {
+  printf("%s (%" PRIu32 " tokens):\n", label, token_array_length(ta));
+  for (uint32_t i = 0; i < token_array_length(ta); i++) {
     Token token = token_array_at(ta, i);
-    printf("  [%zu]: type=%d", i, token.type);
+    printf("  [%" PRIu32 "]: type=%d", i, token.type);
     if (token.text) {
       printf(", text=\"%s\"", token.text);
     }
@@ -28,17 +28,17 @@ static void dump_token_array(TokenArray ta, const char *label) {
 
 // Helper function to print expected token array for debugging
 static void dump_expected_tokens(const enum TOKEN *expected,
-                                 size_t expected_count, const char *label) {
-  printf("%s (%zu tokens):\n", label, expected_count);
-  for (size_t i = 0; i < expected_count; i++) {
-    printf("  [%zu]: type=%d\n", i, expected[i]);
+                                 uint32_t expected_count, const char *label) {
+  printf("%s (%" PRIu32 " tokens):\n", label, expected_count);
+  for (uint32_t i = 0; i < expected_count; i++) {
+    printf("  [%" PRIu32 "]: type=%d\n", i, expected[i]);
   }
 }
 
 // Helper function to check if token array contains expected tokens
 static void assert_tokens_equal(TokenArray ta, const enum TOKEN *expected,
-                                size_t expected_count) {
-  size_t actual_count = token_array_length(ta);
+                                uint32_t expected_count) {
+  uint32_t actual_count = token_array_length(ta);
 
   if (actual_count != expected_count) {
     printf("\nToken count mismatch - dumping arrays for debugging:\n");
@@ -47,58 +47,63 @@ static void assert_tokens_equal(TokenArray ta, const enum TOKEN *expected,
     printf("\n");
   }
 
-  cr_assert_eq(actual_count, expected_count, "Expected %zu tokens, got %zu",
-               expected_count, actual_count);
+  cr_assert_eq(actual_count, expected_count,
+               "Expected %" PRIu32 " tokens, got %" PRIu32 "", expected_count,
+               actual_count);
 
-  for (size_t i = 0; i < expected_count; i++) {
+  for (uint32_t i = 0; i < expected_count; i++) {
     enum TOKEN actual = token_array_at(ta, i).type;
-    cr_assert_eq(actual, expected[i], "Token %zu: expected %d, got %d", i,
-                 expected[i], actual);
+    cr_assert_eq(actual, expected[i], "Token %" PRIu32 ": expected %d, got %d",
+                 i, expected[i], actual);
   }
 }
 
 // Helper functions to compare FileLocations
 static void assert_filelocations_equal(const TokenArray ta,
-                                       const size_t *expected_line,
-                                       const size_t *expected_col,
-                                       const size_t expected_count) {
-  size_t actual_count = token_array_length(ta);
+                                       const uint32_t *expected_line,
+                                       const uint32_t *expected_col,
+                                       const uint32_t expected_count) {
+  uint32_t actual_count = token_array_length(ta);
   if (actual_count != expected_count) {
     printf("\nToken acount mismatch - dumping arrays for debugging:");
     dump_token_array(ta, "Actual Tokens");
   }
-  cr_assert_eq(actual_count, expected_count, "Expected %zu tokens, got %zu",
-               expected_count, actual_count);
+  cr_assert_eq(actual_count, expected_count,
+               "Expected %" PRIu32 " tokens, got %" PRIu32 "", expected_count,
+               actual_count);
 
-  for (size_t i = 0; i < expected_count; i++) {
+  for (uint32_t i = 0; i < expected_count; i++) {
     const FileLocation actual = token_array_at(ta, i).file_pos;
     cr_assert_eq(actual.line, expected_line[i],
-                 "Token %zu: expected %ld:%ld, got %ld:%ld", i,
-                 expected_line[i], expected_col[i], actual.line, actual.col);
+                 "Token %" PRIu32 ": expected %" PRIu32 ":%" PRIu32
+                 ", got %" PRIu32 ":%" PRIu32 "",
+                 i, expected_line[i], expected_col[i], actual.line, actual.col);
     cr_assert_eq(actual.col, expected_col[i],
-                 "Token %zu: expected %ld:%ld, got %ld:%ld", i,
-                 expected_line[i], expected_col[i], actual.line, actual.col);
+                 "Token %" PRIu32 ": expected %" PRIu32 ":%" PRIu32
+                 ", got %" PRIu32 ":%" PRIu32 "",
+                 i, expected_line[i], expected_col[i], actual.line, actual.col);
   }
 }
 
 // Helper function to check token text data
-// static void assert_token_text_equal(TokenArray ta, size_t index,
+// static void assert_token_text_equal(TokenArray ta, uint32_t index,
 //                                     const char *expected_text) {
-//   cr_assert_lt(index, token_array_length(ta), "Token index %zu out of
+//   cr_assert_lt(index, token_array_length(ta), "Token index %"PRIu32" out of
 //   bounds",
 //                index);
 
 //   Token token = token_array_at(ta, index);
 
 //   if (expected_text == NULL) {
-//     cr_assert_null(token.text, "Token %zu: expected NULL text, got '%s'",
-//     index,
+//     cr_assert_null(token.text, "Token %"PRIu32": expected NULL text, got
+//     '%s'", index,
 //                    token.text ? token.text : "NULL");
 //   } else {
-//     cr_assert_not_null(token.text, "Token %zu: expected text '%s', got NULL",
+//     cr_assert_not_null(token.text, "Token %"PRIu32": expected text '%s', got
+//     NULL",
 //                        index, expected_text);
 //     cr_assert_str_eq(token.text, expected_text,
-//                      "Token %zu: expected text '%s', got '%s'", index,
+//                      "Token %"PRIu32": expected text '%s', got '%s'", index,
 //                      expected_text, token.text);
 //   }
 // }
@@ -107,28 +112,30 @@ static void assert_filelocations_equal(const TokenArray ta,
 static void assert_tokens_and_text_equal(TokenArray ta,
                                          const enum TOKEN *expected_types,
                                          const char **expected_texts,
-                                         size_t expected_count) {
+                                         uint32_t expected_count) {
   cr_assert_eq(token_array_length(ta), expected_count,
-               "Expected %zu tokens, got %zu", expected_count,
+               "Expected %" PRIu32 " tokens, got %" PRIu32 "", expected_count,
                token_array_length(ta));
 
-  for (size_t i = 0; i < expected_count; i++) {
+  for (uint32_t i = 0; i < expected_count; i++) {
     Token token = token_array_at(ta, i);
 
     // Check token type
     cr_assert_eq(token.type, expected_types[i],
-                 "Token %zu: expected type %d, got %d", i, expected_types[i],
-                 token.type);
+                 "Token %" PRIu32 ": expected type %d, got %d", i,
+                 expected_types[i], token.type);
 
     // Check token text
     if (expected_texts[i] == NULL) {
-      cr_assert_null(token.text, "Token %zu: expected NULL text, got '%s'", i,
+      cr_assert_null(token.text,
+                     "Token %" PRIu32 ": expected NULL text, got '%s'", i,
                      token.text ? token.text : "NULL");
     } else {
-      cr_assert_not_null(token.text, "Token %zu: expected text '%s', got NULL",
-                         i, expected_texts[i]);
+      cr_assert_not_null(token.text,
+                         "Token %" PRIu32 ": expected text '%s', got NULL", i,
+                         expected_texts[i]);
       cr_assert_str_eq(token.text, expected_texts[i],
-                       "Token %zu: expected text '%s', got '%s'", i,
+                       "Token %" PRIu32 ": expected text '%s', got '%s'", i,
                        expected_texts[i], token.text);
     }
   }
@@ -291,9 +298,9 @@ Test(lexer, three_char_operators_rejected) {
       "///", // Three divide
   };
 
-  size_t num_tests = array_size(three_char_ops);
+  uint32_t num_tests = array_size(three_char_ops);
 
-  for (size_t i = 0; i < num_tests; i++) {
+  for (uint32_t i = 0; i < num_tests; i++) {
     TokenArray ta = parse_string(three_char_ops[i]);
 
     // Should contain exactly one TOKEN_UNKNOWN
@@ -2032,7 +2039,7 @@ Test(lexer, strings_in_complex_program) {
 
   // Verify some key tokens exist
   bool found_hello = false, found_world = false;
-  for (size_t i = 0; i < token_array_length(ta); i++) {
+  for (uint32_t i = 0; i < token_array_length(ta); i++) {
     Token token = token_array_at(ta, i);
     if (token.type == TOKEN_STRING && token.text) {
       if (strcmp(token.text, "Hello") == 0)
@@ -2053,8 +2060,8 @@ Test(lexer, strings_in_complex_program) {
 
 Test(Lexer, basic_file_location_test) {
   TokenArray ta = parse_string("Line one\nLines two\nLines three");
-  const size_t expected_col[] = {1, 6, 1, 7, 1, 7};
-  const size_t expected_line[] = {1, 1, 2, 2, 3, 3};
+  const uint32_t expected_col[] = {1, 6, 1, 7, 1, 7};
+  const uint32_t expected_line[] = {1, 1, 2, 2, 3, 3};
   assert_filelocations_equal(ta, expected_line, expected_col,
                              array_size(expected_line));
 
@@ -2063,8 +2070,8 @@ Test(Lexer, basic_file_location_test) {
 
 Test(Lexer, file_location_eat_whitespace) {
   TokenArray ta = parse_string("\n\n   Line three\n  Lines four\n\nLines five");
-  const size_t expected_col[] = {4, 9, 3, 9, 1, 7};
-  const size_t expected_line[] = {3, 3, 4, 4, 6, 6};
+  const uint32_t expected_col[] = {4, 9, 3, 9, 1, 7};
+  const uint32_t expected_line[] = {3, 3, 4, 4, 6, 6};
   assert_filelocations_equal(ta, expected_line, expected_col,
                              array_size(expected_line));
 

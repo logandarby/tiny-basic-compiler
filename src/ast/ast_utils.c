@@ -1,8 +1,8 @@
 #include "ast_utils.h"
 #include "ast_visitor.h"
 
-static void _print_indent_with_tree(size_t indent) {
-  for (size_t i = 0; i < indent; i++) {
+static void _print_indent_with_tree(uint32_t indent) {
+  for (uint32_t i = 0; i < indent; i++) {
     printf("  "); // Vertical line with spacing
   }
 }
@@ -12,7 +12,7 @@ _print_token(const Token *token, NodeID node_id,
              AstTraversalGenericContext generic_context, void *context) {
   UNUSED(node_id);
   UNUSED(generic_context);
-  size_t indent = *(size_t *)context;
+  uint32_t indent = *(uint32_t *)context;
   _print_indent_with_tree(indent);
   if (token->text) {
     printf("TOKEN(%s): %s\n", token_type_to_string(token->type), token->text);
@@ -28,7 +28,7 @@ _print_grammar_enter(GrammarNode *grammar, NodeID node_id,
                      void *context) {
   UNUSED(node_id);
   UNUSED(generic_context);
-  size_t *indent = (size_t *)context;
+  uint32_t *indent = (uint32_t *)context;
   _print_indent_with_tree(*indent);
   printf("<%s>\n", grammar_type_to_string(grammar->grammar));
   (*indent)++;
@@ -41,7 +41,7 @@ _print_grammar_exit(GrammarNode *grammar, NodeID node_id,
   UNUSED(node_id);
   UNUSED(grammar);
   UNUSED(generic_context);
-  size_t *indent = (size_t *)context;
+  uint32_t *indent = (uint32_t *)context;
   (*indent)--;
   return AST_TRAVERSAL_CONTINUE;
 }
@@ -52,7 +52,7 @@ void ast_print(AST *ast) {
       .visit_grammar_enter = _print_grammar_enter,
       .visit_grammar_exit = _print_grammar_exit,
   };
-  size_t indent = 0;
+  uint32_t indent = 0;
   if (ast_is_empty(ast)) {
     printf("<EMPTY>\n");
   } else {
@@ -62,14 +62,14 @@ void ast_print(AST *ast) {
 
 typedef struct {
   char *str;
-  size_t str_len;
-  size_t str_capacity;
+  uint32_t str_len;
+  uint32_t str_capacity;
 } BracketPrintContext;
 
 // write to and automatically resize the string in the context
 static void _write_to_bracket_context(BracketPrintContext *ctx,
                                       const char *str) {
-  size_t str_len = strlen(str);
+  uint32_t str_len = strlen(str);
   if (ctx->str_len + str_len + 1 >= ctx->str_capacity) {
     ctx->str_capacity *= 2;
     ctx->str = xrealloc(ctx->str, ctx->str_capacity);

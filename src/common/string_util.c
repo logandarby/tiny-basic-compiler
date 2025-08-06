@@ -6,7 +6,7 @@ static char _lookup_escape_replacement(char escaped_char,
                                        const EscapeConfig *config,
                                        bool *found) {
   *found = false;
-  for (size_t i = 0; i < config->count; i++) {
+  for (uint32_t i = 0; i < config->count; i++) {
     if (config->mappings[i].escape_char == escaped_char) {
       *found = true;
       return config->mappings[i].replacement;
@@ -22,13 +22,13 @@ bool string_clean_escape_sequences(char *input, const EscapeConfig *config) {
   if (config == NULL) {
     config = &DEFAULT_ESCAPE_CONFIG;
   }
-  const size_t input_len = strlen(input);
+  const uint32_t input_len = strlen(input);
   // Empty string, nothing to do.
   if (input_len == 0) {
     return true;
   }
-  size_t read_idx = 0;  // Where to read next char
-  size_t write_idx = 0; // Where to write next char
+  uint32_t read_idx = 0;  // Where to read next char
+  uint32_t write_idx = 0; // Where to write next char
   while (read_idx < input_len) {
     if (input[read_idx] == ESCAPE_PREFIX && read_idx + 1 < input_len) {
       // Process potential escape sequence
@@ -67,20 +67,20 @@ bool string_clean_escape_sequences(char *input, const EscapeConfig *config) {
 }
 
 // Custom function to compare string slice with exact token match
-bool string_slice_equals(const char *str_slice, const size_t str_length,
+bool string_slice_equals(const char *str_slice, const uint32_t str_length,
                          const char *token_str) {
   if (token_str == NULL) {
     return false;
   }
-  size_t token_len = strlen(token_str);
+  uint32_t token_len = strlen(token_str);
   if (token_len != str_length) {
     return false;
   }
   return strncmp(str_slice, token_str, str_length) == 0;
 }
 
-size_t strspn_callback(const char *str, bool (*predicate)(char c)) {
-  size_t count = 0;
+uint32_t strspn_callback(const char *str, bool (*predicate)(char c)) {
+  uint32_t count = 0;
   while (str[count] && predicate(str[count])) {
     count++;
   }
@@ -88,10 +88,10 @@ size_t strspn_callback(const char *str, bool (*predicate)(char c)) {
 }
 
 void strip_newline(const char *restrict str, char *restrict buffer,
-                   size_t buffer_size) {
+                   uint32_t buffer_size) {
   DZ_ASSERT(str && buffer && buffer_size > 0);
-  size_t write_pos = 0;
-  for (size_t read_pos = 0;
+  uint32_t write_pos = 0;
+  for (uint32_t read_pos = 0;
        str[read_pos] != '\0' && write_pos < buffer_size - 1; read_pos++) {
     if (str[read_pos] != '\n' && str[read_pos] != '\r') {
       buffer[write_pos++] = str[read_pos];
@@ -100,10 +100,10 @@ void strip_newline(const char *restrict str, char *restrict buffer,
   buffer[write_pos] = '\0';
 }
 
-void strip_trailing_newlines(char *str, const size_t n) {
+void strip_trailing_newlines(char *str, const uint32_t n) {
   if (!str)
     return; // Handle null pointer
-  size_t len = strnlen(str, n);
+  uint32_t len = strnlen(str, n);
   if (len < n) {
   }
   if (len == 0)

@@ -27,7 +27,7 @@ static const enum TOKEN CONTROL_FLOW_TOKENS[] = {TOKEN_ENDIF, TOKEN_ENDWHILE,
 // Preferably, the struct methods should be used to operate on it
 typedef struct {
   TokenArray _ta;
-  size_t _position;
+  uint32_t _position;
 } ParseContext;
 
 ParseContext pc_init(const TokenArray ta) {
@@ -63,8 +63,8 @@ bool pc_expect(ParseContext *pc, const enum TOKEN type) {
 }
 
 bool pc_expect_array(ParseContext *pc, const enum TOKEN types[],
-                     const size_t length) {
-  for (size_t i = 0; i < length; i++) {
+                     const uint32_t length) {
+  for (uint32_t i = 0; i < length; i++) {
     if (pc_expect(pc, types[i])) {
       return true;
     }
@@ -329,14 +329,14 @@ bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
   // ERROR: Statement does not start with correct token
   // Build dynamic error message with all statement keywords
   char error_msg[256] = "Unknown statement. Expected one of: ";
-  size_t remaining = sizeof(error_msg) - strlen(error_msg) - 1;
-  for (size_t i = 0; i < array_size(STATEMENT_START_KEYWORDS); i++) {
+  uint32_t remaining = sizeof(error_msg) - strlen(error_msg) - 1;
+  for (uint32_t i = 0; i < array_size(STATEMENT_START_KEYWORDS); i++) {
     if (i > 0 && remaining > 2) {
       strncat(error_msg, ", ", remaining);
       remaining -= 2;
     }
     const char *keyword = token_type_to_string(STATEMENT_START_KEYWORDS[i]);
-    size_t keyword_len = strlen(keyword);
+    uint32_t keyword_len = strlen(keyword);
     if (remaining > keyword_len) {
       strncat(error_msg, keyword, remaining);
       remaining -= keyword_len;
@@ -350,14 +350,14 @@ bool _parse_statement(AST *ast, NodeID parent_node, ParseContext *pc) {
 // Must free string after
 char *get_unknown_statement_err_msg(void) {
   char error_msg[256] = "Unknown statement. Expected one of: ";
-  size_t remaining = sizeof(error_msg) - strlen(error_msg) - 1;
-  for (size_t i = 0; i < array_size(STATEMENT_START_KEYWORDS); i++) {
+  uint32_t remaining = sizeof(error_msg) - strlen(error_msg) - 1;
+  for (uint32_t i = 0; i < array_size(STATEMENT_START_KEYWORDS); i++) {
     if (i > 0 && remaining > 2) {
       strncat(error_msg, ", ", remaining);
       remaining -= 2;
     }
     const char *keyword = token_type_to_string(STATEMENT_START_KEYWORDS[i]);
-    size_t keyword_len = strlen(keyword);
+    uint32_t keyword_len = strlen(keyword);
     if (remaining > keyword_len) {
       strncat(error_msg, keyword, remaining);
       remaining -= keyword_len;

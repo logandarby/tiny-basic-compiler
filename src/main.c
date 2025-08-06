@@ -79,12 +79,12 @@ int main(const int argc, const char **argv) {
     printf("%s SYMBOL TABLE %s\n", SEP, SEP);
     for (size_t i = 0; i < shlenu(vars->symbol_table); i++) {
       SymbolHash sym = vars->symbol_table[i];
-      printf("Key: %s,\tValue: %ld\n", sym.key, sym.value.label);
+      printf("Key: %s,\tValue: %" PRIu32 "\n", sym.key, sym.value.label);
     }
     printf("%s LITERAL TABLE %s\n", SEP, SEP);
     for (size_t i = 0; i < shlenu(vars->literal_table); i++) {
       LiteralHash lit = vars->literal_table[i];
-      printf("Key: %s,\tValue: %ld\n", lit.key, lit.value.label);
+      printf("Key: %s,\tValue: %" PRIu32 "\n", lit.key, lit.value.label);
     }
 
     // Debug print generated ASM

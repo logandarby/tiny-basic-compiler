@@ -5,8 +5,8 @@
 
 typedef struct _ArenaRegion {
   uint8_t *data;
-  size_t capacity;
-  size_t length;
+  uint32_t capacity;
+  uint32_t length;
   struct _ArenaRegion *prev;
 } ArenaRegion;
 
@@ -17,7 +17,7 @@ Arena arena_init() {
   return a;
 }
 
-static ArenaRegion *_arena_alloc_region(size_t capacity, ArenaRegion *prev) {
+static ArenaRegion *_arena_alloc_region(uint32_t capacity, ArenaRegion *prev) {
   ArenaRegion *region = (ArenaRegion *)xmalloc(sizeof(*region));
   region->capacity = capacity;
   region->data = (uint8_t *)xmalloc(region->capacity * sizeof(*region->data));
@@ -26,22 +26,22 @@ static ArenaRegion *_arena_alloc_region(size_t capacity, ArenaRegion *prev) {
   return region;
 }
 
-void *arena_alloc(Arena *a, size_t size) {
+void *arena_alloc(Arena *a, uint32_t size) {
   DZ_ASSERT(a != NULL);
 
   if (a->head == NULL) {
-    size_t capacity = INITIAL_ARENA_SIZE;
+    uint32_t capacity = INITIAL_ARENA_SIZE;
     if (size > capacity)
       capacity = size;
     a->head = _arena_alloc_region(capacity, NULL);
   }
 
-  size_t alignment = a->head->length % sizeof(void *);
+  uint32_t alignment = a->head->length % sizeof(void *);
   if (alignment > 0)
     alignment = sizeof(void *) - alignment;
 
   if (alignment + size > a->head->capacity - a->head->length) {
-    size_t new_capacity = a->head->capacity * 2;
+    uint32_t new_capacity = a->head->capacity * 2;
     if (size > new_capacity)
       new_capacity = size;
     a->head = _arena_alloc_region(new_capacity, a->head);
@@ -75,7 +75,7 @@ char *arena_allocate_string(Arena *a, const char *begin, const char *end) {
   DZ_ASSERT(a != NULL && begin != NULL && end != NULL);
   DZ_ASSERT(end >= begin);
 
-  size_t len = (size_t)(end - begin);
+  uint32_t len = (uint32_t)(end - begin);
 
   char *string = (char *)arena_alloc(a, len + 2);
   memcpy(string, begin, len);
@@ -89,7 +89,7 @@ char *_arena_concat(Arena *a, ...) {
 
   va_list va_args;
 
-  size_t size = 0;
+  uint32_t size = 0;
   va_start(va_args, a);
   while (true) {
     const char *str = va_arg(va_args, const char *);
@@ -109,7 +109,7 @@ char *_arena_concat(Arena *a, ...) {
     if (str == NULL)
       break;
 
-    size_t len = strlen(str);
+    uint32_t len = strlen(str);
     memcpy(p, str, len);
     p += len;
   }

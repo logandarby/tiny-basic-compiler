@@ -22,12 +22,12 @@ static AST parse_string_with_errors(const char *input) {
 }
 
 // Helper function to get error count
-static size_t get_error_count(void) { return er_get_error_count(); }
+static uint32_t get_error_count(void) { return er_get_error_count(); }
 
 // Helper function to get specific error
-static CompilerError get_error_at(size_t index) {
-  cr_assert_lt(index, get_error_count(), "Error index %zu out of bounds",
-               index);
+static CompilerError get_error_at(uint32_t index) {
+  cr_assert_lt(index, get_error_count(),
+               "Error index %" PRIu32 " out of bounds", index);
   return er_get_error_at(index);
 }
 
@@ -38,8 +38,8 @@ static bool error_contains_text(const CompilerError *error, const char *text) {
 
 // Helper function to find grammar error with specific text
 static bool find_grammar_error_with_text(const char *text) {
-  size_t count = get_error_count();
-  for (size_t i = 0; i < count; i++) {
+  uint32_t count = get_error_count();
+  for (uint32_t i = 0; i < count; i++) {
     CompilerError error = get_error_at(i);
     if (error.type == ERROR_GRAMMAR && error_contains_text(&error, text)) {
       return true;
@@ -334,7 +334,7 @@ Test(error_grammar_test, unknown_statement_multiple) {
 
   // Should have at least one "Unknown statement" error
   bool found_unknown = false;
-  for (size_t i = 0; i < get_error_count(); i++) {
+  for (uint32_t i = 0; i < get_error_count(); i++) {
     CompilerError error = get_error_at(i);
     if (error.type == ERROR_GRAMMAR &&
         error_contains_text(&error, "Unknown statement")) {

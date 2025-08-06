@@ -25,16 +25,16 @@ const char *_get_error_type_str(const ERROR_TYPE err_type) {
 
 // Public API
 
-void er_add_error(ERROR_TYPE error, const char *file, size_t line, size_t col,
-                  const char *msg, ...) {
+void er_add_error(ERROR_TYPE error, const char *file, uint32_t line,
+                  uint32_t col, const char *msg, ...) {
   va_list args;
   va_start(args, msg);
   er_add_error_v(error, file, line, col, msg, args);
   va_end(args);
 }
 
-void er_add_error_v(ERROR_TYPE error, const char *file, size_t line, size_t col,
-                    const char *msg, va_list args) {
+void er_add_error_v(ERROR_TYPE error, const char *file, uint32_t line,
+                    uint32_t col, const char *msg, va_list args) {
   char *formatted_msg = NULL;
   const int bytes_read = vasprintf(&formatted_msg, msg, args);
   if (!bytes_read) {
@@ -52,19 +52,20 @@ void er_add_error_v(ERROR_TYPE error, const char *file, size_t line, size_t col,
 }
 
 void er_print_all_errors(void) {
-  for (size_t i = 0; i < arrlenu(ERROR_REPORTER.errors); i++) {
+  for (uint32_t i = 0; i < arrlenu(ERROR_REPORTER.errors); i++) {
     const CompilerError err = ERROR_REPORTER.errors[i];
     fprintf(stderr,
-            "%s[COMPILER ERROR]%s In file %s:%ld:%ld: %s error - %s\n\n", KRED,
-            KNRM, err.file, err.line, err.col, _get_error_type_str(err.type),
-            err.message);
+            "%s[COMPILER ERROR]%s In file %s:%" PRIu32 ":%" PRIu32
+            ": %s error - %s\n\n",
+            KRED, KNRM, err.file, err.line, err.col,
+            _get_error_type_str(err.type), err.message);
   }
 }
 
 bool er_has_errors(void) { return arrlen(ERROR_REPORTER.errors) != 0; }
 
 void er_free(void) {
-  for (size_t i = 0; i < arrlenu(ERROR_REPORTER.errors); i++) {
+  for (uint32_t i = 0; i < arrlenu(ERROR_REPORTER.errors); i++) {
     const CompilerError err = ERROR_REPORTER.errors[i];
     if (err.message) {
       free(err.message);
@@ -78,16 +79,16 @@ void er_free(void) {
 }
 
 #ifdef DZ_TESTING
-size_t er_get_error_count(void) {
+uint32_t er_get_error_count(void) {
   if (!ERROR_REPORTER.errors) {
     return 0;
   }
   return arrlen(ERROR_REPORTER.errors);
 }
 
-CompilerError er_get_error_at(size_t index) {
+CompilerError er_get_error_at(uint32_t index) {
   if (!ERROR_REPORTER.errors ||
-      index >= (size_t)arrlen(ERROR_REPORTER.errors)) {
+      index >= (uint32_t)arrlen(ERROR_REPORTER.errors)) {
     CompilerError empty_error = {0};
     return empty_error;
   }
