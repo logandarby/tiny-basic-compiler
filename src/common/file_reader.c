@@ -1,18 +1,19 @@
 #include "file_reader.h"
 #include "../debug/dz_debug.h"
+#include "error_reporter.h"
 #include "string_util.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-const size_t INIT_FILE_LINE_BUFFER = 1024;
+#define MAX_LINE_BUFFER 1000
 
 typedef struct FileReaderHandle {
   FileIO *io; // File I/O abstraction layer
   const char *filename;
-  char *line_buffer; // Dynamically allocated
+  char line_buffer[MAX_LINE_BUFFER]; // Fixed size buffer
   size_t current_line_length;
-  size_t line_buffer_size;
   // Publically available struct of current line number to create better error
   // msgs 1 - Indexed
   struct {
@@ -26,8 +27,8 @@ typedef struct FileReaderHandle {
 // --------------------------------------
 
 // Standard stdio wrappers
-static ssize_t _stdio_getline(char **lineptr, size_t *n, void *stream) {
-  return getline(lineptr, n, (FILE *)stream);
+static char *_stdio_fgets(char *buffer, int size, void *stream) {
+  return fgets(buffer, size, (FILE *)stream);
 }
 
 static int _stdio_feof(void *stream) { return feof((FILE *)stream); }
@@ -42,7 +43,7 @@ FileIO *fileio_create_stdio(FILE *stream, const char *label) {
   FileIO *io = (FileIO *)xmalloc(sizeof(FileIO));
   io->stream = stream;
   io->label = label;
-  io->getline = _stdio_getline;
+  io->fgets = _stdio_fgets;
   io->feof = _stdio_feof;
   io->fclose = _stdio_fclose;
   io->cleanup = NULL;
@@ -115,7 +116,6 @@ void _filereader_debug_print(const FileReader fr) {
   DZ_INFO("File: %s\n", fr->io->label);
   DZ_INFO("Line buffer: %s\n", fr->line_buffer);
   DZ_INFO("Current line length: %zu\n", fr->current_line_length);
-  DZ_INFO("Line buffer size: %zu\n", fr->line_buffer_size);
   DZ_INFO("Error: %d\n", fr->error);
   DZ_INFO("Is EOF: %s\n", _filereader_is_eof(fr) ? "true" : "false");
 }
@@ -130,21 +130,39 @@ bool _read_next_line(FileReader fr) {
     fr->current_line_length = 0;
     return false;
   }
-  const ssize_t bytes_read =
-      fr->io->getline(&fr->line_buffer, &fr->line_buffer_size, fr->io->stream);
-  if (bytes_read == -1 && !fr->io->feof(fr->io->stream)) {
-    fr->error = FR_ERR_CANT_READ;
-    DZ_ERRORNO("CRITICAL: Could not read next line of file %s\n", fr->filename);
+
+  char *result =
+      fr->io->fgets(fr->line_buffer, MAX_LINE_BUFFER, fr->io->stream);
+  if (result == NULL) {
+    if (fr->io->feof(fr->io->stream)) {
+      fr->line_buffer[0] = '\0';
+      fr->current_line_length = 0;
+      return true;
+    } else {
+      fr->error = FR_ERR_CANT_READ;
+      DZ_ERRORNO("CRITICAL: Could not read next line of file %s\n",
+                 fr->filename);
+      exit(EXIT_FAILURE);
+      return false;
+    }
+  }
+
+  // Check if line was truncated (buffer too small)
+  size_t line_len = strlen(fr->line_buffer);
+  if (line_len == MAX_LINE_BUFFER - 1 &&
+      fr->line_buffer[line_len - 1] != '\n' && !fr->io->feof(fr->io->stream)) {
+    fr->error = FR_ERR_LINE_TOO_BIG;
+    size_t next_line =
+        fr->cursor_pos.line == NO_LINE_NUMBER ? 1 : fr->cursor_pos.line + 1;
+    DZ_ERRORNO("CRITICAL: Line too long in file %s at line %lld\nPlease try to "
+               "keep lines ~100 characters.",
+               fr->filename, (unsigned long long)next_line);
     exit(EXIT_FAILURE);
     return false;
-  } else if (bytes_read == -1) {
-    fr->line_buffer[0] = '\0';
-    fr->current_line_length = 0;
-    return true;
   }
-  strip_trailing_newlines(fr->line_buffer, fr->line_buffer_size - 1);
-  fr->current_line_length =
-      bytes_read == -1 ? strlen(fr->line_buffer) : (size_t)bytes_read;
+
+  strip_trailing_newlines(fr->line_buffer, MAX_LINE_BUFFER - 1);
+  fr->current_line_length = strlen(fr->line_buffer);
   return true;
 }
 
@@ -163,10 +181,9 @@ FileReader filereader_init(const char *filename) {
   FileReaderHandle fr = {
       .io = io,
       .filename = filename,
-      .line_buffer = (char *)xcalloc(1, INIT_FILE_LINE_BUFFER),
+      .line_buffer = {0}, // Initialize fixed buffer to zero
       .error = FR_ERR_NONE,
       .current_line_length = 0,
-      .line_buffer_size = INIT_FILE_LINE_BUFFER,
       .cursor_pos =
           {
               .line = NO_LINE_NUMBER,
@@ -213,9 +230,7 @@ void filereader_destroy(FileReader *fr) {
 
   FileReader handle = *fr;
 
-  if (handle->line_buffer) {
-    free(handle->line_buffer);
-  }
+  // No need to free line_buffer since it's a fixed array now
   if (handle->io) {
     fileio_destroy(handle->io);
   }
@@ -246,10 +261,9 @@ FileReader filereader_init_from_fileio(FileIO *io) {
   FileReaderHandle fr = {
       .io = io,
       .filename = io->label,
-      .line_buffer = (char *)xcalloc(1, INIT_FILE_LINE_BUFFER),
+      .line_buffer = {0}, // Initialize fixed buffer to zero
       .error = FR_ERR_NONE,
       .current_line_length = 0,
-      .line_buffer_size = INIT_FILE_LINE_BUFFER,
       .cursor_pos =
           {
               .line = NO_LINE_NUMBER,
@@ -267,7 +281,8 @@ const char *filereader_get_current_line(FileReader fr) {
 }
 
 size_t filereader_get_linebuffer_length(const FileReader fr) {
-  return fr->line_buffer_size;
+  UNUSED(fr);
+  return MAX_LINE_BUFFER;
 }
 
 size_t filereader_get_current_line_number(FileReader fr) {

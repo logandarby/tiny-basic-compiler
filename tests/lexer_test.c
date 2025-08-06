@@ -1,4 +1,5 @@
 #include "../src/frontend/lexer/lexer.h"
+#include "test_util.h"
 #include "token.h"
 #include <criterion/criterion.h>
 #include <criterion/parameterized.h>
@@ -1896,22 +1897,21 @@ Test(lexer, string_containing_quotes_without_escape) {
   token_array_destroy(&ta);
 }
 
-Test(lexer, very_long_string) {
+#define LONG_STR_LEN 2000
+Test(lexer, very_long_string, .exit_code = 1) {
   // Test with a very long string to check buffer handling
-  char long_string[1000];
+  // This should cause the program to exit with status 1 due to line too long
+  // error
+  char long_string[LONG_STR_LEN];
   strcpy(long_string, "\"");
-  for (int i = 1; i < 998; i++) {
+  for (int i = 1; i < LONG_STR_LEN - 2; i++) {
     long_string[i] = 'a';
   }
-  long_string[998] = '"';
-  long_string[999] = '\0';
+  long_string[LONG_STR_LEN - 2] = '"';
+  long_string[LONG_STR_LEN - 1] = '\0';
 
-  TokenArray ta = parse_string(long_string);
-
-  enum TOKEN expected[] = {TOKEN_STRING};
-  assert_tokens_equal(ta, expected, 1);
-
-  token_array_destroy(&ta);
+  // This will cause the program to exit with status 1
+  MUTED_OUTPUT { parse_string(long_string); }
 }
 
 Test(lexer, string_with_newlines_inside) {

@@ -6,7 +6,8 @@
 #define ERROR_TYPE_X_VALUES                                                    \
   X(ERROR_LEXICAL, "Lexical")                                                  \
   X(ERROR_SEMANTIC, "Semantic")                                                \
-  X(ERROR_GRAMMAR, "Grammar")
+  X(ERROR_GRAMMAR, "Grammar")                                                  \
+  X(ERROR_FILE, "File")
 
 typedef enum {
 #define X(a, b) a,

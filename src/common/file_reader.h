@@ -20,7 +20,7 @@ typedef struct FileIO FileIO;
 typedef struct FileReaderHandle *FileReader;
 
 // File I/O function pointer types
-typedef ssize_t (*getline_fn)(char **lineptr, size_t *n, void *stream);
+typedef char *(*fgets_fn)(char *buffer, int size, void *stream);
 typedef int (*feof_fn)(void *stream);
 typedef int (*fclose_fn)(void *stream);
 typedef void (*cleanup_fn)(void *stream);
@@ -29,7 +29,7 @@ typedef void (*cleanup_fn)(void *stream);
 struct FileIO {
   void *stream;       // Actual FILE*, memory buffer, mock object, etc.
   const char *label;  // Human-readable identifier for debugging
-  getline_fn getline; // Function to read a line
+  fgets_fn fgets;     // Function to read a line
   feof_fn feof;       // Function to check end-of-file
   fclose_fn fclose;   // Function to close the stream
   cleanup_fn cleanup; // Optional custom cleanup function
@@ -42,7 +42,7 @@ extern const FileIO *fileio_stdio;
 // Creates a FileIO wrapper around a standard FILE*
 FileIO *fileio_create_stdio(FILE *stream, const char *label);
 
-// Creates a FileIO wrapper from an in-memory string (using fmemopen)
+// Creates a FileIO wrapper from an in-memory string (using fmemopen or tmpfile)
 FileIO *fileio_create_from_string(const char *input, const char *label);
 
 // Destroys a FileIO wrapper
