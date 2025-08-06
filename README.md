@@ -4,6 +4,8 @@ A compiler for the TINY BASIC language specification with some additional featur
 
 ## What is TINY BASIC?
 
+[A full manual describing the TINY BASIC language is available here.](./MANUAL.md)
+
 TINY BASIC is a simplified version of the BASIC programming language, designed to be minimal yet functional. This compiler supports standard BASIC constructs including:
 
 - Variables and assignments (`LET`)
