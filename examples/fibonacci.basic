@@ -1,0 +1,31 @@
+PRINT "Fibonacci Number Calculator"
+PRINT "Enter which Fibonacci number you want (0, 1, 2, 3, ...): "
+LET N = 0
+INPUT N
+
+IF N == 0 THEN
+    PRINT "F(0) = 0"
+    GOTO L_DONE
+ENDIF
+
+IF N == 1 THEN  
+    PRINT "F(1) = 1"
+    GOTO L_DONE
+ENDIF
+
+LET A = 0
+LET B = 1
+LET I = 2
+
+WHILE I <= N REPEAT
+    LET C = A + B
+    LET A = B
+    LET B = C
+    LET I = I + 1
+ENDWHILE
+
+PRINT "The result is: "
+PRINT B
+
+LABEL L_DONE
+PRINT "Done!"
