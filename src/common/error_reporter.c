@@ -33,10 +33,13 @@ void er_add_error(ERROR_TYPE error, const char *file, uint32_t line,
   va_end(args);
 }
 
+#define ERROR_BUFFER_SIZE 10000
+
 void er_add_error_v(ERROR_TYPE error, const char *file, uint32_t line,
                     uint32_t col, const char *msg, va_list args) {
-  char *formatted_msg = NULL;
-  const int bytes_read = vasprintf(&formatted_msg, msg, args);
+  static char formatted_msg[ERROR_BUFFER_SIZE];
+
+  const int bytes_read = vsnprintf(formatted_msg, ERROR_BUFFER_SIZE, msg, args);
   if (!bytes_read) {
     DZ_THROW("Could not vasprintf -- out of memory");
   }
@@ -44,7 +47,7 @@ void er_add_error_v(ERROR_TYPE error, const char *file, uint32_t line,
   CompilerError new_error = {
       .col = col,
       .line = line,
-      .message = formatted_msg,
+      .message = strdup(formatted_msg),
       .file = strdup(file),
       .type = error,
   };

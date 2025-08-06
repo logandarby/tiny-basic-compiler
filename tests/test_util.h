@@ -7,6 +7,7 @@
 // --------------------------------------
 
 #include <fcntl.h>
+#include <stdint.h>
 #include <unistd.h>
 
 // Used for temporarily muting STDOUT and STDERR from within tests within a

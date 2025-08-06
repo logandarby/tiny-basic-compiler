@@ -14,7 +14,6 @@
 // flag
 
 #include "../core/compiler.h"
-#include <execinfo.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>

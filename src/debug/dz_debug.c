@@ -1,13 +1,25 @@
 #include "dz_debug.h"
 
 #include <errno.h>
-#include <execinfo.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+// Check for execinfo.h availability
+#if defined(__linux__) || defined(__GLIBC__) || defined(__FreeBSD__) ||        \
+    defined(__NetBSD__) || defined(__OpenBSD__) ||                             \
+    (defined(__APPLE__) && defined(__MACH__))
+#define HAVE_EXECINFO_H 1
+#include <execinfo.h>
+#elif defined(_WIN32)
+#define HAVE_EXECINFO_H 0
+// Windows alternative: use CaptureStackBackTrace or similar
+#else
+#define HAVE_EXECINFO_H 0
+#endif
 
 // Terminal Colours
 const char *KNRM = "\x1B[0m";
@@ -78,6 +90,7 @@ bool mem_eq(const void *s1, const void *s2, uint32_t s1_size,
 }
 
 static void dz_print_backtrace(void) {
+#if HAVE_EXECINFO_H
   void *callstack[128];
   int frames = backtrace(callstack, 128);
   char **strs = backtrace_symbols(callstack, frames);
@@ -87,6 +100,9 @@ static void dz_print_backtrace(void) {
     fprintf(stderr, "  %s%d: %s%s\n", KYEL, i, strs[i], KNRM);
   }
   free(strs);
+#else
+  UNUSED(NULL);
+#endif
 }
 
 void dz_impl_assert_msg(const char *filename, const char *functionname,

@@ -8,8 +8,8 @@
 // Test helper function to collect all words from a FileReader
 typedef struct {
   char **lines;
-  uint32_t count;
-  uint32_t capacity;
+  size_t count;
+  size_t capacity;
 } LineList;
 
 static LineList *linelist_create(void) {
@@ -51,9 +51,8 @@ static LineList *read_all_lines(FileReader fr) {
 
 static void assert_lines_equal(LineList *actual, const char **expected,
                                uint32_t expected_count) {
-  cr_assert_eq(actual->count, expected_count,
-               "Expected %" PRIu32 " lines, got %" PRIu32 "", expected_count,
-               actual->count);
+  cr_assert_eq(actual->count, expected_count, "Expected %ld lines, got %ld",
+               (unsigned long)expected_count, (unsigned long)actual->count);
 
   for (uint32_t i = 0; i < expected_count; i++) {
     cr_assert_str_eq(actual->lines[i], expected[i],
@@ -107,7 +106,7 @@ Test(file_reader, basic_multiple_lines) {
 Test(file_reader, basic_line_index) {
   FileReader fr =
       filereader_init_from_string("first line\bsecond line\nthird line\n");
-  uint32_t line_num = filereader_get_current_line_number(fr);
+  size_t line_num = filereader_get_current_line_number(fr);
   cr_assert_eq(
       line_num, NO_LINE_NUMBER,
       "FileReader line number should be initialized with sentinel error value");
