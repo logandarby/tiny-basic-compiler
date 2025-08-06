@@ -106,13 +106,13 @@ int main(const int argc, const char **argv) {
 
     // Debug print generated ASM
     printf("%s EMITTED ASM %s\n", SEP, SEP);
-    emit_x86(stdout, &ast, vars);
+    emit_x86(HOST_INFO, stdout, &ast, vars);
     printf("%s END DEBUG OUTPUT %s\n", SEP, SEP);
   }
 
   // Open file and emit asm
   FILE *out_file = fopen("out.s", "w");
-  emit_x86(out_file, &ast, vars);
+  emit_x86(HOST_INFO, out_file, &ast, vars);
   fclose(out_file);
   variables_destroy(vars);
 

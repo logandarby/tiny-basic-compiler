@@ -1,6 +1,5 @@
 #include "file_reader.h"
 #include "../debug/dz_debug.h"
-#include "error_reporter.h"
 #include "string_util.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -110,7 +109,8 @@ void _filereader_debug_print(const FileReader fr) {
   DZ_INFO("FileReader: %p\n", fr);
   DZ_INFO("File: %s\n", fr->io->label);
   DZ_INFO("Line buffer: %s\n", fr->line_buffer);
-  DZ_INFO("Current line length: %zu\n", fr->current_line_length);
+  DZ_INFO("Current line length: %lld\n",
+          (unsigned long long)fr->current_line_length);
   DZ_INFO("Error: %d\n", fr->error);
   DZ_INFO("Is EOF: %s\n", _filereader_is_eof(fr) ? "true" : "false");
 }

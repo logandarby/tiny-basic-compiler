@@ -1,6 +1,7 @@
 #include "emitter-x86.h"
 #include "ast.h"
 #include "dz_debug.h"
+#include "platform.h"
 #include "symbol_table.h"
 #include "token.h"
 #include <stb_ds.h>
@@ -9,7 +10,8 @@
 const char *PREAMBLE = ".intel_syntax noprefix\n"
                        ".data\n"
                        "\tprint_integer_fmt: .string \"%d\\n\"\n"
-                       "\tprint_string_fmt: .string \"%s\\n\"\n";
+                       "\tprint_string_fmt: .string \"%s\\n\"\n"
+                       "\tinput_string_fmt: .string \"%100s\"\n";
 const char *MAIN_PREAMBLE = ".text\n"
                             "\t.global main\n"
                             "main:\n";
@@ -43,35 +45,45 @@ const char *PRINT_STRING_HELPER = "# Given a string addr in rdi, prints it\n"
 // Safely prompts the user for an integer input. If a string is entered, it
 // Inteprets the first character as an ASCII integer
 const char *INPUT_INTEGER_HELPER = "input_integer:\n"
-                                   "\tsub     rsp, 56\n"
-                                   "\tmov     rdi, QWORD PTR stdout[rip]\n"
-                                   "\tcall    fflush\n"
-                                   "\tmov     esi, 32\n"
-                                   "\tlea     rdi, [rsp+16]\n"
-                                   "\tmov     rdx, QWORD PTR stdin[rip]\n"
-                                   "\tcall    fgets\n"
-                                   "\ttest    rax, rax\n"
-                                   "\tje      .input_integer_5\n"
-                                   "\tlea     rsi, [rsp+8]\n"
+                                   "\tpush    rbp\n"
+                                   "\tmov     rbp, rsp\n"
+                                   "\tadd     rsp, -128\n"
+                                   "\tlea     rax, [rbp-112]\n"
+                                   "\tmov     rsi, rax\n"
+                                   "\tlea     rdi, input_string_fmt[rip]\n"
+                                   "\tmov     eax, 0\n"
+                                   "\tcall    scanf\n"
+                                   "\tcmp     eax, -1\n"
+                                   "\tjne     .L2\n"
+                                   "\tmov     eax, 0\n"
+                                   "\tjmp     .L7\n"
+                                   ".L2:\n"
+                                   "\tlea     rcx, [rbp-120]\n"
+                                   "\tlea     rax, [rbp-112]\n"
                                    "\tmov     edx, 10\n"
-                                   "\tlea     rdi, [rsp+16]\n"
+                                   "\tmov     rsi, rcx\n"
+                                   "\tmov     rdi, rax\n"
                                    "\tcall    strtol\n"
-                                   "\tlea     rcx, [rsp+16]\n"
-                                   "\tcmp     QWORD PTR [rsp+8], rcx\n"
-                                   "\tje      .input_integer_8\n"
-                                   "\tmov     edx, 2147483648\n"
-                                   "\tadd     rdx, rax\n"
-                                   "\tshr     rdx, 32\n"
-                                   "\tjne     .input_integer_5\n"
-                                   "\tadd     rsp, 56\n"
-                                   "\tret\n"
-                                   ".input_integer_5:\n"
-                                   "\txor     eax, eax\n"
-                                   "\tadd     rsp, 56\n"
-                                   "\tret\n"
-                                   ".input_integer_8:\n"
-                                   "\tmovsx   eax, BYTE PTR [rsp+16]\n"
-                                   "\tadd     rsp, 56\n"
+                                   "\tmov     QWORD PTR [rbp-8], rax\n"
+                                   "\tmov     rdx, QWORD PTR [rbp-120]\n"
+                                   "\tlea     rax, [rbp-112]\n"
+                                   "\tcmp     rdx, rax\n"
+                                   "\tjne     .L4\n"
+                                   "\tmovzx   eax, BYTE PTR [rbp-112]\n"
+                                   "\tmovsx   eax, al\n"
+                                   "\tjmp     .L7\n"
+                                   ".L4:\n"
+                                   "\tcmp     QWORD PTR [rbp-8], 2147483647\n"
+                                   "\tjg      .L5\n"
+                                   "\tcmp     QWORD PTR [rbp-8], -2147483648\n"
+                                   "\tjge     .L6\n"
+                                   ".L5:\n"
+                                   "\tmov     eax, 0\n"
+                                   "\tjmp     .L7\n"
+                                   ".L6:\n"
+                                   "\tmov     rax, QWORD PTR [rbp-8]\n"
+                                   ".L7:\n"
+                                   "\tleave\n"
                                    "\tret\n";
 
 const char *PRINT_INTEGER = "print_integer";
@@ -80,8 +92,8 @@ const char *INPUT_INTEGER = "input_integer";
 
 const char *LITERAL_DELIMITER = "_static_";
 const char *SYMBOL_DELIMITER = "_var_";
-const char *LABEL_DELIMITER = ".L";
-const char *INTERNAL_LABEL_DELIMITER = ".IL";
+const char *LABEL_DELIMITER = ".LAB";
+const char *INTERNAL_LABEL_DELIMITER = ".ILAB";
 
 // ----------------------
 // Emitter Internals
@@ -424,7 +436,7 @@ void _emit_program(Emitter *emit, NodeID program_node) {
   }
 }
 
-void emit_x86(FILE *file, AST *ast, VariableTable *table) {
+void emit_x86(HostInfo host, FILE *file, AST *ast, VariableTable *table) {
   Emitter emit = emitter_init(file, ast, table);
   fprintf(emit.output, "%s", PREAMBLE);
   // Here's where the static vars should go
@@ -441,6 +453,8 @@ void emit_x86(FILE *file, AST *ast, VariableTable *table) {
   fprintf(emit.output, "%s", PRINT_INT_HELPER);
   fprintf(emit.output, "%s", PRINT_STRING_HELPER);
   fprintf(emit.output, "%s", INPUT_INTEGER_HELPER);
-  fprintf(emit.output, "%s", POSTAMBLE);
+  if (host.os == OS_LINUX) {
+    fprintf(emit.output, "%s", POSTAMBLE);
+  }
   return;
 }

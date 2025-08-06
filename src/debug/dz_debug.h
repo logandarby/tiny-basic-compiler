@@ -90,8 +90,12 @@ extern bool mem_eq(const void *s1, const void *s2, uint32_t s1_size,
 
 // DEBUGBREAK -- Breaks when encountered
 #if DZ_ENABLE_DEBUGBREAK == 1
+#if defined(_WIN32) || defined(_WIN64)
+#define DZ_DEBUGBREAK(...) __debugbreak()
+#else
 #include <signal.h>
 #define DZ_DEBUGBREAK(...) raise(SIGTRAP)
+#endif
 #else
 #define DZ_DEBUGBREAK(...)
 #endif
