@@ -1,9 +1,11 @@
-- [ ] implement basic emitter
-  - After some basic research, it seems like x86-64 assembly might be the best
 - [ ] *IMPORTANT:* Looks like the next step is that we need proper semantic analysis for better error handling. We need:
     - Variable analysis (avoid use before defined)
     - Valid expression Analysis (for this, we need static typing)
     - Type analysis (variables will be statically typed to avoid overhead at runtime)
+- [ ] I got a big file now, we should use perf for optimization
+- [ ] Add proper argument parsing for verbose option, and for outfile naming
+- [ ] maybe integrate gcc right in there idk
+- [ ] test on windows architecture
 
 - [ ] Create basic semantic analyzer for variables
 - [ ] add comments to lexer
@@ -17,6 +19,8 @@
 - [ ] optimize hot paths w/ compiler attributes perchance
 - [ ] USE GPERF -- seems to be the standard for compiler hash tables
 
+- [x] implement basic emitter
+  - After some basic research, it seems like x86-64 assembly might be the best
 - [x] add labels to lexer
 - [x] Implement a proper error handling approach with error reporter that pushes errors
 - [x] implement parser ast from tokenarray

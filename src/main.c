@@ -13,6 +13,7 @@
 #include "common/error_reporter.h"
 #include "common/file_reader.h"
 #include "common/symbol_table.h"
+#include "common/timer.h"
 #include "core/args.h"
 #include "dz_debug.h"
 #include "frontend/lexer/lexer.h"
@@ -21,9 +22,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static const bool VERBOSE = false;
+
 int main(const int argc, const char **argv) {
+  static int exit_code = EXIT_SUCCESS;
   static const char *SEP = "-------------------";
   Args args = parse_args(argc, argv);
+
+  Timer compiler_timer;
+  timer_init(&compiler_timer);
+  timer_start(&compiler_timer);
 
   // Get the FileReader object depending on what the args have
   FileReader fr = NULL;
@@ -53,42 +61,52 @@ int main(const int argc, const char **argv) {
   filereader_destroy(&fr);
 
   AST ast = ast_parse(tokens);
-  printf("%s AST PRINT %s\n", SEP, SEP);
-  ast_print(&ast);
+  if (VERBOSE) {
+    printf("%s AST PRINT %s\n", SEP, SEP);
+    ast_print(&ast);
+  }
+
+  if (er_has_errors()) {
+    er_print_all_errors();
+    exit_code = EXIT_FAILURE;
+    goto cleanup;
+  }
 
   // Debug print symbol tables
 
   VariableTable *vars = variables_collect_from_ast(&ast);
-  printf("%s SYMBOL TABLE %s\n", SEP, SEP);
-  for (size_t i = 0; i < shlenu(vars->symbol_table); i++) {
-    SymbolHash sym = vars->symbol_table[i];
-    printf("Key: %s,\tValue: %ld\n", sym.key, sym.value.label);
-  }
-  printf("%s LITERAL TABLE %s\n", SEP, SEP);
-  for (size_t i = 0; i < shlenu(vars->literal_table); i++) {
-    LiteralHash lit = vars->literal_table[i];
-    printf("Key: %s,\tValue: %ld\n", lit.key, lit.value.label);
-  }
+  if (VERBOSE) {
+    printf("%s SYMBOL TABLE %s\n", SEP, SEP);
+    for (size_t i = 0; i < shlenu(vars->symbol_table); i++) {
+      SymbolHash sym = vars->symbol_table[i];
+      printf("Key: %s,\tValue: %ld\n", sym.key, sym.value.label);
+    }
+    printf("%s LITERAL TABLE %s\n", SEP, SEP);
+    for (size_t i = 0; i < shlenu(vars->literal_table); i++) {
+      LiteralHash lit = vars->literal_table[i];
+      printf("Key: %s,\tValue: %ld\n", lit.key, lit.value.label);
+    }
 
-  // Debug print generated ASM
-  printf("%s EMITTED ASM %s\n", SEP, SEP);
-  emit_x86(stdout, &ast, vars);
-  printf("%s END DEBUG OUTPUT %s\n", SEP, SEP);
+    // Debug print generated ASM
+    printf("%s EMITTED ASM %s\n", SEP, SEP);
+    emit_x86(stdout, &ast, vars);
+    printf("%s END DEBUG OUTPUT %s\n", SEP, SEP);
+  }
 
   // Open file and emit asm
   FILE *out_file = fopen("out.s", "w");
   emit_x86(out_file, &ast, vars);
   fclose(out_file);
-
   variables_destroy(vars);
+
+  timer_stop(&compiler_timer);
+  printf("Compiler finished in %.02f seconds\n",
+         timer_elapsed_seconds(&compiler_timer));
+
+cleanup:
   ast_destroy(&ast);
   token_array_destroy(&tokens);
-
-  if (er_has_errors()) {
-    er_print_all_errors();
-  }
-
   er_free();
 
-  return EXIT_SUCCESS;
+  return exit_code;
 }

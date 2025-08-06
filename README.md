@@ -60,15 +60,19 @@ make format
 
 ## Running the Compiler
 
-Currently, the compiler reads BASIC source files and processes them:
+Currently, the compiler reads BASIC source files and processes them to x86 assembly targeting linux machines. You can compile the generated assembly with gcc
 
 ```bash
 ./builds/release/teeny <filename.basic>
+gcc out.s 
+./a.out
 ```
 
 For debugging:
 ```bash
 ./builds/debug/teeny-debug <filename.basic>
+gcc out.s 
+./a.out
 ```
 
 ## Testing
