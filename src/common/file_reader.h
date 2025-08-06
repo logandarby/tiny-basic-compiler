@@ -42,7 +42,7 @@ extern const FileIO *fileio_stdio;
 // Creates a FileIO wrapper around a standard FILE*
 FileIO *fileio_create_stdio(FILE *stream, const char *label);
 
-// Creates a FileIO wrapper from an in-memory string (using fmemopen or tmpfile)
+// Creates a FileIO wrapper from an in-memory string (using tmpfile)
 FileIO *fileio_create_from_string(const char *input, const char *label);
 
 // Destroys a FileIO wrapper

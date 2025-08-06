@@ -51,37 +51,32 @@ FileIO *fileio_create_stdio(FILE *stream, const char *label) {
   return io;
 }
 
-// Custom cleanup function for string-based streams
-static void _string_cleanup(void *cleanup_data) {
-  free(cleanup_data); // Free the allocated string buffer
-}
-
 FileIO *fileio_create_from_string(const char *input, const char *label) {
   if (!input || !label) {
     return NULL;
   }
 
-  // Make a private, mutable copy because fmemopen expects a writeable buffer
-  const size_t len = strlen(input);
-  char *buffer = (char *)xmalloc(len + 1);
-  memcpy(buffer, input, len + 1);
-
-  FILE *stream = fmemopen(buffer, len + 1, "r");
+  // Create temporary file and write string data to it
+  FILE *stream = tmpfile();
   if (!stream) {
-    free(buffer);
     return NULL;
   }
+
+  const size_t len = strlen(input);
+  if (fwrite(input, 1, len, stream) != len) {
+    fclose(stream);
+    return NULL;
+  }
+
+  // Rewind to beginning for reading
+  rewind(stream);
 
   FileIO *io = fileio_create_stdio(stream, label);
   if (!io) {
     fclose(stream);
-    free(buffer);
     return NULL;
   }
 
-  // Set up custom cleanup to free the string buffer
-  io->cleanup = _string_cleanup;
-  io->cleanup_data = buffer;
   return io;
 }
 
