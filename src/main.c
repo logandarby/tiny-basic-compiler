@@ -9,7 +9,7 @@
 // -------------------------------------
 
 #include "ast/ast_utils.h"
-#include "backend/emitter-x86.h"
+#include "backend/emitter-x86-64.h"
 #include "common/error_reporter.h"
 #include "common/file_reader.h"
 #include "common/symbol_table.h"
