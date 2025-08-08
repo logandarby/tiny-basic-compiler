@@ -1,4 +1,4 @@
-#include "emitter-x86-64.h"
+#include "emitter-x86.h"
 #include "ast.h"
 #include "dz_debug.h"
 #include "platform.h"
@@ -101,18 +101,22 @@ const char *INTERNAL_LABEL_DELIMITER = ".ILAB";
 
 typedef struct {
   FILE *output;
+  const PlatformInfo *platform_info;
+  const CallingConvention *cc;
   uint32_t control_flow_label; // Used to create unique labels for IF and WHILE
                                // statement
   VariableTable *table;        // Non-owning reference
   AST *ast;                    // Non-owning reference
 } Emitter;
 
-Emitter emitter_init(FILE *file, AST *ast, VariableTable *table) {
+Emitter emitter_init(const PlatformInfo *platform_info, FILE *file, AST *ast, VariableTable *table) {
   return (Emitter){
       .ast = ast,
       .output = file,
       .table = table,
       .control_flow_label = 0,
+    .platform_info = platform_info,
+    .cc = get_calling_convention(platform_info),
   };
 }
 
@@ -436,8 +440,8 @@ void _emit_program(Emitter *emit, NodeID program_node) {
   }
 }
 
-void emit_x86(HostInfo host, FILE *file, AST *ast, VariableTable *table) {
-  Emitter emit = emitter_init(file, ast, table);
+void emit_x86(const PlatformInfo *plat_info, FILE *file, AST *ast, VariableTable *table) {
+  Emitter emit = emitter_init(plat_info, file, ast, table);
   fprintf(emit.output, "%s", PREAMBLE);
   // Here's where the static vars should go
   _emit_literals(&emit);
@@ -453,7 +457,7 @@ void emit_x86(HostInfo host, FILE *file, AST *ast, VariableTable *table) {
   fprintf(emit.output, "%s", PRINT_INT_HELPER);
   fprintf(emit.output, "%s", PRINT_STRING_HELPER);
   fprintf(emit.output, "%s", INPUT_INTEGER_HELPER);
-  if (host.os == OS_LINUX) {
+  if (plat_info->os == OS_LINUX) {
     fprintf(emit.output, "%s", POSTAMBLE);
   }
   return;
