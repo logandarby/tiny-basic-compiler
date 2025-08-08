@@ -9,7 +9,7 @@ A compiler for the TINY BASIC language specification with some additional featur
 TINY BASIC is a simplified version of the BASIC programming language, designed to be minimal yet functional. This compiler supports standard BASIC constructs including:
 
 - Variables and assignments (`LET`)
-- Control flow (`IF`, `THEN`, `ELSE`, `WHILE`)
+- Control flow (`IF`, `WHILE`)
 - Input/output operations (`PRINT`, `INPUT`)
 - Labels and jumps (`GOTO`)
 - Arithmetic and logical operators
