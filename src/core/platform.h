@@ -6,6 +6,8 @@
 // Sets macros based off OS and architecture
 // ----------------------------------------------
 
+#include "core.h"
+
 typedef enum {
   OS_UNKNOWN = 0,
   OS_WINDOWS,
@@ -27,32 +29,28 @@ typedef enum {
 } ABI;
 
 typedef struct {
-  OS os;
-  ARCH arch;
-  ABI abi;
-} HostInfo;
+  const OS os;
+  const ARCH arch;
+  const ABI abi;
+} PlatformInfo;
 
-static const HostInfo HOST_INFO = {
-#if defined(_WIN32) || defined(_WIN64_)
-    .os = OS_WINDOWS,
-    .abi = ABI_MS,
-#elif defined(__APPLE__)
-    .os = OS_MACOS,
-    .abi = ABI_SYSV,
-#elif defined(__linux__)
-    .os = OS_LINUX,
-    .abi = ABI_SYSV,
-#else
-    .os = OS_UNKNOWN,
-    .abi = ABI_UNKNOWN,
-#endif
+#define MAX_REGISTER 6
 
-#if defined(__x86_64__) || defined(_M_X64)
-    .arch = ARCH_X86_64,
-#elif defined(__i386__) || defined(_M_IX86)
-    .arch = ARCH_X86_32,
-#else
-    .arch = ARCH_UNKNOWN,
-#endif
+typedef struct {
+  const char *argument_regs[MAX_REGISTER];
+  const char *scratch_regs[MAX_REGISTER];
+  const char *return_reg;
+  const char *stack_reg;
+  const char *base_reg;
+  const char *inst_reg;
+  const uint8_t stack_alignment;
+  const uint8_t shadow_space;
+  const uint8_t ptr_size;
+} CallingConvention;
 
-};
+extern const PlatformInfo HOST_INFO;
+extern const CallingConvention CC_SYSTEM_V_64;
+extern const CallingConvention CC_MS_64;
+
+const CallingConvention *
+get_calling_convention(const PlatformInfo *PlatformInfo);

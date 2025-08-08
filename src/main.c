@@ -9,7 +9,7 @@
 // -------------------------------------
 
 #include "ast/ast_utils.h"
-#include "backend/emitter-x86-64.h"
+#include "backend/emitter-x86.h"
 #include "common/error_reporter.h"
 #include "common/file_reader.h"
 #include "common/symbol_table.h"
@@ -26,7 +26,6 @@
 static const bool VERBOSE = false;
 
 int main(const int argc, const char **argv) {
-
   if (HOST_INFO.os != OS_WINDOWS && HOST_INFO.os != OS_LINUX) {
     fprintf(stderr,
             "%s[ERROR]%s Target OS is not supported. Teeny may be used with "
@@ -106,13 +105,13 @@ int main(const int argc, const char **argv) {
 
     // Debug print generated ASM
     printf("%s EMITTED ASM %s\n", SEP, SEP);
-    emit_x86(HOST_INFO, stdout, &ast, vars);
+    emit_x86(&HOST_INFO, stdout, &ast, vars);
     printf("%s END DEBUG OUTPUT %s\n", SEP, SEP);
   }
 
   // Open file and emit asm
   FILE *out_file = fopen("out.s", "w");
-  emit_x86(HOST_INFO, out_file, &ast, vars);
+  emit_x86(&HOST_INFO, out_file, &ast, vars);
   fclose(out_file);
   variables_destroy(vars);
 
