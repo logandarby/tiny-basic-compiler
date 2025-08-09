@@ -9,26 +9,26 @@
 #include "../core/core.h"
 
 typedef struct {
-  const char *short_name;  // "v" for -v
-  const char *long_name;   // "verbose" for --verbose
-  const char *description; // Help text
-  bool requires_value;     // Whether flag takes an argument
-  bool is_required;        // Whether flag must be present
+  const char short_name;     // 'v' for -v
+  const char *long_name;     // "verbose" for --verbose
+  const char *description;   // Help text
+  const bool requires_value; // Whether flag takes an argument
+  const bool is_required;    // Whether flag must be present
 } FlagSpec;
 
 typedef struct {
   const char *name;        // "input_file"
   const char *description; // Help text
-  bool is_required;        // Whether argument must be present
+  const bool is_required;  // Whether argument must be present
 } ArgSpec;
 
 typedef struct {
   const char *program_name;
   const char *description;
   const FlagSpec *flags;
-  int flag_count;
+  const int flag_count;
   const ArgSpec *args;
-  int arg_count;
+  const int arg_count;
 } ParserSpec;
 
 // Opaque types for the implementation

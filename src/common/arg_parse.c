@@ -1,7 +1,7 @@
 #include "arg_parse.h"
 
 typedef struct {
-  char *short_name;
+  char short_name;
   char *long_name;
   char *description;
   bool requires_value;
@@ -61,8 +61,29 @@ static const FlagDef *find_flag(const ArgParserHandle *parser, const char *name,
     if (is_long && flag->long_name && strcmp(flag->long_name, name) == 0) {
       return flag;
     }
-    if (!is_long && flag->short_name && strcmp(flag->short_name, name) == 0) {
+    if (!is_long && flag->short_name && flag->short_name == name[0] &&
+        name[1] == '\0') {
       return flag;
+    }
+  }
+  return NULL;
+}
+
+static const FlagDef *find_flag_by_char(const ArgParserHandle *parser, char c) {
+  for (int i = 0; i < parser->flag_count; i++) {
+    const FlagDef *flag = &parser->flags[i];
+    if (flag->short_name == c) {
+      return flag;
+    }
+  }
+  return NULL;
+}
+
+static ParsedFlag *find_parsed_flag(ParseResultHandle *result,
+                                    const FlagDef *flag_def) {
+  for (int i = 0; i < result->flag_count; i++) {
+    if (result->flags[i].def == flag_def) {
+      return &result->flags[i];
     }
   }
   return NULL;
@@ -92,7 +113,7 @@ ArgParserHandle *argparse_create(const ParserSpec *spec) {
     parser->flag_count = spec->flag_count;
 
     for (int i = 0; i < spec->flag_count; i++) {
-      parser->flags[i].short_name = safe_strdup(spec->flags[i].short_name);
+      parser->flags[i].short_name = spec->flags[i].short_name;
       parser->flags[i].long_name = safe_strdup(spec->flags[i].long_name);
       parser->flags[i].description = safe_strdup(spec->flags[i].description);
       parser->flags[i].requires_value = spec->flags[i].requires_value;
@@ -167,7 +188,6 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
 
     if (arg[0] == '-' && arg[1] != '\0') {
       // It's a flag
-      const FlagDef *flag_def = NULL;
       bool is_long = (arg[1] == '-');
       const char *flag_name = is_long ? arg + 2 : arg + 1;
 
@@ -190,38 +210,106 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
         break;
       }
 
-      flag_def = find_flag(parser, flag_name, is_long);
+      if (is_long) {
+        // Handle long flags normally
+        const FlagDef *flag_def = find_flag(parser, flag_name, true);
 
-      if (!flag_def) {
-        result->success = false;
-        asprintf(&result->error_message, "Unknown flag: %s", arg);
-        return result;
-      }
-
-      // Find the corresponding parsed flag
-      ParsedFlag *parsed_flag = NULL;
-      for (int j = 0; j < result->flag_count; j++) {
-        if (result->flags[j].def == flag_def) {
-          parsed_flag = &result->flags[j];
-          break;
-        }
-      }
-
-      if (!parsed_flag) {
-        result->success = false;
-        asprintf(&result->error_message, "Internal error: flag not found");
-        return result;
-      }
-
-      parsed_flag->is_present = true;
-
-      if (flag_def->requires_value) {
-        if (i + 1 >= argc || argv[i + 1][0] == '-') {
+        if (!flag_def) {
           result->success = false;
-          asprintf(&result->error_message, "Flag %s requires a value", arg);
+          size_t msg_len = strlen("Unknown flag: ") + strlen(arg) + 1;
+          result->error_message = malloc(msg_len);
+          if (result->error_message) {
+            sprintf(result->error_message, "Unknown flag: %s", arg);
+          }
           return result;
         }
-        parsed_flag->value = strdup(argv[++i]);
+
+        ParsedFlag *parsed_flag = find_parsed_flag(result, flag_def);
+        if (!parsed_flag) {
+          result->success = false;
+          const char *msg = "Internal error: flag not found";
+          result->error_message = malloc(strlen(msg) + 1);
+          if (result->error_message) {
+            sprintf(result->error_message, "%s", msg);
+          }
+          return result;
+        }
+
+        parsed_flag->is_present = true;
+
+        if (flag_def->requires_value) {
+          if (i + 1 >= argc || argv[i + 1][0] == '-') {
+            result->success = false;
+            size_t msg_len = strlen("Flag  requires a value") + strlen(arg) + 1;
+            result->error_message = malloc(msg_len);
+            if (result->error_message) {
+              sprintf(result->error_message, "Flag %s requires a value", arg);
+            }
+            return result;
+          }
+          parsed_flag->value = strdup(argv[++i]);
+        }
+      } else {
+        // Handle short flags (potentially compound)
+        const char *flags = flag_name;
+        int flags_len = strlen(flags);
+
+        for (int flag_idx = 0; flag_idx < flags_len; flag_idx++) {
+          char current_flag = flags[flag_idx];
+          const FlagDef *flag_def = find_flag_by_char(parser, current_flag);
+
+          if (!flag_def) {
+            result->success = false;
+            size_t msg_len = strlen("Unknown flag: -") + 2;
+            result->error_message = malloc(msg_len);
+            if (result->error_message) {
+              sprintf(result->error_message, "Unknown flag: -%c", current_flag);
+            }
+            return result;
+          }
+
+          ParsedFlag *parsed_flag = find_parsed_flag(result, flag_def);
+          if (!parsed_flag) {
+            result->success = false;
+            const char *msg = "Internal error: flag not found";
+            result->error_message = malloc(strlen(msg) + 1);
+            if (result->error_message) {
+              sprintf(result->error_message, "%s", msg);
+            }
+            return result;
+          }
+
+          parsed_flag->is_present = true;
+
+          if (flag_def->requires_value) {
+            // If flag requires value, it must be the last flag in compound
+            if (flag_idx != flags_len - 1) {
+              result->success = false;
+              size_t msg_len = strlen("Flag -%c requires a value and must be "
+                                      "last in compound flags");
+              result->error_message = malloc(msg_len + 1);
+              if (result->error_message) {
+                sprintf(result->error_message,
+                        "Flag -%c requires a value and must be last in "
+                        "compound flags",
+                        current_flag);
+              }
+              return result;
+            }
+
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+              result->success = false;
+              size_t msg_len = strlen("Flag -%c requires a value");
+              result->error_message = malloc(msg_len + 1);
+              if (result->error_message) {
+                sprintf(result->error_message, "Flag -%c requires a value",
+                        current_flag);
+              }
+              return result;
+            }
+            parsed_flag->value = strdup(argv[++i]);
+          }
+        }
       }
     } else {
       // Positional argument
@@ -235,7 +323,11 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
                     (result->remaining_count + 1) * sizeof(char *));
         if (!result->remaining_args) {
           result->success = false;
-          asprintf(&result->error_message, "Out of memory");
+          const char *msg = "Out of memory";
+          result->error_message = malloc(strlen(msg) + 1);
+          if (result->error_message) {
+            sprintf(result->error_message, "%s", msg);
+          }
           return result;
         }
         result->remaining_args[result->remaining_count++] = strdup(arg);
@@ -249,9 +341,15 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
       result->success = false;
       const char *name = result->flags[i].def->long_name
                              ? result->flags[i].def->long_name
-                             : result->flags[i].def->short_name;
-      asprintf(&result->error_message, "Required flag missing: %s%s",
-               result->flags[i].def->long_name ? "--" : "-", name);
+                             : (char[]){result->flags[i].def->short_name, '\0'};
+      const char *prefix = result->flags[i].def->long_name ? "--" : "-";
+      size_t msg_len =
+          strlen("Required flag missing: ") + strlen(prefix) + strlen(name) + 1;
+      result->error_message = malloc(msg_len);
+      if (result->error_message) {
+        sprintf(result->error_message, "Required flag missing: %s%s", prefix,
+                name);
+      }
       return result;
     }
   }
@@ -260,8 +358,13 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
   for (int i = 0; i < result->arg_count; i++) {
     if (result->args[i].def->is_required && !result->args[i].value) {
       result->success = false;
-      asprintf(&result->error_message, "Required argument missing: %s",
-               result->args[i].def->name);
+      size_t msg_len = strlen("Required argument missing: ") +
+                       strlen(result->args[i].def->name) + 1;
+      result->error_message = malloc(msg_len);
+      if (result->error_message) {
+        sprintf(result->error_message, "Required argument missing: %s",
+                result->args[i].def->name);
+      }
       return result;
     }
   }
@@ -278,7 +381,8 @@ bool argparse_has_flag(const ParseResultHandle *result, const char *flag_name) {
 
   for (int i = 0; i < result->flag_count; i++) {
     const FlagDef *def = result->flags[i].def;
-    if ((def->short_name && strcmp(def->short_name, flag_name) == 0) ||
+    if ((def->short_name && def->short_name == flag_name[0] &&
+         flag_name[1] == '\0') ||
         (def->long_name && strcmp(def->long_name, flag_name) == 0)) {
       return result->flags[i].is_present;
     }
@@ -293,7 +397,8 @@ const char *argparse_get_flag_value(const ParseResultHandle *result,
 
   for (int i = 0; i < result->flag_count; i++) {
     const FlagDef *def = result->flags[i].def;
-    if ((def->short_name && strcmp(def->short_name, flag_name) == 0) ||
+    if ((def->short_name && def->short_name == flag_name[0] &&
+         flag_name[1] == '\0') ||
         (def->long_name && strcmp(def->long_name, flag_name) == 0)) {
       return result->flags[i].value;
     }
@@ -370,7 +475,7 @@ void argparse_print_help(const ArgParserHandle *parser) {
       printf("  ");
 
       if (flag->short_name) {
-        printf("-%s", flag->short_name);
+        printf("-%c", flag->short_name);
         if (flag->long_name)
           printf(", ");
       }
@@ -419,7 +524,6 @@ void argparse_free_parser(ArgParserHandle *parser) {
   // Free flags
   if (parser->flags) {
     for (int i = 0; i < parser->flag_count; i++) {
-      free(parser->flags[i].short_name);
       free(parser->flags[i].long_name);
       free(parser->flags[i].description);
     }
