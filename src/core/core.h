@@ -19,6 +19,16 @@
 #include "platform.h"
 #include "portability.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <io.h>
+#include <windows.h>
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH
+#endif // !PATH_MAX
+#else
+#include <linux/limits.h>
+#endif
+
 // =================
 // X Allocation Utils (Panic on Failure)
 // =================

@@ -21,9 +21,6 @@
 #include "frontend/parser/parser.h"
 #include "platform.h"
 #include <stb_ds.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 // Compiler Argument Config
 static const FlagSpec FLAG_SPEC[] = {
@@ -44,7 +41,7 @@ static const ParserSpec PARSER_SPEC =
 
 // CONSTANTS
 static const char *SEP = "-------------------";
-static const char *DEFAULT_OUT_FILE = "out.s";
+static const char *DEFAULT_OUT_FILE = "out";
 
 // SUPPORT
 
@@ -136,11 +133,57 @@ FileReader get_filereader_from_args(ParseResult *parse_result) {
   return fr;
 }
 
+// Generate a named temporary file
+FILE *create_named_tmpfile(char *filepath, size_t filepath_size) {
+#if defined(_WIN32) || defined(_WIN64)
+  char temp_dir[PATH_MAX];
+  char temp_filename[PATH_MAX];
+  // Get Windows temp directory
+  if (GetTempPathA(sizeof(temp_dir), temp_dir) == 0) {
+    strcpy(temp_dir, ".");
+  }
+  // Generate unique filename
+  char prefix[4];
+  snprintf(prefix, sizeof(prefix), "cc_");
+  if (GetTempFileNameA(temp_dir, prefix, 0, temp_filename) == 0) {
+    return NULL;
+  }
+  strncpy(filepath, temp_filename, filepath_size - 1);
+  filepath[filepath_size - 1] = '\0';
+  // Change extension to .s for assembly
+  char *ext = strrchr(filepath, '.');
+  if (ext)
+    strcpy(ext, ".s");
+  else
+    strcat(filepath, ".s");
+  return fopen(filepath, "w");
+#else
+  // Unix/Linux/macOS
+  strncpy(filepath, "/tmp/compiler_XXXXXX.s", filepath_size - 1);
+  filepath[filepath_size - 1] = '\0';
+  int fd = mkstemps(filepath, 2); // 2 = length of ".s" suffix
+  if (fd == -1)
+    return NULL;
+  return fdopen(fd, "w");
+#endif
+}
+
 // --------------
 // MAIN LOOP
 // --------------
 
 int main(const int argc, const char **argv) {
+  // Check if toolchain is available
+  if (system("gcc --version > /dev/null 2>&1") != EXIT_SUCCESS) {
+    if (HOST_INFO.os == OS_WINDOWS) {
+      compiler_error(
+          "GCC is not available on your system. Please install MinGW-64");
+    } else {
+      compiler_error("GCC is not available on your system. Please install GCC");
+    }
+    return EXIT_FAILURE;
+  }
+
   static int exit_code = EXIT_SUCCESS;
 
   // Parse Arguments
@@ -257,15 +300,53 @@ int main(const int argc, const char **argv) {
   }
 
   // Open file and emit asm
+  char tmp_asm_file[PATH_MAX];
+  FILE *asm_file = create_named_tmpfile(tmp_asm_file, sizeof(tmp_asm_file));
+  if (!asm_file) {
+    compiler_error("SYSTEM ERROR: Could not create temporary file: %s",
+                   strerror(errno));
+    exit_code = EXIT_FAILURE;
+    goto cleanup;
+  }
   FILE *out_file = fopen(config.out_file, "w");
-  emit_x86(&config.target, out_file, &ast, vars);
-  fclose(out_file);
-  variables_destroy(vars);
+  if (!out_file) {
+    compiler_error("SYSTEM ERROR: Could not create output file: %s",
+                   strerror(errno));
+  }
+  emit_x86(&config.target, asm_file, &ast, vars);
+  fclose(asm_file);
+  asm_file = NULL;
 
   // Stop timer
   timer_stop(&compiler_timer);
   printf("Compiler finished in %.02f seconds\n",
          timer_elapsed_seconds(&compiler_timer));
+
+  // ======= STAGE 2: Assembly ==========
+
+  Timer asssembler_timer;
+  timer_init(&asssembler_timer);
+  timer_start(&asssembler_timer);
+
+  // Invoke GCC on file
+  char command[PATH_MAX * 2];
+  snprintf(command, sizeof(command), "gcc -x assembler \"%s\" -o \"%s\"",
+           tmp_asm_file, config.out_file);
+  if (system(command) != EXIT_SUCCESS) {
+    compiler_error("SYSTEM ERROR: Could not execute assembler. Errno %s",
+                   strerror(errno));
+    exit_code = EXIT_FAILURE;
+    goto cleanup;
+  }
+
+  // Stop assembler timer
+  timer_stop(&asssembler_timer);
+  printf("Assembler finished in %.02f seconds\n",
+         timer_elapsed_seconds(&asssembler_timer));
+
+  fclose(out_file);
+  out_file = NULL;
+  variables_destroy(vars);
 
 cleanup:
   ast_destroy(&ast);
