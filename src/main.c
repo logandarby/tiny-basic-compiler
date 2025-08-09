@@ -26,15 +26,17 @@
 #include <string.h>
 
 // Compiler Argument Config
-
 static const FlagSpec FLAG_SPEC[] = {
     FLAG('c', "code", "Interpret the input_file as a code string literal"),
-    FLAG_WITH_VALUE('t', "target", "Target to assemble to"),
+    FLAG_WITH_VALUE('t', "target",
+                    "Target to assemble to. Target takes the form \"arch-os\". "
+                    "Example: x86_64-windows."),
     FLAG('h', "help", "Show this help message"),
     FLAG('v', "verbose", "Enable verbose output"),
     FLAG_WITH_VALUE('o', "output-file", "The name of the file to output to"),
+    FLAG('i', "host-info", "Dump the host info triple"),
 };
-static const ArgSpec ARG_SPEC[] = {REQUIRED_ARG(
+static const ArgSpec ARG_SPEC[] = {OPTIONAL_ARG(
     "input_file_or_literal", "The TINY BASIC file to assemble (or code literal "
                              "if compiling with the \"-c\" flag)")};
 static const ParserSpec PARSER_SPEC =
@@ -44,10 +46,16 @@ static const ParserSpec PARSER_SPEC =
 static const char *SEP = "-------------------";
 static const char *DEFAULT_OUT_FILE = "out.s";
 
+// SUPPORT
+
+static const OS SUPPORTED_OS[] = {OS_WINDOWS, OS_LINUX};
+static const ARCH SUPPORTED_ARCH[] = {ARCH_X86_64};
+
 // Helper Config Structs
 typedef struct {
   bool verbose;
   const char *out_file;
+  PlatformInfo target;
 } CompilerConfig;
 
 // ---------------------
@@ -59,9 +67,17 @@ CompilerConfig compiler_config_init(ParseResult *result) {
   if (!out_file) {
     out_file = DEFAULT_OUT_FILE;
   }
+  PlatformInfo target = HOST_INFO;
+  const char *target_triple = argparse_get_flag_value(result, "t");
+  if (target_triple) {
+    if (!parse_target_triple(target_triple, &target)) {
+      target = HOST_INFO;
+    }
+  }
   return (CompilerConfig){
       .verbose = argparse_has_flag(result, "v"),
       .out_file = out_file,
+      .target = target,
   };
 }
 
@@ -73,6 +89,27 @@ void compiler_error(const char *restrict msg, ...) {
   vfprintf(stderr, msg, args);
   va_end(args);
   fprintf(stderr, "\n");
+}
+
+bool is_in_array(const int array[], const size_t count, const int elem) {
+  for (size_t i = 0; i < count; i++) {
+    if (array[i] == elem)
+      return true;
+  }
+  return false;
+}
+
+void parse_debug_commands_and_exit(const ArgParser *parser,
+                                   ParseResult *result) {
+  if (argparse_has_flag(result, "h")) {
+    argparse_print_help(parser);
+    exit(EXIT_SUCCESS);
+  } else if (argparse_has_flag(result, "host-info")) {
+    char *triple = platform_info_to_triple(&HOST_INFO);
+    printf("%s\n", triple);
+    free(triple);
+    exit(EXIT_SUCCESS);
+  }
 }
 
 FileReader get_filereader_from_args(ParseResult *parse_result) {
@@ -104,18 +141,7 @@ FileReader get_filereader_from_args(ParseResult *parse_result) {
 // --------------
 
 int main(const int argc, const char **argv) {
-  // Check host info
-  if (HOST_INFO.os != OS_WINDOWS && HOST_INFO.os != OS_LINUX) {
-    compiler_error("Target OS is not supported. Teeny may be used with either "
-                   "%sLinux%s or %sWindows%s",
-                   KCYN, KNRM, KCYN, KNRM);
-    return EXIT_FAILURE;
-  }
-  if (HOST_INFO.arch != ARCH_X86_64) {
-    compiler_error("Target architecture is not supported. Teeny can be used "
-                   "only with 64-bit x86 architectures.");
-    return EXIT_FAILURE;
-  }
+  static int exit_code = EXIT_SUCCESS;
 
   // Parse Arguments
   ArgParser *argparser = argparse_create(&PARSER_SPEC);
@@ -127,14 +153,52 @@ int main(const int argc, const char **argv) {
   if (!parse_result || !argparse_is_success(parse_result)) {
     compiler_error("Invalid arguments: %s", argparse_get_error(parse_result));
     argparse_print_help(argparser);
-    argparse_free_parser(argparser);
-    argparse_free_result(parse_result);
-    return EXIT_FAILURE;
+    exit_code = EXIT_FAILURE;
+    goto arg_cleanup;
   }
 
   CompilerConfig config = compiler_config_init(parse_result);
 
-  static int exit_code = EXIT_SUCCESS;
+  // Error if anything in the config is unknown
+  if (config.target.os == OS_UNKNOWN || config.target.arch == ARCH_UNKNOWN ||
+      config.target.abi == ABI_UNKNOWN) {
+    const char *triple = argparse_get_flag_value(parse_result, "t");
+    if (triple) {
+      compiler_error(
+          "Invalid target triple %s. The target triple should take the form "
+          "\"arch-os\", where arch and os are supported. Example: "
+          "x86_64-windows",
+          triple);
+    }
+    if (config.target.os == OS_UNKNOWN) {
+      compiler_error("Unknown target OS. Aborting.");
+    } else if (config.target.arch == ARCH_UNKNOWN) {
+      compiler_error("Unknown target architecture. Aborting.");
+    } else if (config.target.abi == ABI_UNKNOWN) {
+      compiler_error("Unknown target ABI. Aborting.");
+    }
+    exit_code = EXIT_FAILURE;
+    goto arg_cleanup;
+  }
+  // Error if target is not supported
+  if (!is_in_array((const int *)SUPPORTED_OS, array_size(SUPPORTED_OS),
+                   config.target.os)) {
+    compiler_error("Target OS is not supported. Teeny may be used with either "
+                   "%sLinux%s or %sWindows%s",
+                   KCYN, KNRM, KCYN, KNRM);
+    exit_code = EXIT_FAILURE;
+    goto arg_cleanup;
+  }
+  if (!is_in_array((const int *)SUPPORTED_ARCH, array_size(SUPPORTED_ARCH),
+                   config.target.arch)) {
+    compiler_error("Target architecture is not supported. Teeny can be used "
+                   "only with 64-bit x86 architectures.");
+    exit_code = EXIT_FAILURE;
+    goto arg_cleanup;
+  }
+
+  // Parse any commands like --help and exit if they exist
+  parse_debug_commands_and_exit(argparser, parse_result);
 
   // Start compiler timer
   Timer compiler_timer;
@@ -145,9 +209,15 @@ int main(const int argc, const char **argv) {
   FileReader fr = get_filereader_from_args(parse_result);
   if (!fr) {
     argparse_print_help(argparser);
-    argparse_free_parser(argparser);
-    argparse_free_result(parse_result);
-    return EXIT_FAILURE;
+    exit_code = EXIT_FAILURE;
+    goto arg_cleanup;
+  }
+
+  // Print verbose target
+  if (config.verbose) {
+    char *triple = platform_info_to_triple(&config.target);
+    printf("Compiling to target %s\n", triple);
+    free(triple);
   }
 
   // Actual parsing logic
@@ -182,13 +252,13 @@ int main(const int argc, const char **argv) {
 
     // Debug print generated ASM
     printf("%s EMITTED ASM %s\n", SEP, SEP);
-    emit_x86(&HOST_INFO, stdout, &ast, vars);
+    emit_x86(&config.target, stdout, &ast, vars);
     printf("%s END DEBUG OUTPUT %s\n", SEP, SEP);
   }
 
   // Open file and emit asm
   FILE *out_file = fopen(config.out_file, "w");
-  emit_x86(&HOST_INFO, out_file, &ast, vars);
+  emit_x86(&config.target, out_file, &ast, vars);
   fclose(out_file);
   variables_destroy(vars);
 
@@ -198,11 +268,11 @@ int main(const int argc, const char **argv) {
          timer_elapsed_seconds(&compiler_timer));
 
 cleanup:
-  argparse_free_result(parse_result);
-  argparse_free_parser(argparser);
   ast_destroy(&ast);
   token_array_destroy(&tokens);
   er_free();
-
+arg_cleanup:
+  argparse_free_result(parse_result);
+  argparse_free_parser(argparser);
   return exit_code;
 }

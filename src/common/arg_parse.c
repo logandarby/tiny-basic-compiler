@@ -445,6 +445,7 @@ const char *argparse_get_error(const ParseResultHandle *result) {
 void argparse_print_help(const ArgParserHandle *parser) {
   if (!parser)
     return;
+  printf("\n");
 
   // Print usage line
   printf("Usage: %s", parser->program_name ? parser->program_name : "program");

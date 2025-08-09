@@ -26,6 +26,19 @@ const CallingConvention CC_MS_64 = {
     .ptr_size = 8,
 };
 
+ABI get_abi_from_os(const OS os) {
+  switch (os) {
+  case OS_WINDOWS:
+    return ABI_MS;
+  case OS_MACOS:
+  case OS_LINUX:
+    return ABI_SYSV;
+  case OS_UNKNOWN:
+    return ABI_UNKNOWN;
+  }
+  return ABI_UNKNOWN;
+}
+
 const PlatformInfo HOST_INFO = {
 #if defined(_WIN32) || defined(_WIN64_)
     .os = OS_WINDOWS,
@@ -63,4 +76,119 @@ const CallingConvention *get_calling_convention(const PlatformInfo *info) {
     DZ_ERROR("OS/ABI is not supported.");
     exit(EXIT_FAILURE);
   }
+}
+
+// Generate OS parsing function
+static OS _parse_os(const char *os_str) {
+  if (os_str == NULL)
+    return OS_UNKNOWN;
+
+#define X(name, str)                                                           \
+  if (strcmp(os_str, str) == 0)                                                \
+    return name;
+  OS_TYPES(X)
+#undef X
+  return OS_UNKNOWN;
+}
+
+// Generate ARCH parsing function
+static ARCH _parse_arch(const char *arch_str) {
+  if (arch_str == NULL)
+    return ARCH_UNKNOWN;
+
+#define X(name, str)                                                           \
+  if (strcmp(arch_str, str) == 0)                                              \
+    return name;
+  ARCH_TYPES(X)
+#undef X
+
+  // Handle common aliases
+  if (strcmp(arch_str, "i386") == 0)
+    return ARCH_X86_32;
+  if (strcmp(arch_str, "x64") == 0)
+    return ARCH_X86_64;
+
+  return ARCH_UNKNOWN;
+}
+
+// Generate OS to string function
+static const char *_os_to_string(OS os) {
+  switch (os) {
+#define X(name, str)                                                           \
+  case name:                                                                   \
+    return str;
+    OS_TYPES(X)
+#undef X
+  }
+  return "unknown";
+}
+
+// Generate ARCH to string function
+static const char *_arch_to_string(ARCH arch) {
+  switch (arch) {
+#define X(name, str)                                                           \
+  case name:                                                                   \
+    return str;
+    ARCH_TYPES(X)
+#undef X
+  }
+  return "unknown";
+}
+
+bool parse_target_triple(const char *triple, PlatformInfo *info) {
+  if (triple == NULL) {
+    info = NULL;
+    return false;
+  }
+
+  // Make a copy since strtok modifies the string
+  char *triple_copy = xmalloc(strlen(triple) + 1);
+  strcpy(triple_copy, triple);
+
+  // Parse the two components
+  char *arch_str = strtok(triple_copy, "-");
+  char *os_str = strtok(NULL, "-");
+
+  if (!arch_str || !os_str) {
+    free(triple_copy);
+    info = NULL;
+    return false;
+  }
+
+  // Parse each component
+  ARCH arch = _parse_arch(arch_str);
+  OS os = _parse_os(os_str);
+
+  free(triple_copy);
+
+  *info = (PlatformInfo){
+      .arch = arch,
+      .os = os,
+      .abi = get_abi_from_os(os),
+  };
+  return true;
+}
+
+char *platform_info_to_triple(const PlatformInfo *info) {
+  if (info == NULL) {
+    return NULL;
+  }
+
+  const char *arch_str = _arch_to_string(info->arch);
+  const char *os_str = _os_to_string(info->os);
+
+  if (arch_str == NULL || os_str == NULL) {
+    return NULL;
+  }
+
+  // Allocate and format the result string
+  size_t len =
+      strlen(arch_str) + strlen(os_str) + 2; // +1 for dash, +1 for null
+  char *result = malloc(len);
+  if (result == NULL) {
+    return NULL;
+  }
+
+  snprintf(result, len, "%s-%s", arch_str, os_str);
+  return result;
 }

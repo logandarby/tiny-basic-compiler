@@ -8,17 +8,31 @@
 
 #include "core.h"
 
+// X macro definitions for OS types
+#define OS_TYPES(X)                                                            \
+  X(OS_UNKNOWN, "unknown")                                                     \
+  X(OS_WINDOWS, "windows")                                                     \
+  X(OS_LINUX, "linux")                                                         \
+  X(OS_MACOS, "macos")
+
+// X macro definitions for architecture types
+#define ARCH_TYPES(X)                                                          \
+  X(ARCH_UNKNOWN, "unknown")                                                   \
+  X(ARCH_X86_32, "x86")                                                        \
+  X(ARCH_X86_64, "x86_64")
+
+// Generate OS enum
 typedef enum {
-  OS_UNKNOWN = 0,
-  OS_WINDOWS,
-  OS_LINUX,
-  OS_MACOS,
+#define X(name, str) name,
+  OS_TYPES(X)
+#undef X
 } OS;
 
+// Generate ARCH enum
 typedef enum {
-  ARCH_UNKNOWN = 0,
-  ARCH_X86_32,
-  ARCH_X86_64,
+#define X(name, str) name,
+  ARCH_TYPES(X)
+#undef X
 } ARCH;
 
 // Target ABI enumeration
@@ -29,9 +43,9 @@ typedef enum {
 } ABI;
 
 typedef struct {
-  const OS os;
-  const ARCH arch;
-  const ABI abi;
+  OS os;
+  ARCH arch;
+  ABI abi;
 } PlatformInfo;
 
 #define MAX_REGISTER 6
@@ -54,3 +68,14 @@ extern const CallingConvention CC_MS_64;
 
 const CallingConvention *
 get_calling_convention(const PlatformInfo *PlatformInfo);
+
+// Convert PlatformInfo back to target triple string
+// Returns a newly allocated string that must be freed by caller
+// Returns NULL on error or if any component is UNKNOWN
+char *platform_info_to_triple(const PlatformInfo *info);
+
+// Parse target triple in format: arch-os
+// Example: "x86_64-linux"
+// Returns PlatformInfo with parsed components inside the "info" variable
+// If it errors, it returns false, and sets PlatformInfo to NULL
+bool parse_target_triple(const char *triple, PlatformInfo *info);
