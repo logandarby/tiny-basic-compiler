@@ -213,11 +213,7 @@ int main(const int argc, const char **argv) {
     exit_code = EXIT_FAILURE;
     goto cleanup;
   }
-  FILE *out_file = fopen(config.out_file, "w");
-  if (!out_file) {
-    compiler_error("SYSTEM ERROR: Could not create output file: %s",
-                   strerror(errno));
-  }
+
   emit_x86(&config.target, asm_file, &ast, vars);
   fclose(asm_file);
   asm_file = NULL;
@@ -257,9 +253,6 @@ int main(const int argc, const char **argv) {
   timer_stop(&asssembler_timer);
   printf("Assembler finished in %.02f seconds\n",
          timer_elapsed_seconds(&asssembler_timer));
-
-  fclose(out_file);
-  out_file = NULL;
 
 cleanup:
   ast_destroy(&ast);
