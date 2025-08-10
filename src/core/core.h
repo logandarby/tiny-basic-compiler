@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "../debug/dz_debug.h"
+#include <stb_ds.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <io.h>
