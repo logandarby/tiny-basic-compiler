@@ -1,5 +1,12 @@
 #pragma once
 
+// ----------------------------------------
+// ERROR REPORTER
+//
+// A global singleton object which allowes the compiler to report any
+// Errors that may occur during compilation
+// ----------------------------------------
+
 #include "../core/core.h"
 #include <stdarg.h>
 

@@ -38,14 +38,6 @@ void compiler_error(const char *restrict msg, ...) {
   fprintf(stderr, "\n");
 }
 
-bool is_in_array(const int array[], const size_t count, const int elem) {
-  for (size_t i = 0; i < count; i++) {
-    if (array[i] == elem)
-      return true;
-  }
-  return false;
-}
-
 void parse_debug_commands_and_exit(const ArgParser *parser,
                                    ParseResult *result) {
   if (argparse_has_flag(result, "h")) {
@@ -139,16 +131,14 @@ int main(const int argc, const char **argv) {
     goto arg_cleanup;
   }
   // Error if target is not supported
-  if (!is_in_array((const int *)SUPPORTED_OS, array_size(SUPPORTED_OS),
-                   config.target.os)) {
+  if (!is_supported_os(&config.target)) {
     compiler_error("Target OS is not supported. Teeny may be used with either "
                    "%sLinux%s or %sWindows%s",
                    KCYN, KNRM, KCYN, KNRM);
     exit_code = EXIT_FAILURE;
     goto arg_cleanup;
   }
-  if (!is_in_array((const int *)SUPPORTED_ARCH, array_size(SUPPORTED_ARCH),
-                   config.target.arch)) {
+  if (!is_supported_arch(&config.target)) {
     compiler_error("Target architecture is not supported. Teeny can be used "
                    "only with 64-bit x86 architectures.");
     exit_code = EXIT_FAILURE;

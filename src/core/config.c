@@ -1,4 +1,5 @@
 #include "config.h"
+#include "compiler_compatibility.h"
 
 // DEFAULTS
 const char *DEFAULT_OUT_FILE = "out";
@@ -27,3 +28,23 @@ const ArgSpec ARG_SPEC[] = {OPTIONAL_ARG(
 
 const ParserSpec PARSER_SPEC =
     PARSER_SPEC("Teeny", "A TINY BASIC compiler", FLAG_SPEC, ARG_SPEC);
+
+// Helpers
+
+bool is_in_array(const int array[], const size_t count, const int elem) {
+  for (size_t i = 0; i < count; i++) {
+    if (array[i] == elem)
+      return true;
+  }
+  return false;
+}
+
+bool is_supported_os(const PlatformInfo *info) {
+  return is_in_array((const int *)SUPPORTED_OS, array_size(SUPPORTED_OS),
+                     info->os);
+}
+
+bool is_supported_arch(const PlatformInfo *info) {
+  return is_in_array((const int *)SUPPORTED_ARCH, array_size(SUPPORTED_ARCH),
+                     info->arch);
+}
