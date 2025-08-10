@@ -3,9 +3,7 @@
     - Valid expression Analysis (for this, we need static typing)
     - Type analysis (variables will be statically typed to avoid overhead at runtime)
 - [ ] I got a big file now, we should use perf for optimization
-- [ ] Add proper argument parsing for verbose option, and for outfile naming
-- [ ] maybe integrate gcc right in there idk
-- [ ] test on windows architecture
+- [ ] Come up with black box testing methodology for testing emitter
 
 - [ ] Create basic semantic analyzer for variables
 - [ ] add comments to lexer
@@ -19,6 +17,10 @@
 - [ ] optimize hot paths w/ compiler attributes perchance
 - [ ] USE GPERF -- seems to be the standard for compiler hash tables
 
+- [x] Add proper argument parsing for verbose option, and for outfile naming
+- [x] maybe integrate gcc right in there idk
+- [x] test on windows architecture
+- [x] GET CROSS COMPILATION WORKING and support windows & linux
 - [x] implement basic emitter
   - After some basic research, it seems like x86-64 assembly might be the best
 - [x] add labels to lexer
