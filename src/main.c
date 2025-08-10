@@ -10,73 +10,23 @@
 
 #include "arg_parse.h"
 #include "ast/ast_utils.h"
+#include "backend/assembly.h"
 #include "backend/emitter-x86.h"
 #include "common/error_reporter.h"
 #include "common/file_reader.h"
 #include "common/symbol_table.h"
 #include "common/timer.h"
 #include "compiler.h"
+#include "core/config.h"
+#include "core/system.h"
 #include "dz_debug.h"
 #include "frontend/lexer/lexer.h"
 #include "frontend/parser/parser.h"
-#include "platform.h"
 #include <stb_ds.h>
+#include <stdlib.h>
+#include <string.h>
 
-// Compiler Argument Config
-static const FlagSpec FLAG_SPEC[] = {
-    FLAG('c', "code", "Interpret the input_file as a code string literal"),
-    FLAG_WITH_VALUE('t', "target",
-                    "Target to assemble to. Target takes the form \"arch-os\". "
-                    "Example: x86_64-windows."),
-    FLAG('h', "help", "Show this help message"),
-    FLAG('v', "verbose", "Enable verbose output"),
-    FLAG_WITH_VALUE('o', "output-file", "The name of the file to output to"),
-    FLAG('i', "host-info", "Dump the host info triple"),
-};
-static const ArgSpec ARG_SPEC[] = {OPTIONAL_ARG(
-    "input_file_or_literal", "The TINY BASIC file to assemble (or code literal "
-                             "if compiling with the \"-c\" flag)")};
-static const ParserSpec PARSER_SPEC =
-    PARSER_SPEC("Teeny", "A TINY BASIC compiler", FLAG_SPEC, ARG_SPEC);
-
-// CONSTANTS
-static const char *SEP = "-------------------";
-static const char *DEFAULT_OUT_FILE = "out";
-
-// SUPPORT
-
-static const OS SUPPORTED_OS[] = {OS_WINDOWS, OS_LINUX};
-static const ARCH SUPPORTED_ARCH[] = {ARCH_X86_64};
-
-// Helper Config Structs
-typedef struct {
-  bool verbose;
-  const char *out_file;
-  PlatformInfo target;
-} CompilerConfig;
-
-// ---------------------
-// Helper Functions
-// ---------------------
-
-CompilerConfig compiler_config_init(ParseResult *result) {
-  const char *out_file = argparse_get_flag_value(result, "o");
-  if (!out_file) {
-    out_file = DEFAULT_OUT_FILE;
-  }
-  PlatformInfo target = HOST_INFO;
-  const char *target_triple = argparse_get_flag_value(result, "t");
-  if (target_triple) {
-    if (!parse_target_triple(target_triple, &target)) {
-      target = HOST_INFO;
-    }
-  }
-  return (CompilerConfig){
-      .verbose = argparse_has_flag(result, "v"),
-      .out_file = out_file,
-      .target = target,
-  };
-}
+// Helper functions
 
 void compiler_error(const char *restrict msg, ...) FORMAT_PRINTF(1, 2);
 void compiler_error(const char *restrict msg, ...) {
@@ -131,41 +81,6 @@ FileReader get_filereader_from_args(ParseResult *parse_result) {
     }
   }
   return fr;
-}
-
-// Generate a named temporary file
-FILE *create_named_tmpfile(char *filepath, size_t filepath_size) {
-#if defined(_WIN32) || defined(_WIN64)
-  char temp_dir[PATH_MAX];
-  char temp_filename[PATH_MAX];
-  // Get Windows temp directory
-  if (GetTempPathA(sizeof(temp_dir), temp_dir) == 0) {
-    strcpy(temp_dir, ".");
-  }
-  // Generate unique filename
-  char prefix[4];
-  snprintf(prefix, sizeof(prefix), "cc_");
-  if (GetTempFileNameA(temp_dir, prefix, 0, temp_filename) == 0) {
-    return NULL;
-  }
-  strncpy(filepath, temp_filename, filepath_size - 1);
-  filepath[filepath_size - 1] = '\0';
-  // Change extension to .s for assembly
-  char *ext = strrchr(filepath, '.');
-  if (ext)
-    strcpy(ext, ".s");
-  else
-    strcat(filepath, ".s");
-  return fopen(filepath, "w");
-#else
-  // Unix/Linux/macOS
-  strncpy(filepath, "/tmp/compiler_XXXXXX.s", filepath_size - 1);
-  filepath[filepath_size - 1] = '\0';
-  int fd = mkstemps(filepath, 2); // 2 = length of ".s" suffix
-  if (fd == -1)
-    return NULL;
-  return fdopen(fd, "w");
-#endif
 }
 
 // --------------
@@ -329,10 +244,19 @@ int main(const int argc, const char **argv) {
   timer_start(&asssembler_timer);
 
   // Invoke GCC on file
-  char command[PATH_MAX * 2];
-  snprintf(command, sizeof(command), "gcc -x assembler \"%s\" -o \"%s\"",
-           tmp_asm_file, config.out_file);
-  if (system(command) != EXIT_SUCCESS) {
+  AssemblerInfo cmd;
+  if (!assembler_init(&cmd, &config)) {
+    compiler_error("Target is not supported");
+    exit_code = EXIT_FAILURE;
+    goto cleanup;
+  }
+  if (!assembler_is_available(&cmd)) {
+    compiler_error("Assmebler is not installed on the system");
+    assembler_print_help(&cmd);
+    exit_code = EXIT_FAILURE;
+    goto cleanup;
+  }
+  if (!assembler_invoke(&cmd, tmp_asm_file, config.out_file)) {
     compiler_error("SYSTEM ERROR: Could not execute assembler. Errno %s",
                    strerror(errno));
     exit_code = EXIT_FAILURE;

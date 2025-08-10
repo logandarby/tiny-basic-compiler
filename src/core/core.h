@@ -15,9 +15,6 @@
 #include <string.h>
 
 #include "../debug/dz_debug.h"
-#include "compiler.h"
-#include "platform.h"
-#include "portability.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <io.h>
@@ -34,8 +31,8 @@
 // =================
 
 // Like malloc, but panics on failure, and prints an error message
-extern void *xmalloc(const uint32_t size);
+void *xmalloc(const uint32_t size);
 // Like calloc, but panics on failure and prints an error message
-extern void *xcalloc(const uint32_t n, const uint32_t size);
+void *xcalloc(const uint32_t n, const uint32_t size);
 // Like realloc, but panics on failure and prints an error message
-extern void *xrealloc(void *old_ptr, const uint32_t new_size);
+void *xrealloc(void *old_ptr, const uint32_t new_size);

@@ -13,7 +13,7 @@
 // These are all enabled when debugging is enabled using the DZ_DEBUG
 // flag
 
-#include "../core/compiler.h"
+#include "../core/compiler_compatibility.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -144,10 +144,10 @@ typedef enum DzErrorLevel {
 // Asserts with file, line number, and condition information.
 // Optionally takes a message. You can leave it as NULL if you don't
 // want one
-extern void dz_impl_assert_msg(const char *filename, const char *function_name,
-                               const int line_number,
-                               const char *condition_string, bool condition,
-                               const char *msg, ...) FORMAT_PRINTF(6, 7);
+void dz_impl_assert_msg(const char *filename, const char *function_name,
+                        const int line_number, const char *condition_string,
+                        bool condition, const char *msg, ...)
+    FORMAT_PRINTF(6, 7);
 
 // Throws an error with backtrace and terminates the program
 extern void dz_impl_throw(const char *filename, const char *function_name,
