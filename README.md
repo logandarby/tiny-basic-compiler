@@ -17,7 +17,8 @@ TINY BASIC is a simplified version of the BASIC programming language, designed t
 
 ## System Requirements
 
-- **Operating System**: Linux, macOS, or Unix-like system
+- **Operating System**: Linux, macOS, or Unix-like system (for building the compiler)
+- **Target Platforms**: Windows and Linux (64-bit)
 - **Compiler**: GCC with C99 support
 - **Memory**: Minimal requirements (uses address sanitizer for debugging)
 
@@ -60,19 +61,41 @@ make format
 
 ## Running the Compiler
 
-Currently, the compiler reads BASIC source files and processes them to x86 assembly targeting linux machines. You can compile the generated assembly with gcc
+The compiler reads BASIC source files and emits x86-64 assembly code targeting Windows and Linux systems. The output is ready-to-assemble code that doesn't require additional gcc processing.
+
+### Basic Usage
 
 ```bash
 ./builds/release/teeny <filename.basic>
-gcc out.s 
-./a.out
 ```
+
+This generates assembly output to stdout by default.
+
+### Getting Help
+
+To see all available options and usage information:
+
+```bash
+./builds/release/teeny --help
+```
+
+### Cross-Compilation Support
+
+The compiler supports cross-compilation between platforms using the `-t` (target) option:
+
+```bash
+# Compile for Windows from Linux
+./builds/release/teeny -t x86_64-windows <filename.basic>
+
+# Compile for Linux (default)
+./builds/release/teeny -t x86_64-linux <filename.basic>
+```
+
+**Note**: Cross-compilation is currently only supported when running the compiler on Linux systems.
 
 For debugging:
 ```bash
 ./builds/debug/teeny-debug <filename.basic>
-gcc out.s 
-./a.out
 ```
 
 ## Testing
