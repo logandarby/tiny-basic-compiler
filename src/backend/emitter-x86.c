@@ -1,10 +1,12 @@
 #include "emitter-x86.h"
 #include "ast.h"
+#include "compiler_compatibility.h"
 #include "dz_debug.h"
 #include "platform.h"
 #include "symbol_table.h"
 #include "token.h"
 #include <stb_ds.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 const char *PREAMBLE = ".intel_syntax noprefix\n"
@@ -15,85 +17,24 @@ const char *PREAMBLE = ".intel_syntax noprefix\n"
 const char *MAIN_PREAMBLE = ".text\n"
                             "\t.global main\n"
                             "main:\n";
-const char *FUNC_PREAMBLE = "\tpush rbp\n"
-                            "\tmov rbp, rsp\n";
-const char *FUNC_POSTAMBLE = "\tleave\n"
-                             "\tret\n";
-const char *POSTAMBLE = ".section .note.GNU-stack,\"\",@progbits\n";
-const char *PRINT_INT_HELPER = "# Given an integer in rdi, prints it\n"
-                               "print_integer:\n"
-                               "\tpush rbp \n"
-                               "\tmov rbp, rsp\n"
-                               "\tmov rsi, rdi\n"
-                               "\tlea rdi, print_integer_fmt[rip]\n"
-                               "\txor rax, rax\n"
-                               "\tcall printf\n"
-                               "\tleave\n"
-                               "\tret\n";
+const char *LINUX_POSTAMBLE = ".section .note.GNU-stack,\"\",@progbits\n";
 
-const char *PRINT_STRING_HELPER = "# Given a string addr in rdi, prints it\n"
-                                  "print_string:\n"
-                                  "\tpush rbp\n"
-                                  "\tmov rbp, rsp \n"
-                                  "\tmov rsi, rdi\n"
-                                  "\tlea rdi, print_string_fmt[rip]\n"
-                                  "\txor rax, rax \n"
-                                  "\tcall printf\n"
-                                  "\tleave \n"
-                                  "\tret\n";
+// Function names
 
-// Safely prompts the user for an integer input. If a string is entered, it
-// Inteprets the first character as an ASCII integer
-const char *INPUT_INTEGER_HELPER = "input_integer:\n"
-        "\tpush    rbp\n"
-        "\tmov     rbp, rsp\n"
-        "\tadd     rsp, -128\n"
-        "\tlea     rax, [rbp-112]\n"
-        "\tmov     rsi, rax\n"
-        "\tlea     rdi, input_string_fmt[rip]\n"
-        "\tmov     eax, 0\n"
-        "\tcall    scanf\n"
-        "\tcmp     eax, -1\n"
-        "\tjne     .L2\n"
-        "\tmov     eax, 0\n"
-        "\tjmp     .L7\n"
-".L2:\n"
-        "\tlea     rcx, [rbp-120]\n"
-        "\tlea     rax, [rbp-112]\n"
-        "\tmov     edx, 10\n"
-        "\tmov     rsi, rcx\n"
-        "\tmov     rdi, rax\n"
-        "\tcall    strtol\n"
-        "\tmov     QWORD PTR [rbp-8], rax\n"
-        "\tmov     rdx, QWORD PTR [rbp-120]\n"
-        "\tlea     rax, [rbp-112]\n"
-        "\tcmp     rdx, rax\n"
-        "\tjne     .L4\n"
-        "\tmovzx   eax, BYTE PTR [rbp-112]\n"
-        "\tmovsx   eax, al\n"
-        "\tjmp     .L7\n"
-".L4:\n"
-        "\tcmp     QWORD PTR [rbp-8], 2147483647\n"
-        "\tjg      .L5\n"
-        "\tcmp     QWORD PTR [rbp-8], -2147483648\n"
-        "\tjge     .L6\n"
-".L5:\n"
-        "\tmov     eax, 0\n"
-        "\tjmp     .L7\n"
-".L6:\n"
-        "\tmov     rax, QWORD PTR [rbp-8]\n"
-".L7:\n"
-        "\tleave\n"
-        "\tret\n";
+#define PRINT_INTEGER "print_integer"
+#define PRINT_STRING "print_string"
+#define INPUT_INTEGER "input_integer"
 
-const char *PRINT_INTEGER = "print_integer";
-const char *PRINT_STRING = "print_string";
-const char *INPUT_INTEGER = "input_integer";
+#define PRINT_INTEGER_FMT_STR "print_integer_fmt"
+#define PRINT_STRING_FMT_STR "print_string_fmt"
+#define INPUT_INTEGER_FMT_STR "input_string_fmt"
 
-const char *LITERAL_DELIMITER = "_static_";
-const char *SYMBOL_DELIMITER = "_var_";
-const char *LABEL_DELIMITER = ".LAB";
-const char *INTERNAL_LABEL_DELIMITER = ".ILAB";
+// Internal delimiters
+
+#define LITERAL_DELIMITER "_static_"
+#define SYMBOL_DELIMITER "_var_"
+#define LABEL_DELIMITER ".LAB"
+#define INTERNAL_LABEL_DELIMITER ".ILAB"
 
 // ----------------------
 // Emitter Internals
@@ -109,14 +50,15 @@ typedef struct {
   AST *ast;                    // Non-owning reference
 } Emitter;
 
-Emitter emitter_init(const PlatformInfo *platform_info, FILE *file, AST *ast, VariableTable *table) {
+Emitter emitter_init(const PlatformInfo *platform_info, FILE *file, AST *ast,
+                     VariableTable *table) {
   return (Emitter){
       .ast = ast,
       .output = file,
       .table = table,
       .control_flow_label = 0,
-    .platform_info = platform_info,
-    .cc = get_calling_convention(platform_info),
+      .platform_info = platform_info,
+      .cc = get_calling_convention(platform_info),
   };
 }
 
@@ -132,16 +74,184 @@ void _emit_literals(Emitter *emit) {
   }
 }
 
+// Generic emitter for complex cases
+void _emit_instr(Emitter *emit, const char *msg, ...) FORMAT_PRINTF(2, 3);
+void _emit_instr(Emitter *emit, const char *msg, ...) {
+  va_list args;
+  va_start(args, msg);
+  fprintf(emit->output, "\t");
+  vfprintf(emit->output, msg, args);
+  fprintf(emit->output, "\n");
+  va_end(args);
+}
+
+void _emit_label(Emitter *emit, const char *msg) {
+  fprintf(emit->output, "%s:\n", msg);
+}
+
+void _emit_mov(Emitter *emit, const char *dest, const char *src) {
+  _emit_instr(emit, "mov %s, %s", dest, src);
+}
+
+void _emit_lea(Emitter *emit, const char *dest, const char *src) {
+  _emit_instr(emit, "lea %s, %s", dest, src);
+}
+
+void _emit_lea_fmt(Emitter *emit, const char *dest, const char *src_fmt, ...)
+    FORMAT_PRINTF(3, 4);
+void _emit_lea_fmt(Emitter *emit, const char *dest, const char *src_fmt, ...) {
+  va_list args;
+  va_start(args, src_fmt);
+  char src_buffer[256];
+  vsnprintf(src_buffer, sizeof(src_buffer), src_fmt, args);
+  va_end(args);
+  _emit_instr(emit, "lea %s, %s", dest, src_buffer);
+}
+
+void _emit_push(Emitter *emit, const char *reg) {
+  _emit_instr(emit, "push %s", reg);
+}
+
+void _emit_pop(Emitter *emit, const char *reg) {
+  _emit_instr(emit, "pop %s", reg);
+}
+
+void _emit_sub(Emitter *emit, const char *a1, const char *a2) {
+  _emit_instr(emit, "sub %s, %s", a1, a2);
+}
+
+void _emit_add(Emitter *emit, const char *a1, const char *a2) {
+  _emit_instr(emit, "add %s, %s", a1, a2);
+}
+
+void _emit_func_preamble(Emitter *emit) {
+  const CallingConvention *cc = emit->cc;
+  _emit_push(emit, cc->rbp);
+  _emit_mov(emit, cc->rbp, cc->rsp);
+  if (cc->shadow_space) {
+    _emit_instr(emit, "sub %s, %" PRIu8, cc->rsp, cc->shadow_space);
+  }
+}
+
+void _emit_func_ret(Emitter *emit) {
+  const CallingConvention *cc = emit->cc;
+  if (cc->shadow_space) {
+    _emit_instr(emit, "add %s, %" PRIu8, cc->rsp, cc->shadow_space);
+  }
+  _emit_instr(emit, "leave");
+  _emit_instr(emit, "ret");
+}
+
+void _emit_syscall(Emitter *emit, const char *sys_call) {
+  _emit_instr(emit, "xor %s, %s", emit->cc->ret_r, emit->cc->ret_r);
+  _emit_instr(emit, "call %s", sys_call);
+}
+
+// Emit Helpers
+
+// Helper that prints an integer
+void _emit_print_int(Emitter *emit) {
+  const CallingConvention *cc = emit->cc;
+  _emit_label(emit, PRINT_INTEGER);
+  _emit_func_preamble(emit);
+  _emit_mov(emit, cc->arg_r[1], cc->arg_r[0]);
+  _emit_instr(emit, "lea %s, " PRINT_INTEGER_FMT_STR "[%s]", cc->arg_r[0],
+              cc->rip);
+  _emit_syscall(emit, "printf");
+  _emit_func_ret(emit);
+}
+
+// Helper that prints a string literal
+void _emit_print_string(Emitter *emit) {
+  const CallingConvention *cc = emit->cc;
+  _emit_label(emit, PRINT_STRING);
+  _emit_func_preamble(emit);
+  _emit_mov(emit, cc->arg_r[1], cc->arg_r[0]);
+  _emit_instr(emit, "lea %s, " PRINT_STRING_FMT_STR "[%s]", cc->arg_r[0],
+              cc->rip);
+  _emit_syscall(emit, "printf");
+  _emit_func_ret(emit);
+}
+
+// Safely prompts the user for an integer input. If a string is entered, it
+// Inteprets the first character as an ASCII integer
+void _emit_input_int(Emitter *emit) {
+  const CallingConvention *cc = emit->cc;
+  _emit_label(emit, INPUT_INTEGER);
+  _emit_func_preamble(emit);
+
+  // Allocate 128 bytes on stack for input buffer
+  _emit_sub(emit, cc->rsp, "128");
+
+  // lea rax, [rbp-112] - buffer for input string
+  _emit_lea_fmt(emit, cc->ret_r, "[%s-112]", cc->rbp);
+  _emit_mov(emit, cc->arg_r[1], cc->ret_r); // rsi = buffer address
+  _emit_lea_fmt(emit, cc->arg_r[0], INPUT_INTEGER_FMT_STR "[%s]",
+                cc->rip); // rdi = format string
+  _emit_syscall(emit, "scanf");
+
+  // Check if scanf failed (returned -1)
+  _emit_instr(emit, "cmp %s, -1", cc->ret_r);
+  _emit_instr(emit, "jne .L2");
+  _emit_mov(emit, cc->ret_r, "0"); // Return 0 on scanf failure
+  _emit_instr(emit, "jmp .L7");
+
+  _emit_label(emit, ".L2");
+  // Try to convert string to long using strtol
+  _emit_lea_fmt(emit, cc->scratch_r[0], "[%s-120]", cc->rbp); // endptr location
+  _emit_lea_fmt(emit, cc->ret_r, "[%s-112]", cc->rbp);        // string buffer
+  _emit_mov(emit, cc->arg_r[2], "10");
+  _emit_mov(emit, cc->arg_r[1], cc->scratch_r[0]); // rsi = endptr
+  _emit_mov(emit, cc->arg_r[0], cc->ret_r);        // rdi = string
+  _emit_syscall(emit, "strtol");
+
+  // Store result in [rbp-8]
+  _emit_instr(emit, "mov QWORD PTR [%s-8], %s", cc->rbp, cc->ret_r);
+
+  // Check if endptr equals original string (no conversion occurred)
+  _emit_instr(emit, "mov %s, QWORD PTR [%s-120]", cc->scratch_r[1],
+              cc->rbp);                                // endptr value
+  _emit_lea_fmt(emit, cc->ret_r, "[%s-112]", cc->rbp); // original string
+  _emit_instr(emit, "cmp %s, %s", cc->scratch_r[1], cc->ret_r);
+  _emit_instr(emit, "jne .L4");
+
+  // No conversion - use first character as ASCII value
+  _emit_instr(emit, "movzx %s, BYTE PTR [%s-112]", cc->ret_r, cc->rbp);
+  // TODO: There's currently no mechanism in place for different register
+  // variants
+  _emit_instr(emit, "movsx %s, al", cc->ret_r);
+  _emit_instr(emit, "jmp .L7");
+
+  _emit_label(emit, ".L4");
+  // Check if converted value is within int32 range
+  _emit_instr(emit, "cmp QWORD PTR [%s-8], 2147483647", cc->rbp);
+  _emit_instr(emit, "jg .L5");
+  _emit_instr(emit, "cmp QWORD PTR [%s-8], -2147483648", cc->rbp);
+  _emit_instr(emit, "jge .L6");
+
+  _emit_label(emit, ".L5");
+  // Out of range - return 0
+  _emit_instr(emit, "mov %s, 0", cc->ret_r);
+  _emit_instr(emit, "jmp .L7");
+
+  _emit_label(emit, ".L6");
+  // In range - return the converted value
+  _emit_instr(emit, "mov %s, QWORD PTR [%s-8]", cc->ret_r, cc->rbp);
+
+  _emit_label(emit, ".L7");
+  _emit_func_ret(emit);
+}
+
 // We are storing uninitialized integers in the data sector using
-// var_name: .skip 4
-// This initialized 4 bytes of memory (DWORD) which can be referenced later
-// using mov DWORD PTR var_name[rip], 10
+// var_name: .skip 8
+// This initialized 8 bytes of memory (QWORD) which can be referenced later
+// using mov QWORD PTR var_name[rip], 10
 void _emit_symbols(Emitter *emit) {
   const SymbolTable symbol_table = emit->table->symbol_table;
   const uint32_t symbol_len = (uint32_t)shlenu(symbol_table);
   for (uint32_t i = 0; i < symbol_len; i++) {
     const SymbolHash sym = symbol_table[i];
-    fprintf(emit->output, "\t%s%s: .skip 8\n", SYMBOL_DELIMITER, sym.key);
+    _emit_instr(emit, "%s%s: .skip 8\n", SYMBOL_DELIMITER, sym.key);
   }
 }
 
@@ -155,10 +265,10 @@ void _emit_primary(Emitter *emit, NodeID primary_node) {
     return;
   const Token *token = ast_node_get_token(ast, num_or_ident);
   if (token->type == TOKEN_NUMBER) {
-    fprintf(emit->output, "\tmov rax, %s\n", token->text);
+    _emit_mov(emit, emit->cc->ret_r, token->text);
   } else if (token->type == TOKEN_IDENT) {
-    fprintf(emit->output, "\tmov rax, QWORD PTR %s%s[rip]\n", SYMBOL_DELIMITER,
-            token->text);
+    _emit_instr(emit, "mov %s, QWORD PTR %s%s[%s]", emit->cc->ret_r,
+                SYMBOL_DELIMITER, token->text, emit->cc->rip);
   }
   // ERROR bad primary formed
 }
@@ -182,7 +292,7 @@ void _emit_unary(Emitter *emit, NodeID unary_node) {
       return;
     if (token->type == TOKEN_MINUS) {
       _emit_primary(emit, primary_child);
-      fprintf(emit->output, "\tneg rax\n");
+      _emit_instr(emit, "neg %s", emit->cc->ret_r);
       return;
     } else if (token->type == TOKEN_PLUS) {
       // Unary + is a noop
@@ -198,6 +308,7 @@ void _emit_unary(Emitter *emit, NodeID unary_node) {
 // Emits a term, and stores the result into rax
 // term ::= unary {( "/" | "*" ) unary}
 void _emit_term(Emitter *emit, NodeID term_node) {
+  const CallingConvention *cc = emit->cc;
   AST *ast = emit->ast;
   NodeID child = ast_get_first_child(ast, term_node);
   if (child == NO_NODE)
@@ -209,16 +320,16 @@ void _emit_term(Emitter *emit, NodeID term_node) {
     const NodeID unary_node = ast_get_next_sibling(ast, child);
     if (!ast_node_is_token(ast, child) || unary_node == NO_NODE)
       return;
-    fprintf(emit->output, "\tpush rax\n");
+    _emit_push(emit, cc->ret_r);
     _emit_unary(emit, unary_node);
-    fprintf(emit->output, "\tmov rbx, rax\n"); // Move the unary node into rbx
-    fprintf(emit->output, "\tpop rax\n");
+    _emit_mov(emit, cc->scratch_r[0], cc->ret_r);
+    _emit_pop(emit, cc->ret_r);
     const Token *child_token = ast_node_get_token(ast, child);
     if (child_token->type == TOKEN_MULT) {
-      fprintf(emit->output, "\timul rax, rbx\n");
+      _emit_instr(emit, "imul %s, %s", cc->ret_r, cc->scratch_r[0]);
     } else if (child_token->type == TOKEN_DIV) {
-      fprintf(emit->output, "\tcqo\n");
-      fprintf(emit->output, "\tidiv rbx\n"); // stores result in rax
+      _emit_instr(emit, "cqo");
+      _emit_instr(emit, "idiv %s", cc->scratch_r[0]); // stores result in rax
     } else {
       return;
     }
@@ -229,6 +340,7 @@ void _emit_term(Emitter *emit, NodeID term_node) {
 // expression := term {( "-" | "+" ) term}
 // Emits an expression, and places the result in rax
 void _emit_expression(Emitter *emit, NodeID expr_node) {
+  const CallingConvention *cc = emit->cc;
   AST *ast = emit->ast;
   NodeID child = ast_get_first_child(ast, expr_node);
   if (child == NO_NODE)
@@ -240,15 +352,16 @@ void _emit_expression(Emitter *emit, NodeID expr_node) {
     const NodeID term_node = ast_get_next_sibling(ast, child);
     if (!ast_node_is_token(ast, child) || term_node == NO_NODE)
       return;
-    fprintf(emit->output, "\tpush rax\n");
+    _emit_push(emit, cc->ret_r);
     _emit_term(emit, term_node);
-    fprintf(emit->output, "\tmov rbx, rax\n"); // Move the unary node into rbx
-    fprintf(emit->output, "\tpop rax\n");
+    _emit_mov(emit, cc->scratch_r[0],
+              cc->ret_r); // Move the unary node into rbx
+    _emit_pop(emit, cc->ret_r);
     const Token *child_token = ast_node_get_token(ast, child);
     if (child_token->type == TOKEN_PLUS) {
-      fprintf(emit->output, "\tadd rax, rbx\n");
+      _emit_add(emit, cc->ret_r, cc->scratch_r[0]);
     } else if (child_token->type == TOKEN_MINUS) {
-      fprintf(emit->output, "\tsub rax, rbx\n");
+      _emit_sub(emit, cc->ret_r, cc->scratch_r[0]);
     } else {
       return;
     }
@@ -260,6 +373,7 @@ void _emit_expression(Emitter *emit, NodeID expr_node) {
 // the operation node comparison ::= expression ("==" | "!=" | ">" | ">=" | "<"
 // | "<=") expression
 NodeID _emit_comparison(Emitter *emit, NodeID comparison_node) {
+  const CallingConvention *cc = emit->cc;
   AST *ast = emit->ast;
   NodeID left_expr = ast_get_first_child(ast, comparison_node);
   NodeID op_node = ast_get_next_sibling(ast, left_expr);
@@ -267,11 +381,11 @@ NodeID _emit_comparison(Emitter *emit, NodeID comparison_node) {
   if (left_expr == NO_NODE || op_node == NO_NODE || right_expr == NO_NODE)
     return NO_NODE;
   _emit_expression(emit, left_expr);
-  fprintf(emit->output, "\tpush rax\n");
+  _emit_push(emit, cc->ret_r);
   _emit_expression(emit, right_expr);
-  fprintf(emit->output, "\tmov rbx, rax\n");
-  fprintf(emit->output, "\tpop rax\n");
-  fprintf(emit->output, "\tcmp rax, rbx\n");
+  _emit_mov(emit, cc->scratch_r[0], cc->ret_r);
+  _emit_pop(emit, cc->ret_r);
+  _emit_instr(emit, "cmp %s, %s", cc->ret_r, cc->scratch_r[0]);
   return op_node;
 }
 
@@ -295,6 +409,7 @@ const char *_get_jump_instruction_from_operation(const enum TOKEN token) {
 NodeID _emit_statement_block(Emitter *emit, NodeID possible_statement_node);
 
 void _emit_statement(Emitter *emit, NodeID statement_node) {
+  const CallingConvention *cc = emit->cc;
   AST *ast = emit->ast;
   NodeID first_child = ast_get_first_child(ast, statement_node);
   if (first_child == NO_NODE || !ast_node_is_token(ast, first_child))
@@ -308,9 +423,9 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
         ast_node_get_token(ast, expr_or_str)->type == TOKEN_STRING) {
       const Token *string = ast_node_get_token(ast, expr_or_str);
       LiteralInfo literal = shget(emit->table->literal_table, string->text);
-      fprintf(emit->output, "\tlea rdi, %s%" PRIu32 "[rip]\n",
-              LITERAL_DELIMITER, literal.label);
-      fprintf(emit->output, "\tcall %s\n", PRINT_STRING);
+      _emit_instr(emit, "lea %s, %s%" PRIu32 "[%s]", cc->arg_r[0],
+                  LITERAL_DELIMITER, literal.label, cc->rip);
+      _emit_instr(emit, "call %s", PRINT_STRING);
       return;
     }
     // Otherwise, check if it's an expression node
@@ -318,8 +433,8 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
         ast_node_get_grammar(ast, expr_or_str) == GRAMMAR_TYPE_EXPRESSION) {
       // Gets expr int in rax
       _emit_expression(emit, expr_or_str);
-      fprintf(emit->output, "\tmov rdi, rax\n");
-      fprintf(emit->output, "\tcall %s\n", PRINT_INTEGER);
+      _emit_instr(emit, "mov %s, %s", cc->arg_r[0], cc->ret_r);
+      _emit_instr(emit, "call %s", PRINT_INTEGER);
       return;
     }
     // ERROR! Bad print statement
@@ -334,8 +449,8 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     const Token *ident_token = ast_node_get_token(ast, ident_node);
     // Get identifier name and write value
     _emit_expression(emit, expr_node);
-    fprintf(emit->output, "\tmov QWORD PTR %s%s[rip], rax\n", SYMBOL_DELIMITER,
-            ident_token->text);
+    _emit_instr(emit, "mov QWORD PTR %s%s[%s], %s\n", SYMBOL_DELIMITER,
+                ident_token->text, cc->rip, cc->ret_r);
     return;
   } else if (token->type == TOKEN_INPUT) {
     // "INPUT" ident nl
@@ -344,9 +459,9 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
       return;
     const Token *ident_token = ast_node_get_token(ast, ident_node);
     DZ_ASSERT(ident_token->type == TOKEN_IDENT);
-    fprintf(emit->output, "\tcall %s\n", INPUT_INTEGER);
-    fprintf(emit->output, "\tmov QWORD PTR %s%s[rip], rax\n", SYMBOL_DELIMITER,
-            ident_token->text);
+    _emit_instr(emit, "call %s", INPUT_INTEGER);
+    _emit_instr(emit, "mov QWORD PTR %s%s[%s], %s\n", SYMBOL_DELIMITER,
+                ident_token->text, cc->rip, cc->ret_r);
     return;
   } else if (token->type == TOKEN_LABEL) {
     // LABEL ident
@@ -355,7 +470,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
       return;
     const Token *ident_token = ast_node_get_token(ast, label_ident_node);
     DZ_ASSERT(ident_token->type == TOKEN_IDENT);
-    fprintf(emit->output, "%s%s:\n", LABEL_DELIMITER, ident_token->text);
+    _emit_instr(emit, "%s%s:\n", LABEL_DELIMITER, ident_token->text);
     return;
   } else if (token->type == TOKEN_GOTO) {
     const NodeID label_ident_node = ast_get_next_sibling(ast, first_child);
@@ -363,7 +478,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
       return;
     const Token *ident_token = ast_node_get_token(ast, label_ident_node);
     DZ_ASSERT(ident_token->type == TOKEN_IDENT);
-    fprintf(emit->output, "\tjmp %s%s\n", LABEL_DELIMITER, ident_token->text);
+    _emit_instr(emit, "jmp %s%s\n", LABEL_DELIMITER, ident_token->text);
     return;
   } else if (token->type == TOKEN_IF) {
     // "IF" comparison "THEN" nl {statement}* "ENDIF" nl
@@ -374,8 +489,8 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     const char *jmp_inst = _get_jump_instruction_from_operation(
         ast_node_get_token(ast, op_node)->type);
     const uint32_t label_number = emitter_get_label(emit);
-    fprintf(emit->output, "\t%s %s%" PRIu32 "\n", jmp_inst,
-            INTERNAL_LABEL_DELIMITER, label_number);
+    _emit_instr(emit, "%s %s%" PRIu32 "\n", jmp_inst, INTERNAL_LABEL_DELIMITER,
+                label_number);
     // Emit THEN body
     const NodeID then_node = ast_get_next_sibling(ast, comp_node);
     DZ_ASSERT(ast_node_get_token(ast, then_node)->type == TOKEN_THEN);
@@ -383,8 +498,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     const NodeID end_if_node = _emit_statement_block(emit, possible_statement);
     DZ_ASSERT(ast_node_get_token(ast, end_if_node)->type == TOKEN_ENDIF);
     UNUSED(end_if_node);
-    fprintf(emit->output, "%s%" PRIu32 ":", INTERNAL_LABEL_DELIMITER,
-            label_number);
+    _emit_instr(emit, "%s%" PRIu32 ":", INTERNAL_LABEL_DELIMITER, label_number);
     return;
   } else if (token->type == TOKEN_WHILE) {
     // "WHILE" comparison "REPEAT" nl {statement}* "ENDWHILE" nl
@@ -393,24 +507,24 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
       return;
     const uint32_t loop_start_label = emitter_get_label(emit);
     const uint32_t loop_end_label = emitter_get_label(emit);
-    fprintf(emit->output, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
-            loop_start_label);
+    _emit_instr(emit, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
+                loop_start_label);
     NodeID op_node = _emit_comparison(emit, comp_node);
     const char *jmp_inst = _get_jump_instruction_from_operation(
         ast_node_get_token(ast, op_node)->type);
-    fprintf(emit->output, "\t%s %s%" PRIu32 "\n", jmp_inst,
-            INTERNAL_LABEL_DELIMITER, loop_end_label);
+    _emit_instr(emit, "%s %s%" PRIu32 "\n", jmp_inst, INTERNAL_LABEL_DELIMITER,
+                loop_end_label);
 
     const NodeID repeat_node = ast_get_next_sibling(ast, comp_node);
     DZ_ASSERT(ast_node_get_token(ast, repeat_node)->type == TOKEN_REPEAT);
     const NodeID endwhile_node =
         _emit_statement_block(emit, ast_get_next_sibling(ast, repeat_node));
-    fprintf(emit->output, "\tjmp %s%" PRIu32 "\n", INTERNAL_LABEL_DELIMITER,
-            loop_start_label);
+    _emit_instr(emit, "jmp %s%" PRIu32 "\n", INTERNAL_LABEL_DELIMITER,
+                loop_start_label);
     UNUSED(endwhile_node);
     DZ_ASSERT(ast_node_get_token(ast, endwhile_node)->type == TOKEN_ENDWHILE);
-    fprintf(emit->output, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
-            loop_end_label);
+    _emit_instr(emit, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
+                loop_end_label);
   }
 }
 
@@ -440,25 +554,26 @@ void _emit_program(Emitter *emit, NodeID program_node) {
   }
 }
 
-void emit_x86(const PlatformInfo *plat_info, FILE *file, AST *ast, VariableTable *table) {
+void emit_x86(const PlatformInfo *plat_info, FILE *file, AST *ast,
+              VariableTable *table) {
   Emitter emit = emitter_init(plat_info, file, ast, table);
   fprintf(emit.output, "%s", PREAMBLE);
   // Here's where the static vars should go
   _emit_literals(&emit);
   _emit_symbols(&emit);
   fprintf(emit.output, "%s", MAIN_PREAMBLE);
-  fprintf(emit.output, "%s", FUNC_PREAMBLE);
+  _emit_func_preamble(&emit);
   NodeID head = ast_head(ast);
   if (head != NO_NODE) {
     _emit_program(&emit, head);
   }
   // Here's where the generated code should go
-  fprintf(emit.output, "%s", FUNC_POSTAMBLE);
-  fprintf(emit.output, "%s", PRINT_INT_HELPER);
-  fprintf(emit.output, "%s", PRINT_STRING_HELPER);
-  fprintf(emit.output, "%s", INPUT_INTEGER_HELPER);
+  _emit_func_ret(&emit);
+  _emit_print_int(&emit);
+  _emit_print_string(&emit);
+  _emit_input_int(&emit);
   if (plat_info->os == OS_LINUX) {
-    fprintf(emit.output, "%s", POSTAMBLE);
+    fprintf(emit.output, "%s", LINUX_POSTAMBLE);
   }
   return;
 }

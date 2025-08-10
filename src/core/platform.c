@@ -3,24 +3,24 @@
 #include <stdlib.h>
 
 const CallingConvention CC_SYSTEM_V_64 = {
-    .argument_regs = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"},
-    .scratch_regs = {"r10", "r11"},
-    .return_reg = "rax",
-    .stack_reg = "rsp",
-    .base_reg = "rbp",
-    .inst_reg = "rip",
+    .arg_r = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"},
+    .scratch_r = {"r10", "r11"},
+    .ret_r = "rax",
+    .rsp = "rsp",
+    .rbp = "rbp",
+    .rip = "rip",
     .stack_alignment = 16,
     .shadow_space = 0,
     .ptr_size = 8,
 };
 
 const CallingConvention CC_MS_64 = {
-    .argument_regs = {"rcx", "rdx", "r8", "r9"},
-    .scratch_regs = {"r10", "r11"},
-    .return_reg = "rax",
-    .stack_reg = "rsp",
-    .base_reg = "rbp",
-    .inst_reg = "rip",
+    .arg_r = {"rcx", "rdx", "r8", "r9"},
+    .scratch_r = {"r10", "r11"},
+    .ret_r = "rax",
+    .rsp = "rsp",
+    .rbp = "rbp",
+    .rip = "rip",
     .stack_alignment = 16,
     .shadow_space = 32,
     .ptr_size = 8,

@@ -221,6 +221,7 @@ int main(const int argc, const char **argv) {
   emit_x86(&config.target, asm_file, &ast, vars);
   fclose(asm_file);
   asm_file = NULL;
+  variables_destroy(vars);
 
   // Stop timer
   timer_stop(&compiler_timer);
@@ -247,8 +248,7 @@ int main(const int argc, const char **argv) {
     goto cleanup;
   }
   if (!assembler_invoke(&cmd, tmp_asm_file, config.out_file)) {
-    compiler_error("SYSTEM ERROR: Could not execute assembler. Errno %s",
-                   strerror(errno));
+    compiler_error("Assembly failed");
     exit_code = EXIT_FAILURE;
     goto cleanup;
   }
@@ -260,7 +260,6 @@ int main(const int argc, const char **argv) {
 
   fclose(out_file);
   out_file = NULL;
-  variables_destroy(vars);
 
 cleanup:
   ast_destroy(&ast);

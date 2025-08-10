@@ -51,12 +51,12 @@ typedef struct {
 #define MAX_REGISTER 6
 
 typedef struct {
-  const char *argument_regs[MAX_REGISTER];
-  const char *scratch_regs[MAX_REGISTER];
-  const char *return_reg;
-  const char *stack_reg;
-  const char *base_reg;
-  const char *inst_reg;
+  const char *arg_r[MAX_REGISTER];     // Argument registers
+  const char *scratch_r[MAX_REGISTER]; // Scratch registers
+  const char *ret_r;                   // Return reg
+  const char *rsp;                     // Stack pointer reg
+  const char *rbp;                     // Stack base pointer reg
+  const char *rip;                     // instruction reg
   const uint8_t stack_alignment;
   const uint8_t shadow_space;
   const uint8_t ptr_size;

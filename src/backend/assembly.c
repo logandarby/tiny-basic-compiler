@@ -24,6 +24,7 @@ bool assembler_init(AssemblerInfo *cmd, const CompilerConfig *config) {
         .assembler_flags = "",
         .linker_flags = "",
     };
+    return true;
   }
   *cmd = (AssemblerInfo){0};
   return false;
