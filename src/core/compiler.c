@@ -122,9 +122,10 @@ bool compiler_execute(const CompilerConfig *config) {
     if (config->triple) {
       compiler_error(
           "Invalid target triple %s. The target triple should take the form "
-          "\"arch-os\", where arch and os are supported. Example: "
-          "x86_64-windows",
+          "\"arch-os\", where arch and os are supported. Below are the "
+          "currently supported targets",
           config->triple);
+      print_supported_platforms("\t -");
     }
     if (config->target.os == OS_UNKNOWN) {
       compiler_error("Unknown target OS. Aborting.");
@@ -137,14 +138,16 @@ bool compiler_execute(const CompilerConfig *config) {
   }
   // Error if target is not supported
   if (!is_supported_os(&config->target)) {
-    compiler_error("Target OS is not supported. Teeny may be used with either "
-                   "%sLinux%s or %sWindows%s",
-                   KCYN, KNRM, KCYN, KNRM);
+    compiler_error("Target OS is not supported. Teeny may be used with the "
+                   "following targets:");
+    print_supported_platforms("\t -");
     return false;
   }
   if (!is_supported_arch(&config->target)) {
     compiler_error("Target architecture is not supported. Teeny can be used "
-                   "only with 64-bit x86 architectures.");
+                   "only with 64-bit x86 architectures. The following targets "
+                   "are supported:");
+    print_supported_platforms("\t -");
     return false;
   }
 

@@ -15,6 +15,7 @@ static const ARCH SUPPORTED_ARCH[] = {ARCH_X86_64};
 
 bool is_supported_os(const PlatformInfo *info);
 bool is_supported_arch(const PlatformInfo *info);
+void print_supported_platforms(const char *prefix);
 
 // DEFAULTS
 extern const char *DEFAULT_OUT_FILE;

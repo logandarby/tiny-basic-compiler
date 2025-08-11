@@ -11,6 +11,7 @@
 #include "arg_parse.h"
 #include "compiler.h"
 #include "config.h"
+#include "platform.h"
 #include <stdlib.h>
 
 void parse_debug_commands_and_exit(const ArgParser *parser,
@@ -18,10 +19,18 @@ void parse_debug_commands_and_exit(const ArgParser *parser,
   if (argparse_has_flag(result, "h")) {
     argparse_print_help(parser);
     exit(EXIT_SUCCESS);
-  } else if (argparse_has_flag(result, "host-info")) {
+  }
+
+  if (argparse_has_flag(result, "host-info")) {
     char *triple = platform_info_to_triple(&HOST_INFO);
     printf("%s\n", triple);
     free(triple);
+    exit(EXIT_SUCCESS);
+  }
+
+  if (argparse_has_flag(result, "list-targets")) {
+    printf("Supported targets:\n");
+    print_supported_platforms("\t -");
     exit(EXIT_SUCCESS);
   }
 }

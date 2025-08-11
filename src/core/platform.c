@@ -135,9 +135,16 @@ static const char *_arch_to_string(ARCH arch) {
   return "unknown";
 }
 
+const PlatformInfo PLAT_INFO_UNKNOWN = {
+    .abi = ABI_UNKNOWN,
+    .os = OS_UNKNOWN,
+    .arch = ARCH_UNKNOWN,
+};
+
 bool parse_target_triple(const char *triple, PlatformInfo *info) {
+  printf("TEST %s\n", triple);
   if (triple == NULL) {
-    info = NULL;
+    *info = PLAT_INFO_UNKNOWN;
     return false;
   }
 
@@ -151,7 +158,7 @@ bool parse_target_triple(const char *triple, PlatformInfo *info) {
 
   if (!arch_str || !os_str) {
     free(triple_copy);
-    info = NULL;
+    *info = PLAT_INFO_UNKNOWN;
     return false;
   }
 
@@ -160,6 +167,10 @@ bool parse_target_triple(const char *triple, PlatformInfo *info) {
   OS os = _parse_os(os_str);
 
   free(triple_copy);
+
+  if (!arch || !os) {
+    return false;
+  }
 
   *info = (PlatformInfo){
       .arch = arch,
