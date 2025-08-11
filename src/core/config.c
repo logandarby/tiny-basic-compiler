@@ -2,7 +2,7 @@
 #include "compiler_compatibility.h"
 
 // DEFAULTS
-const char *DEFAULT_OUT_FILE = "out";
+const char *DEFAULT_OUT_FILE = "a.out";
 
 // MISC CONSTANTS
 const char *SEP = "-------------------";
