@@ -142,7 +142,6 @@ const PlatformInfo PLAT_INFO_UNKNOWN = {
 };
 
 bool parse_target_triple(const char *triple, PlatformInfo *info) {
-  printf("TEST %s\n", triple);
   if (triple == NULL) {
     *info = PLAT_INFO_UNKNOWN;
     return false;
@@ -168,7 +167,8 @@ bool parse_target_triple(const char *triple, PlatformInfo *info) {
 
   free(triple_copy);
 
-  if (!arch || !os) {
+  if (arch == ARCH_UNKNOWN || os == OS_UNKNOWN) {
+    *info = PLAT_INFO_UNKNOWN;
     return false;
   }
 

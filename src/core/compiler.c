@@ -39,9 +39,10 @@ CompilerConfig compiler_config_init(ParseResult *result) {
   char *triple = NULL;
   if (arg_target_triple) {
     if (!parse_target_triple(arg_target_triple, &target)) {
-      target = HOST_INFO;
+      triple = NULL;
+    } else {
+      triple = strdup(arg_target_triple);
     }
-    triple = strdup(arg_target_triple);
   } else {
     triple = platform_info_to_triple(&HOST_INFO);
   }
