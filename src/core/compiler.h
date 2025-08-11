@@ -9,10 +9,18 @@
 #include "../common/arg_parse.h"
 #include "platform.h"
 
+typedef enum {
+  EMIT_EXECUTABLE, // Default. Checks that an assembler is available
+  EMIT_X86_ASSEMBLY,
+} EMIT_FORMAT;
+
 typedef struct {
   char *filename_or_code_literal;
-  bool is_code_literal;
-  const bool verbose;
+  const bool
+      is_code_literal; // If the given arg is a filename, or a code literal
+  const bool verbose;  // Verbose option
+  const EMIT_FORMAT emit_format; // The format which the compiler should emit
+                                 // (just the assembly, or an executable)
   char *out_file;
   const PlatformInfo target;
   char *triple; // triple input by the user/host triple if none was provided

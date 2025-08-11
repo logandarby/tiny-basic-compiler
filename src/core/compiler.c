@@ -53,7 +53,8 @@ CompilerConfig compiler_config_init(ParseResult *result) {
       .triple = triple,
       .filename_or_code_literal = filename_or_code_literal,
       .is_code_literal = argparse_has_flag(result, "c"),
-  };
+      .emit_format = argparse_has_flag(result, "emit-asm") ? EMIT_X86_ASSEMBLY
+                                                           : EMIT_EXECUTABLE};
 }
 
 void compiler_config_free(CompilerConfig *config) {
@@ -199,19 +200,35 @@ bool compiler_execute(const CompilerConfig *config) {
     printf("%s END DEBUG OUTPUT %s\n", SEP, SEP);
   }
 
-  // Open file and emit asm
   char tmp_asm_file[PATH_MAX];
-  FILE *asm_file = create_named_tmpfile(tmp_asm_file, sizeof(tmp_asm_file));
-  if (!asm_file) {
-    compiler_error("SYSTEM ERROR: Could not create temporary file: %s",
-                   strerror(errno));
-    exit_code = false;
-    goto cleanup;
+  // Open file and emit asm
+  // IF the emit format is exec, create a temp file for the asm
+  if (config->emit_format == EMIT_EXECUTABLE) {
+    FILE *asm_file = create_named_tmpfile(tmp_asm_file, sizeof(tmp_asm_file));
+    if (!asm_file) {
+      compiler_error("SYSTEM ERROR: Could not create temporary file: %s",
+                     strerror(errno));
+      exit_code = false;
+      goto cleanup;
+    }
+    emit_x86(&config->target, asm_file, &ast, vars);
+    fclose(asm_file);
+    asm_file = NULL;
+  } else if (config->emit_format == EMIT_X86_ASSEMBLY) {
+    // IF the emit format is assembly, then open the out_file to emit to
+    FILE *asm_file = fopen(config->out_file, "w");
+    if (!asm_file) {
+      compiler_error(
+          "SYSTEM ERROR: Could not open output file %s for writing: %s",
+          config->out_file, strerror(errno));
+      exit_code = false;
+      goto cleanup;
+    }
+    emit_x86(&config->target, asm_file, &ast, vars);
+    fclose(asm_file);
+    asm_file = NULL;
+    strncpy(tmp_asm_file, config->out_file, sizeof(tmp_asm_file) - 1);
   }
-
-  emit_x86(&config->target, asm_file, &ast, vars);
-  fclose(asm_file);
-  asm_file = NULL;
   variables_destroy(vars);
 
   // Stop timer
@@ -220,6 +237,10 @@ bool compiler_execute(const CompilerConfig *config) {
          timer_elapsed_seconds(&compiler_timer));
 
   // ======= STAGE 2: Assembly ==========
+  // Only emitted if emit_format == EMIT_EXECUTABLE flag isn't specified
+  if (config->emit_format == EMIT_X86_ASSEMBLY) {
+    goto cleanup;
+  }
 
   Timer asssembler_timer;
   timer_init(&asssembler_timer);

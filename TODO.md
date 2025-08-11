@@ -6,6 +6,7 @@
 - [ ] Come up with black box testing methodology for testing emitter
 
 - [ ] Create basic semantic analyzer for variables
+    - Also need it for labels:
 - [ ] add comments to lexer
 - [ ] right now, the contiguous array of nodes doesn't support deletion without collecting garbage. Depending on the optimizations I do, I might need to clean this up
   - This means implementing something like a freelist (set) of holes in the contiguous array

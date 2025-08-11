@@ -20,6 +20,8 @@ const FlagSpec FLAG_SPEC[] = {
     FLAG('v', "verbose", "Enable verbose output"),
     FLAG_WITH_VALUE('o', "output-file", "The name of the file to output to"),
     FLAG('i', "host-info", "Dump the host info triple"),
+    FLAG('a', "emit-asm",
+         "Emit the ASM \".s\" file instead of an executable file"),
 };
 
 const ArgSpec ARG_SPEC[] = {OPTIONAL_ARG(
