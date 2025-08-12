@@ -2,8 +2,8 @@
 #include "ast.h"
 #include "compiler_compatibility.h"
 #include "dz_debug.h"
+#include "name_table.h"
 #include "platform.h"
-#include "symbol_table.h"
 #include "token.h"
 #include <stb_ds.h>
 #include <stdarg.h>
@@ -46,12 +46,12 @@ typedef struct {
   const CallingConvention *cc;
   uint32_t control_flow_label; // Used to create unique labels for IF and WHILE
                                // statement
-  VariableTable *table;        // Non-owning reference
+  NameTable *table;            // Non-owning reference
   AST *ast;                    // Non-owning reference
 } Emitter;
 
 Emitter emitter_init(const PlatformInfo *platform_info, FILE *file, AST *ast,
-                     VariableTable *table) {
+                     NameTable *table) {
   return (Emitter){
       .ast = ast,
       .output = file,
@@ -555,7 +555,7 @@ void _emit_program(Emitter *emit, NodeID program_node) {
 }
 
 void emit_x86(const PlatformInfo *plat_info, FILE *file, AST *ast,
-              VariableTable *table) {
+              NameTable *table) {
   Emitter emit = emitter_init(plat_info, file, ast, table);
   fprintf(emit.output, "%s", PREAMBLE);
   // Here's where the static vars should go

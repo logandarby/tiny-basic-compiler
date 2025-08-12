@@ -4,7 +4,7 @@
 #include "../backend/emitter-x86.h"
 #include "../common/error_reporter.h"
 #include "../common/file_reader.h"
-#include "../common/symbol_table.h"
+#include "../common/name_table.h"
 #include "../common/timer.h"
 #include "../core/core.h"
 #include "../core/system.h"
@@ -185,12 +185,19 @@ bool compiler_execute(const CompilerConfig *config) {
   }
 
   // Debug print symbol tables
-  VariableTable *vars = variables_collect_from_ast(&ast);
+  NameTable *vars = name_table_collect_from_ast(&ast);
   if (config->verbose) {
     printf("%s SYMBOL TABLE %s\n", SEP, SEP);
     for (size_t i = 0; i < shlenu(vars->symbol_table); i++) {
       SymbolHash sym = vars->symbol_table[i];
-      printf("Key: %s,\tValue: %" PRIu32 "\n", sym.key, sym.value.label);
+      printf("Key: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", sym.key,
+             sym.value.file_pos.line, sym.value.file_pos.col);
+    }
+    printf("%s LABEL TABLE %s\n", SEP, SEP);
+    for (size_t i = 0; i < shlenu(vars->label_table); i++) {
+      LabelHash label = vars->label_table[i];
+      printf("Label: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", label.key,
+             label.value.file_pos.line, label.value.file_pos.col);
     }
     printf("%s LITERAL TABLE %s\n", SEP, SEP);
     for (size_t i = 0; i < shlenu(vars->literal_table); i++) {
@@ -233,7 +240,7 @@ bool compiler_execute(const CompilerConfig *config) {
     asm_file = NULL;
     strncpy(tmp_asm_file, config->out_file, sizeof(tmp_asm_file) - 1);
   }
-  variables_destroy(vars);
+  name_table_destroy(vars);
 
   // Stop timer
   timer_stop(&compiler_timer);
