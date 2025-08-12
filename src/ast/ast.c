@@ -189,7 +189,7 @@ void ast_destroy(AST *ast) {
 bool ast_is_empty(AST *ast) { return ast->node_array_size == 0; }
 
 NodeID ast_get_first_child(AST *ast, NodeID node) {
-  if (!ast_node_is_grammar(ast, node)) {
+  if (node == NO_NODE || !ast_node_is_grammar(ast, node)) {
     return NO_NODE;
   }
   return ast_node_get_grammar_mut(ast, node)->first_child;

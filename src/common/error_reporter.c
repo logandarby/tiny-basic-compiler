@@ -43,12 +43,16 @@ void er_add_error_v(ERROR_TYPE error, const char *file, uint32_t line,
   if (!bytes_read) {
     DZ_THROW("Could not vasprintf -- out of memory");
   }
+  char *new_file = NULL;
+  if (file) {
+    new_file = strdup(file);
+  }
 
   CompilerError new_error = {
       .col = col,
       .line = line,
       .message = strdup(formatted_msg),
-      .file = strdup(file),
+      .file = new_file,
       .type = error,
   };
   arrput(ERROR_REPORTER.errors, new_error);

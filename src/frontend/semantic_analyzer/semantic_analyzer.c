@@ -70,6 +70,24 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
   // For variables, make sure that the variable declaration exists BEFORE
   // use
   if (token->type == TOKEN_IDENT) {
+    // Make sure the identifier is not a label
+    if (shgeti(ctx->table->label_table, token->text) != -1) {
+      return AST_TRAVERSAL_CONTINUE;
+    }
+    // Also make sure the identifier is not a label
+    if (gen_ctx.parent_id != NO_NODE &&
+        ast_node_is_grammar(ast, gen_ctx.parent_id) &&
+        ast_node_get_grammar(ast, gen_ctx.parent_id) ==
+            GRAMMAR_TYPE_STATEMENT) {
+      NodeID first_child = ast_get_first_child(ast, gen_ctx.parent_id);
+      if (ast_node_is_token(ast, first_child)) {
+        const Token *first_child_token = ast_node_get_token(ast, first_child);
+        if (first_child_token->type == TOKEN_LABEL ||
+            first_child_token->type == TOKEN_GOTO) {
+          return AST_TRAVERSAL_CONTINUE;
+        }
+      }
+    }
     // Check if exists
     if (shgeti(ctx->table->variable_table, token->text) == -1) {
       er_add_error(ERROR_SEMANTIC, ast_filename(ast), token->file_pos.line,
@@ -81,6 +99,10 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
     FileLocation decl_filepos =
         shget(ctx->table->variable_table, token->text).file_pos;
     FileLocation current_filepos = token->file_pos;
+    // TODO: Remove
+    printf("Current filepos: %d:%d\t Decl filepos: %d:%d\n",
+           current_filepos.line, current_filepos.col, decl_filepos.line,
+           decl_filepos.col);
     if (current_filepos.line < decl_filepos.line ||
         (current_filepos.line == decl_filepos.line &&
          current_filepos.col < decl_filepos.col)) {
@@ -94,6 +116,39 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
           decl_filepos.col);
       return AST_TRAVERSAL_CONTINUE;
     }
+    // TODO: Special case
+    // Special case: prevent user from using a variable in its own declaration
+    // To do this, we see if the parent is a statement, and if the first
+    // variable is a LET keyword. If so, then we see if the first sibling of the
+    // let token is NOT the same as the token being analyzed. If so, then we
+    // know a variable is being used in its own declaration
+    // TODO: This doesn't work, we need to traverse up the tree until we find a
+    // statement node
+    // TODO: Add to ast api to find nearest grammar ancestor
+    if (gen_ctx.parent_id == NO_NODE ||
+        !ast_node_is_grammar(ast, gen_ctx.parent_id) ||
+        ast_node_get_grammar(ast, gen_ctx.parent_id) !=
+            GRAMMAR_TYPE_STATEMENT) {
+      return AST_TRAVERSAL_CONTINUE;
+    }
+    printf("SPECIAL CASE\n");
+    NodeID first_child = ast_get_first_child(ast, gen_ctx.parent_id);
+    if (!ast_node_is_token(ast, first_child) ||
+        ast_node_get_token(ast, first_child)->type != TOKEN_LET)
+      return AST_TRAVERSAL_CONTINUE;
+    NodeID decl_ident = ast_get_next_sibling(ast, first_child);
+    if (!ast_node_is_token(ast, decl_ident))
+      return AST_TRAVERSAL_CONTINUE;
+    const Token *decl_ident_token = ast_node_get_token(ast, decl_ident);
+    if (decl_ident_token->type != TOKEN_IDENT)
+      return AST_TRAVERSAL_CONTINUE;
+    if (decl_ident_token->file_pos.line == current_filepos.line &&
+        decl_ident_token->file_pos.col == current_filepos.col)
+      return AST_TRAVERSAL_CONTINUE;
+    er_add_error(ERROR_SEMANTIC, ast_filename(ast), current_filepos.line,
+                 current_filepos.col,
+                 "Variable %s is referenced in its own declaration.",
+                 token->text);
   }
   return AST_TRAVERSAL_CONTINUE;
 }
