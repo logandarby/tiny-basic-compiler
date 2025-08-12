@@ -191,18 +191,14 @@ bool compiler_execute(const CompilerConfig *config) {
   // Debug print symbol tables
   if (config->verbose) {
     printf("%s SYMBOL TABLE %s\n", SEP, SEP);
-    for (size_t i = 0; i < shlenu(vars->identifier_table); i++) {
-      IdentifierHash sym = vars->identifier_table[i];
-      if (sym.value.type != IDENTIFIER_VARIABLE)
-        continue;
+    for (size_t i = 0; i < shlenu(vars->variable_table); i++) {
+      IdentifierHash sym = vars->variable_table[i];
       printf("Key: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", sym.key,
              sym.value.file_pos.line, sym.value.file_pos.col);
     }
     printf("%s LABEL TABLE %s\n", SEP, SEP);
-    for (size_t i = 0; i < shlenu(vars->identifier_table); i++) {
-      IdentifierHash label = vars->identifier_table[i];
-      if (label.value.type != IDENTIFIER_LABEL)
-        continue;
+    for (size_t i = 0; i < shlenu(vars->label_table); i++) {
+      IdentifierHash label = vars->label_table[i];
       printf("Label: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", label.key,
              label.value.file_pos.line, label.value.file_pos.col);
     }

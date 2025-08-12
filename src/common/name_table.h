@@ -19,15 +19,9 @@
 // For variables
 // -----------
 
-typedef enum {
-  IDENTIFIER_UNKNOWN,
-  IDENTIFIER_VARIABLE,
-  IDENTIFIER_LABEL,
-} IDENTIFIER_TYPE;
-
+// For variables
 typedef struct IdentifierInfo {
   FileLocation file_pos;
-  IDENTIFIER_TYPE type;
 } IdentifierInfo;
 
 typedef struct IdentifierHash {
@@ -35,7 +29,8 @@ typedef struct IdentifierHash {
   IdentifierInfo value;
 } IdentifierHash;
 
-typedef IdentifierHash *IdentifierTable;
+typedef IdentifierHash *VariableTable;
+typedef IdentifierHash *LabelTable;
 
 // -----------
 // Literal Table
@@ -65,7 +60,8 @@ typedef LiteralHash *LiteralTable;
 
 typedef struct {
   LiteralTable literal_table;
-  IdentifierTable identifier_table;
+  VariableTable variable_table;
+  LabelTable label_table;
 } NameTable;
 
 // Gets all string literals and all integer symbols from the ast

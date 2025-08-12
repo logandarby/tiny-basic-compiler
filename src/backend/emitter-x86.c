@@ -247,7 +247,7 @@ void _emit_input_int(Emitter *emit) {
 // This initialized 8 bytes of memory (QWORD) which can be referenced later
 // using mov QWORD PTR var_name[rip], 10
 void _emit_symbols(Emitter *emit) {
-  const IdentifierTable symbol_table = emit->table->identifier_table;
+  const VariableTable symbol_table = emit->table->variable_table;
   const uint32_t symbol_len = (uint32_t)shlenu(symbol_table);
   for (uint32_t i = 0; i < symbol_len; i++) {
     const IdentifierHash sym = symbol_table[i];

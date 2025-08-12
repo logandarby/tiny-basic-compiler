@@ -43,12 +43,11 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
     if (ident_token->type != TOKEN_IDENT)
       return AST_TRAVERSAL_CONTINUE;
     // Check if it exists already
-    if (shgetp_null(table->identifier_table, ident_token->text) != NULL)
+    if (shgetp_null(table->label_table, ident_token->text) != NULL)
       return AST_TRAVERSAL_CONTINUE;
     // Add label
-    IdentifierInfo new_label = {.type = IDENTIFIER_LABEL,
-                                .file_pos = ident_token->file_pos};
-    shput(table->identifier_table, ident_token->text, new_label);
+    IdentifierInfo new_label = {.file_pos = ident_token->file_pos};
+    shput(table->label_table, ident_token->text, new_label);
     return AST_TRAVERSAL_CONTINUE;
   }
   // ADD VARIABLE DECLARATION
@@ -61,12 +60,11 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
     if (ident_token->type != TOKEN_IDENT)
       return AST_TRAVERSAL_CONTINUE;
     // Check if it exists already
-    if (shgetp_null(table->identifier_table, ident_token->text) != NULL)
+    if (shgetp_null(table->variable_table, ident_token->text) != NULL)
       return AST_TRAVERSAL_CONTINUE;
     // Add identifier
-    IdentifierInfo new_symbol = {.type = IDENTIFIER_VARIABLE,
-                                 .file_pos = ident_token->file_pos};
-    shput(table->identifier_table, ident_token->text, new_symbol);
+    IdentifierInfo new_symbol = {.file_pos = ident_token->file_pos};
+    shput(table->variable_table, ident_token->text, new_symbol);
     ctx->counter++;
     return AST_TRAVERSAL_CONTINUE;
   }
@@ -83,7 +81,8 @@ NameTable *name_table_collect_from_ast(AST *ast) {
   NameTable *table = malloc(sizeof(NameTable));
   *table = (NameTable){
       .literal_table = NULL,
-      .identifier_table = NULL,
+      .variable_table = NULL,
+      .label_table = NULL,
   };
   Ctx ctx = (Ctx){
       .counter = 0,
@@ -96,7 +95,8 @@ NameTable *name_table_collect_from_ast(AST *ast) {
 void name_table_destroy(NameTable *var_table) {
   if (!var_table)
     return;
-  shfree(var_table->identifier_table);
+  shfree(var_table->variable_table);
+  shfree(var_table->label_table);
   shfree(var_table->literal_table);
   free(var_table);
 }

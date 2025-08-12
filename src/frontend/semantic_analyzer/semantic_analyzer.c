@@ -35,21 +35,10 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
       return AST_TRAVERSAL_STOP;
     FileLocation ident_filepos = ident_token->file_pos;
     // Error if label doesn't exist
-    if (shgeti(ctx->table->identifier_table, ident_token->text) == -1) {
+    if (shgeti(ctx->table->label_table, ident_token->text) == -1) {
       er_add_error(ERROR_SEMANTIC, ast_filename(ast), ident_filepos.line,
                    ident_filepos.col,
-                   "The identifier %s has not been declared in the codebase",
-                   ident_token->text);
-      return AST_TRAVERSAL_CONTINUE;
-    }
-    // Error if label exists, and is wrong type
-    IdentifierInfo ident_info =
-        shget(ctx->table->identifier_table, ident_token->text);
-    if (ident_info.type != IDENTIFIER_LABEL) {
-      er_add_error(ERROR_SEMANTIC, ast_filename(ast), ident_filepos.line,
-                   ident_filepos.col,
-                   "The goto statement \"GOTO %s\" is pointing to a variable "
-                   "instead of a label.",
+                   "The label %s does not exist in the codebase",
                    ident_token->text);
       return AST_TRAVERSAL_CONTINUE;
     }
@@ -64,9 +53,8 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
     if (ident_token->type != TOKEN_IDENT)
       return AST_TRAVERSAL_STOP;
     FileLocation filepos = ident_token->file_pos;
-    if (shgeti(ctx->table->identifier_table, ident_token->text) != -1) {
-      IdentifierInfo info =
-          shget(ctx->table->identifier_table, ident_token->text);
+    if (shgeti(ctx->table->label_table, ident_token->text) != -1) {
+      IdentifierInfo info = shget(ctx->table->label_table, ident_token->text);
       // If the file positions are equal, then they refer to the same identifier
       if (memcmp(&info.file_pos, &filepos, sizeof(FileLocation)) == 0)
         return AST_TRAVERSAL_CONTINUE;
@@ -80,36 +68,33 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
     return AST_TRAVERSAL_CONTINUE;
   }
   // For variables, make sure that the variable declaration exists BEFORE
-  // use,and is of the correct type
-  // TODO: THIS IS WRONG and we should probably have dedicated label ident token
-  // if (token->type != TOKEN_GOTO && token->type != TOKEN_LABEL && token->type
-  // != TOKEN_LET) {
-  //   printf("BUH\n");
-  //   // the identifier is NOT a label if it does NOT come after a label or
-  //   goto statement
-  //   // This also checks that the variable is not a declaration using LET
-  //
-  //   // Then check if next one is identifier, it must then be a variable
-  //   NodeID var_sibling = ast_get_next_sibling(ast, node);
-  //   printf("BUH2 %d %s\n", var_sibling, ast_node_is_token(ast, var_sibling) ?
-  //   "true" : "false"); if (var_sibling == NO_NODE || !ast_node_is_token(ast,
-  //   var_sibling)) return AST_TRAVERSAL_CONTINUE; printf("BUH3\n"); const
-  //   Token *var_token = ast_node_get_token(ast, var_sibling); if
-  //   (var_token->type != TOKEN_IDENT) return AST_TRAVERSAL_CONTINUE;
-  //   printf("BUH4\n");
-  //   const FileLocation filepos = var_token->file_pos;
-  //   printf("IS IDENT");
-  //
-  //   // Now, check that variable use has a corresponding declaration
-  //   if (shgeti(ctx->table->identifier_table, var_token->text) == -1) {
-  //     er_add_error(ERROR_SEMANTIC, ast_filename(ast), filepos.line,
-  //     filepos.col, "Variable %s does not have a corresponding declartion.
-  //     Please add \"LET %s = <value>\" before this line.", var_token->text,
-  //     var_token->text); return AST_TRAVERSAL_CONTINUE;
-  //   }
-  //
-  //   return AST_TRAVERSAL_CONTINUE;
-  // }
+  // use
+  if (token->type == TOKEN_IDENT) {
+    // Check if exists
+    if (shgeti(ctx->table->variable_table, token->text) == -1) {
+      er_add_error(ERROR_SEMANTIC, ast_filename(ast), token->file_pos.line,
+                   token->file_pos.col, "Variable %s has not been defined yet!",
+                   token->text);
+      return AST_TRAVERSAL_CONTINUE;
+    }
+    // If it exists, make sure its declared before
+    FileLocation decl_filepos =
+        shget(ctx->table->variable_table, token->text).file_pos;
+    FileLocation current_filepos = token->file_pos;
+    if (current_filepos.line < decl_filepos.line ||
+        (current_filepos.line == decl_filepos.line &&
+         current_filepos.col < decl_filepos.col)) {
+      er_add_error(
+          ERROR_SEMANTIC, ast_filename(ast), current_filepos.line,
+          current_filepos.col,
+          "Variable %s used before declaration. Variable is used in %s:%" PRIu32
+          ":%" PRIu32 ", but declared in %s:%" PRIu32 ":%" PRIu32,
+          token->text, ast_filename(ast), current_filepos.line,
+          current_filepos.col, ast_filename(ast), decl_filepos.line,
+          decl_filepos.col);
+      return AST_TRAVERSAL_CONTINUE;
+    }
+  }
   return AST_TRAVERSAL_CONTINUE;
 }
 
