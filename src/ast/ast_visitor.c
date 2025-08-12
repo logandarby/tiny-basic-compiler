@@ -1,4 +1,5 @@
 #include "ast_visitor.h"
+#include "arg_parse.h"
 #include "ast.h"
 
 // ====================
@@ -13,7 +14,8 @@ _ast_traverse_with_context(AST *ast, NodeID current_node,
 
   // Visit the current node
   AST_TRAVERSAL_ACTION action = AST_TRAVERSAL_CONTINUE;
-
+  if (current_node == NO_NODE)
+    return AST_TRAVERSAL_CONTINUE;
   if (ast_node_is_token(ast, current_node) && visitor->visit_token != NULL) {
     action = visitor->visit_token(ast_node_get_token(ast, current_node),
                                   current_node, generic_context, context);

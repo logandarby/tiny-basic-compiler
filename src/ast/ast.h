@@ -45,6 +45,7 @@ typedef struct {
 // It stores the head of the AST, and a pointer to the out-of-band array of
 // ASTNodes.
 typedef struct {
+  char *filename; // Dynamic allocation of the file the AST references
   NodeID _head;
   // Stores the ASTNodes out of band -- dynamically reallocates
   ASTNode *node_array;
@@ -100,6 +101,8 @@ GrammarNode *ast_node_get_grammar_mut(AST *ast, NodeID node_id);
 NodeID ast_get_first_child(AST *ast, NodeID node);
 NodeID ast_get_next_sibling(AST *ast, NodeID node);
 const char *grammar_type_to_string(GRAMMAR_TYPE type);
+const char *ast_filename(const AST *ast);
+void ast_set_filename(AST *ast, const char *filename);
 
 // ==============================
 // TESTING UTIL

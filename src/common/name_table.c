@@ -18,6 +18,7 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
   // type. If the token is a string -- adds literal to table
   Ctx *ctx = (Ctx *)ctx_void;
   NameTable *table = ctx->table;
+  // ADD LITERAL
   // Add string token
   if (token->type == TOKEN_STRING) {
     // Check if it exists already
@@ -31,6 +32,7 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
     ctx->counter++;
     return AST_TRAVERSAL_CONTINUE;
   }
+  // ADD LABEL DECLARATION
   // If the token is a label keyword, then sees if the next is an identifier and
   // adds it to the label table
   if (token->type == TOKEN_LABEL) {
@@ -45,10 +47,11 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
       return AST_TRAVERSAL_CONTINUE;
     // Add label
     IdentifierInfo new_label = {.type = IDENTIFIER_LABEL,
-                                .file_pos = token->file_pos};
+                                .file_pos = ident_token->file_pos};
     shput(table->identifier_table, ident_token->text, new_label);
     return AST_TRAVERSAL_CONTINUE;
   }
+  // ADD VARIABLE DECLARATION
   // Check if the token is "LET" with an identifier sibling, and add it
   if (token->type == TOKEN_LET) {
     const NodeID sibling = ast_get_next_sibling(gen_ctx.ast, node_id);
@@ -62,7 +65,7 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
       return AST_TRAVERSAL_CONTINUE;
     // Add identifier
     IdentifierInfo new_symbol = {.type = IDENTIFIER_VARIABLE,
-                                 .file_pos = token->file_pos};
+                                 .file_pos = ident_token->file_pos};
     shput(table->identifier_table, ident_token->text, new_symbol);
     ctx->counter++;
     return AST_TRAVERSAL_CONTINUE;

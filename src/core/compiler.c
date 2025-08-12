@@ -11,8 +11,10 @@
 #include "../frontend/lexer/lexer.h"
 #include "../parser/parser.h"
 #include "arg_parse.h"
+#include "ast.h"
 #include "config.h"
 #include "platform.h"
+#include "semantic_analyzer/semantic_analyzer.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -170,22 +172,26 @@ bool compiler_execute(const CompilerConfig *config) {
 
   // Actual parsing logic
   TokenArray tokens = lexer_parse(fr);
-  filereader_destroy(&fr);
   AST ast = ast_parse(tokens);
+  ast_set_filename(&ast, filereader_get_filename_ref(fr));
+  filereader_destroy(&fr);
   if (config->verbose) {
     printf("%s AST PRINT %s\n", SEP, SEP);
     ast_print(&ast);
   }
 
+  NameTable *vars = name_table_collect_from_ast(&ast);
+  semantic_analyzer_check(&ast, vars);
+
   // Report errors
   if (er_has_errors()) {
     er_print_all_errors();
+    name_table_destroy(vars);
     exit_code = false;
     goto cleanup;
   }
 
   // Debug print symbol tables
-  NameTable *vars = name_table_collect_from_ast(&ast);
   if (config->verbose) {
     printf("%s SYMBOL TABLE %s\n", SEP, SEP);
     for (size_t i = 0; i < shlenu(vars->identifier_table); i++) {

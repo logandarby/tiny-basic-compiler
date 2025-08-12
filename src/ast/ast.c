@@ -1,4 +1,5 @@
 #include "ast.h"
+#include <string.h>
 
 // ====================
 // CONSTANTS & DEFINITIONS
@@ -180,6 +181,9 @@ void ast_destroy(AST *ast) {
   if (ast->node_array) {
     free(ast->node_array);
   }
+  if (ast->filename) {
+    free(ast->filename);
+  }
 }
 
 bool ast_is_empty(AST *ast) { return ast->node_array_size == 0; }
@@ -229,4 +233,13 @@ NodeID ast_node_get_child(AST *ast, NodeID parent_id, short child_number) {
   DZ_ASSERT(current_child < ast->node_array_size,
             "Child node does not exist in the ast");
   return current_child;
+}
+
+const char *ast_filename(const AST *ast) { return ast->filename; }
+
+void ast_set_filename(AST *ast, const char *filename) {
+  if (ast->filename) {
+    free(ast->filename);
+  }
+  ast->filename = strdup(filename);
 }

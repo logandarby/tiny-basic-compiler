@@ -59,8 +59,8 @@ typedef LiteralHash *LiteralTable;
 // API
 // Builds Several name tables from the AST
 // Used for debug printing, and for semantic analysis
-// Only captures the first name of any type. If there are duplicates, the first
-// in the file is put into the table
+// Only captures the first declaration of any type. If there are duplicates, the
+// first in the file is put into the table
 // -----------
 
 typedef struct {
