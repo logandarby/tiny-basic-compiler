@@ -1,20 +1,17 @@
 #include "compiler.h"
 #include "../ast/ast_utils.h"
-#include "../backend/assembly.h"
-#include "../backend/emitter-x86.h"
 #include "../common/error_reporter.h"
 #include "../common/file_reader.h"
 #include "../common/name_table.h"
 #include "../common/timer.h"
 #include "../core/core.h"
 #include "../core/system.h"
-#include "../frontend/lexer/lexer.h"
-#include "../parser/parser.h"
 #include "arg_parse.h"
 #include "ast.h"
+#include "backend/backend.h"
 #include "config.h"
+#include "frontend/frontend.h"
 #include "platform.h"
-#include "semantic_analyzer/semantic_analyzer.h"
 #include <stdlib.h>
 #include <string.h>
 
