@@ -4,7 +4,8 @@
 // SYMBOL TABLE
 //
 // A dictionary of symbols. Maps an identifier string to
-// an entry which contains the variable (always integers)
+// an entry which contains info about the variable. Analyzes
+// the type of the variable as well
 //
 // Also contains logic to collect string literals
 // -----------------------------------
@@ -18,16 +19,23 @@
 // For variables
 // -----------
 
-typedef struct SymbolInfo {
+typedef enum {
+  IDENTIFIER_UNKNOWN,
+  IDENTIFIER_VARIABLE,
+  IDENTIFIER_LABEL,
+} IDENTIFIER_TYPE;
+
+typedef struct IdentifierInfo {
   FileLocation file_pos;
-} SymbolInfo;
+  IDENTIFIER_TYPE type;
+} IdentifierInfo;
 
-typedef struct SymbolHash {
+typedef struct IdentifierHash {
   char *key;
-  SymbolInfo value;
-} SymbolHash;
+  IdentifierInfo value;
+} IdentifierHash;
 
-typedef SymbolHash *SymbolTable;
+typedef IdentifierHash *IdentifierTable;
 
 // -----------
 // Literal Table
@@ -47,31 +55,17 @@ typedef struct LiteralHash {
 
 typedef LiteralHash *LiteralTable;
 
-// ------------
-// Labels
-// Maps label name to value
-// ------------
-
-typedef struct {
-  FileLocation file_pos;
-} LabelInfo;
-
-typedef struct {
-  char *key; // keyed by label name
-  LabelInfo value;
-} LabelHash;
-
-typedef LabelHash *LabelTable;
-
 // -----------
 // API
-// Builds a LiteralTable and SymbolTable from an ast
+// Builds Several name tables from the AST
+// Used for debug printing, and for semantic analysis
+// Only captures the first name of any type. If there are duplicates, the first
+// in the file is put into the table
 // -----------
 
 typedef struct {
   LiteralTable literal_table;
-  SymbolTable symbol_table;
-  LabelTable label_table;
+  IdentifierTable identifier_table;
 } NameTable;
 
 // Gets all string literals and all integer symbols from the ast

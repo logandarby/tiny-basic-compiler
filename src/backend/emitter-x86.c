@@ -247,10 +247,10 @@ void _emit_input_int(Emitter *emit) {
 // This initialized 8 bytes of memory (QWORD) which can be referenced later
 // using mov QWORD PTR var_name[rip], 10
 void _emit_symbols(Emitter *emit) {
-  const SymbolTable symbol_table = emit->table->symbol_table;
+  const IdentifierTable symbol_table = emit->table->identifier_table;
   const uint32_t symbol_len = (uint32_t)shlenu(symbol_table);
   for (uint32_t i = 0; i < symbol_len; i++) {
-    const SymbolHash sym = symbol_table[i];
+    const IdentifierHash sym = symbol_table[i];
     _emit_instr(emit, "%s%s: .skip 8\n", SYMBOL_DELIMITER, sym.key);
   }
 }
