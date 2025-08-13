@@ -2077,3 +2077,279 @@ Test(Lexer, file_location_eat_whitespace) {
 
   token_array_destroy(&ta);
 }
+
+// =========================
+// COMMENT (REM) TOKENIZATION TESTS
+// =========================
+
+Test(lexer, basic_rem_comment) {
+  TokenArray ta = parse_string("REM this is a comment");
+
+  // REM should be consumed and rest of line ignored
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_keyword_only) {
+  TokenArray ta = parse_string("REM");
+
+  // Just REM keyword should be consumed
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_trailing_whitespace) {
+  TokenArray ta = parse_string("REM    ");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_long_comment) {
+  TokenArray ta = parse_string(
+      "REM This is a very long comment with many words and symbols !@#$%^&*()");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_code_like_text) {
+  TokenArray ta = parse_string("REM LET x = 10 IF THEN WHILE REPEAT");
+
+  // Should ignore everything after REM, even if it looks like code
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_operators_in_comment) {
+  TokenArray ta = parse_string("REM x + y >= z && a || b != c");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_numbers_in_comment) {
+  TokenArray ta = parse_string("REM 123 456 789 000 999");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_strings_in_comment) {
+  TokenArray ta = parse_string("REM \"this is a string\" 'another string'");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// REM COMMENT EDGE CASES
+// =========================
+
+Test(lexer, rem_as_part_of_identifier) {
+  TokenArray ta = parse_string("REMX REMEDY REMINDS");
+
+  // Should be treated as identifiers, not comments
+  enum TOKEN expected[] = {TOKEN_IDENT, TOKEN_IDENT, TOKEN_IDENT};
+  assert_tokens_equal(ta, expected, 3);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_leading_whitespace) {
+  TokenArray ta = parse_string("   REM this is a comment with leading spaces");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_tabs_before) {
+  TokenArray ta = parse_string("\t\tREM comment with tabs");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_empty_comment) {
+  TokenArray ta = parse_string("REM");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_single_space_comment) {
+  TokenArray ta = parse_string("REM ");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_special_characters) {
+  TokenArray ta = parse_string("REM !@#$%^&*()[]{}|\\:;\"'<>?,./~`");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_unicode_like_chars) {
+  TokenArray ta = parse_string("REM comment with extended ASCII chars");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_followed_by_newline_immediately) {
+  TokenArray ta = parse_string("REM\n");
+
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+// =========================
+// REM MIXED WITH OTHER TOKENS
+// =========================
+
+Test(lexer, code_before_rem_comment) {
+  TokenArray ta = parse_string("LET x = 10 REM this is a comment");
+
+  // Should only see tokens before REM
+  enum TOKEN expected[] = {TOKEN_LET, TOKEN_IDENT, TOKEN_EQ, TOKEN_NUMBER};
+  assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_comment_then_code_next_line) {
+  TokenArray ta = parse_string("REM first line comment\nLET y = 20");
+
+  // REM should only affect its own line
+  enum TOKEN expected[] = {TOKEN_LET, TOKEN_IDENT, TOKEN_EQ, TOKEN_NUMBER};
+  assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, multiple_rem_comments) {
+  TokenArray ta =
+      parse_string("REM first comment\nREM second comment\nREM third comment");
+
+  // All REM lines should be ignored
+  enum TOKEN expected[] = {};
+  assert_tokens_equal(ta, expected, 0);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_between_code_lines) {
+  TokenArray ta = parse_string("LET a = 1\nREM this is a comment\nLET b = 2");
+
+  enum TOKEN expected[] = {TOKEN_LET, TOKEN_IDENT, TOKEN_EQ, TOKEN_NUMBER,
+                           TOKEN_LET, TOKEN_IDENT, TOKEN_EQ, TOKEN_NUMBER};
+  assert_tokens_equal(ta, expected, 8);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_complex_expression_before) {
+  TokenArray ta = parse_string(
+      "IF x >= 10 && y <= 20 THEN PRINT result REM complex condition check");
+
+  enum TOKEN expected[] = {TOKEN_IF,   TOKEN_IDENT, TOKEN_GTE,  TOKEN_NUMBER,
+                           TOKEN_AND,  TOKEN_IDENT, TOKEN_LTE,  TOKEN_NUMBER,
+                           TOKEN_THEN, TOKEN_PRINT, TOKEN_IDENT};
+  assert_tokens_equal(ta, expected, 11);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_after_string) {
+  TokenArray ta = parse_string("PRINT \"Hello World\" REM print greeting");
+
+  enum TOKEN expected[] = {TOKEN_PRINT, TOKEN_STRING};
+  assert_tokens_equal(ta, expected, 2);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_after_operators) {
+  TokenArray ta = parse_string("x + y * z REM mathematical expression");
+
+  enum TOKEN expected[] = {TOKEN_IDENT, TOKEN_PLUS, TOKEN_IDENT, TOKEN_MULT,
+                           TOKEN_IDENT};
+  assert_tokens_equal(ta, expected, 5);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_in_middle_of_program) {
+  TokenArray ta = parse_string("LET x = 10\n"
+                               "REM initialize variable\n"
+                               "WHILE x > 0\n"
+                               "REM loop until zero\n"
+                               "REPEAT\n"
+                               "  PRINT x\n"
+                               "  LET x = x - 1\n"
+                               "REM decrement counter\n"
+                               "ENDWHILE");
+
+  enum TOKEN expected[] = {
+      TOKEN_LET,   TOKEN_IDENT,  TOKEN_EQ,      TOKEN_NUMBER, TOKEN_WHILE,
+      TOKEN_IDENT, TOKEN_GT,     TOKEN_NUMBER,  TOKEN_REPEAT, TOKEN_PRINT,
+      TOKEN_IDENT, TOKEN_LET,    TOKEN_IDENT,   TOKEN_EQ,     TOKEN_IDENT,
+      TOKEN_MINUS, TOKEN_NUMBER, TOKEN_ENDWHILE};
+  assert_tokens_equal(ta, expected, 18);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_keywords_in_comment) {
+  TokenArray ta =
+      parse_string("LET x = 5 REM IF THEN ELSE WHILE keywords in comment");
+
+  // Keywords in comment should be ignored
+  enum TOKEN expected[] = {TOKEN_LET, TOKEN_IDENT, TOKEN_EQ, TOKEN_NUMBER};
+  assert_tokens_equal(ta, expected, 4);
+
+  token_array_destroy(&ta);
+}
+
+Test(lexer, rem_with_all_token_types_before) {
+  TokenArray ta = parse_string(
+      "LET var123 = \"test\" + 42 >= result REM all types present");
+
+  enum TOKEN expected[] = {TOKEN_LET,  TOKEN_IDENT,  TOKEN_EQ,  TOKEN_STRING,
+                           TOKEN_PLUS, TOKEN_NUMBER, TOKEN_GTE, TOKEN_IDENT};
+  assert_tokens_equal(ta, expected, 8);
+
+  token_array_destroy(&ta);
+}
