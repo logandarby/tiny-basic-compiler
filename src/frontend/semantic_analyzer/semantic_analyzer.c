@@ -168,8 +168,7 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
     if (statement_ancestor != decl_ident_info.parent_statement)
       return AST_TRAVERSAL_CONTINUE;
     // Shouldn't be the actual declaration
-    if (decl_ident_token->file_pos.line == current_filepos.line &&
-        decl_ident_token->file_pos.col == current_filepos.col)
+    if (decl_ident == node)
       return AST_TRAVERSAL_CONTINUE;
     er_add_error(ERROR_SEMANTIC, ast_filename(ast), current_filepos.line,
                  current_filepos.col,
