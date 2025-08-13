@@ -16,7 +16,7 @@
 
 typedef struct ASTNode ASTNode;
 // Index into out-of-band array with ASTNode struct
-typedef uint32_t NodeID;
+typedef uint64_t NodeID;
 // Represents when no node is present
 extern const NodeID NO_NODE;
 ;

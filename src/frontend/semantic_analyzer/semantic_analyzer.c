@@ -2,17 +2,46 @@
 #include "ast.h"
 #include "ast_visitor.h"
 #include "compiler_compatibility.h"
+#include "dz_debug.h"
 #include "error_reporter.h"
 #include "name_table.h"
 #include "token.h"
 #include <stb_ds.h>
+#include <string.h>
 
 typedef struct {
   NameTable *table;
+  NodeID
+      *statement_stack; // A Stack DS that keeps track of the neatest ancestor
+                        // which is a grammar token of statement type
   bool success;
 } Context;
 
-AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
+AST_TRAVERSAL_ACTION _enter_grammar(GrammarNode *grammar, const NodeID node,
+                                    AstTraversalGenericContext gen_ctx,
+                                    void *ctx_void) {
+  UNUSED(gen_ctx);
+  Context *ctx = (Context *)ctx_void;
+  if (grammar->grammar == GRAMMAR_TYPE_STATEMENT) {
+    arrpush(ctx->statement_stack, node);
+  }
+  return AST_TRAVERSAL_CONTINUE;
+}
+
+AST_TRAVERSAL_ACTION _exit_grammar(GrammarNode *grammar, const NodeID node,
+                                   AstTraversalGenericContext gen_ctx,
+                                   void *ctx_void) {
+  UNUSED(node);
+  UNUSED(gen_ctx);
+  Context *ctx = (Context *)ctx_void;
+  if (grammar->grammar == GRAMMAR_TYPE_STATEMENT) {
+    NodeID _ = arrpop(ctx->statement_stack);
+    UNUSED(_);
+  }
+  return AST_TRAVERSAL_CONTINUE;
+}
+
+AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
                                   AstTraversalGenericContext gen_ctx,
                                   void *ctx_void) {
   /*
@@ -99,10 +128,6 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
     FileLocation decl_filepos =
         shget(ctx->table->variable_table, token->text).file_pos;
     FileLocation current_filepos = token->file_pos;
-    // TODO: Remove
-    printf("Current filepos: %d:%d\t Decl filepos: %d:%d\n",
-           current_filepos.line, current_filepos.col, decl_filepos.line,
-           decl_filepos.col);
     if (current_filepos.line < decl_filepos.line ||
         (current_filepos.line == decl_filepos.line &&
          current_filepos.col < decl_filepos.col)) {
@@ -116,23 +141,23 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
           decl_filepos.col);
       return AST_TRAVERSAL_CONTINUE;
     }
-    // TODO: Special case
     // Special case: prevent user from using a variable in its own declaration
     // To do this, we see if the parent is a statement, and if the first
     // variable is a LET keyword. If so, then we see if the first sibling of the
     // let token is NOT the same as the token being analyzed. If so, then we
     // know a variable is being used in its own declaration
-    // TODO: This doesn't work, we need to traverse up the tree until we find a
     // statement node
-    // TODO: Add to ast api to find nearest grammar ancestor
-    if (gen_ctx.parent_id == NO_NODE ||
-        !ast_node_is_grammar(ast, gen_ctx.parent_id) ||
-        ast_node_get_grammar(ast, gen_ctx.parent_id) !=
-            GRAMMAR_TYPE_STATEMENT) {
+    // TODO: This almost works. It would probably be better if instead of using
+    // the fileposition, we somehow track parent statements with an ID, and
+    // instead of checking if declaration and usage are on the same line, we
+    // check if they are within the same statement.
+    if (decl_filepos.line != current_filepos.line)
+      return AST_TRAVERSAL_CONTINUE;
+    if (arrlen(ctx->statement_stack) == 0) {
       return AST_TRAVERSAL_CONTINUE;
     }
-    printf("SPECIAL CASE\n");
-    NodeID first_child = ast_get_first_child(ast, gen_ctx.parent_id);
+    NodeID statement_ancestor = arrlast(ctx->statement_stack);
+    NodeID first_child = ast_get_first_child(ast, statement_ancestor);
     if (!ast_node_is_token(ast, first_child) ||
         ast_node_get_token(ast, first_child)->type != TOKEN_LET)
       return AST_TRAVERSAL_CONTINUE;
@@ -142,6 +167,10 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
     const Token *decl_ident_token = ast_node_get_token(ast, decl_ident);
     if (decl_ident_token->type != TOKEN_IDENT)
       return AST_TRAVERSAL_CONTINUE;
+    if (strcmp(decl_ident_token->text, token->text) != 0)
+      return AST_TRAVERSAL_CONTINUE;
+    if (decl_ident_token->file_pos.line < current_filepos.line)
+      return AST_TRAVERSAL_CONTINUE;
     if (decl_ident_token->file_pos.line == current_filepos.line &&
         decl_ident_token->file_pos.col == current_filepos.col)
       return AST_TRAVERSAL_CONTINUE;
@@ -149,20 +178,22 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, NodeID node,
                  current_filepos.col,
                  "Variable %s is referenced in its own declaration.",
                  token->text);
+    return AST_TRAVERSAL_CONTINUE;
   }
   return AST_TRAVERSAL_CONTINUE;
 }
 
 bool semantic_analyzer_check(AST *ast, NameTable *table) {
   AstTraversalVisitor visitor = {
-      .visit_grammar_enter = NULL,
-      .visit_grammar_exit = NULL,
+      .visit_grammar_enter = _enter_grammar,
+      .visit_grammar_exit = _exit_grammar,
       .visit_token = _visit_token,
   };
-  Context ctx = {.success = true, .table = table};
+  Context ctx = {.success = true, .table = table, .statement_stack = NULL};
   NodeID head = ast_head(ast);
   if (head == NO_NODE)
     return true;
   ast_traverse(ast, head, &visitor, &ctx);
+  arrfree(ctx.statement_stack);
   return ctx.success;
 }

@@ -291,6 +291,25 @@ Test(SemanticAnalyzer, variable_used_before_definition_same_line) {
   er_free();
 }
 
+Test(SemanticAnalyzer, variable_defined_and_referenced_same_line) {
+  const char *program = "LET x = 1 LET x = x + 1\n";
+
+  AST ast;
+  TokenArray ta = NULL;
+  NameTable *table;
+  setup_test_data(program, &ast, &ta, &table);
+
+  bool result = semantic_analyzer_check(&ast, table);
+
+  cr_assert(result == true,
+            "Function should return true even with semantic errors");
+  cr_assert(!er_has_errors(), "Variable referencing itself with definition "
+                              "before on same line shouldn't generate errors");
+
+  cleanup_test_data(&ast, &ta, table);
+  er_free();
+}
+
 Test(SemanticAnalyzer, variable_used_before_definition_different_lines) {
   const char *program = "PRINT x\n"
                         "LET x = 5\n";
