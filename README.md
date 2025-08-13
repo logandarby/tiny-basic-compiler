@@ -18,9 +18,9 @@ TINY BASIC is a simplified version of the BASIC programming language, designed t
 
 ## System Requirements
 
-- **Operating System**: Linux, macOS, or Unix-like system (for building the compiler)
+- **Operating System**: Any OS which supports GCC
 - **Target Platforms**: Windows and Linux (64-bit)
-- **Compiler**: GCC with C99 support
+- **Compiler**: GCC (preferrably) with C99 support
 - **Memory**: Minimal requirements (uses address sanitizer for debugging)
 
 ## Building the Project
@@ -92,7 +92,7 @@ The compiler supports cross-compilation between platforms using the `-t` (target
 ./builds/release/teeny -t x86_64-linux <filename.basic>
 ```
 
-**Note**: Cross-compilation is currently only supported when running the compiler on Linux systems.
+**Note**: Cross-compilation is currently only supported when running the compiler on Linux systems, and the appropriate GCC toolchain must be installed for cross compilation.
 
 For debugging:
 ```bash
