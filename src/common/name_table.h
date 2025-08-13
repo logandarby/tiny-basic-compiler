@@ -22,6 +22,7 @@
 // For variables
 typedef struct IdentifierInfo {
   FileLocation file_pos;
+  NodeID parent_statement;
 } IdentifierInfo;
 
 typedef struct IdentifierHash {

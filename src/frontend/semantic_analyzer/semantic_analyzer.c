@@ -125,8 +125,9 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
       return AST_TRAVERSAL_CONTINUE;
     }
     // If it exists, make sure its declared before
-    FileLocation decl_filepos =
-        shget(ctx->table->variable_table, token->text).file_pos;
+    IdentifierInfo decl_ident_info =
+        shget(ctx->table->variable_table, token->text);
+    FileLocation decl_filepos = decl_ident_info.file_pos;
     FileLocation current_filepos = token->file_pos;
     if (current_filepos.line < decl_filepos.line ||
         (current_filepos.line == decl_filepos.line &&
@@ -144,15 +145,9 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
     // Special case: prevent user from using a variable in its own declaration
     // To do this, we see if the parent is a statement, and if the first
     // variable is a LET keyword. If so, then we see if the first sibling of the
-    // let token is NOT the same as the token being analyzed. If so, then we
+    // let token is the same as the token being analyzed. If so, then we
     // know a variable is being used in its own declaration
     // statement node
-    // TODO: This almost works. It would probably be better if instead of using
-    // the fileposition, we somehow track parent statements with an ID, and
-    // instead of checking if declaration and usage are on the same line, we
-    // check if they are within the same statement.
-    if (decl_filepos.line != current_filepos.line)
-      return AST_TRAVERSAL_CONTINUE;
     if (arrlen(ctx->statement_stack) == 0) {
       return AST_TRAVERSAL_CONTINUE;
     }
@@ -169,8 +164,10 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
       return AST_TRAVERSAL_CONTINUE;
     if (strcmp(decl_ident_token->text, token->text) != 0)
       return AST_TRAVERSAL_CONTINUE;
-    if (decl_ident_token->file_pos.line < current_filepos.line)
+    // Check if these are in different statements
+    if (statement_ancestor != decl_ident_info.parent_statement)
       return AST_TRAVERSAL_CONTINUE;
+    // Shouldn't be the actual declaration
     if (decl_ident_token->file_pos.line == current_filepos.line &&
         decl_ident_token->file_pos.col == current_filepos.col)
       return AST_TRAVERSAL_CONTINUE;

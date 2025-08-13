@@ -8,7 +8,41 @@
 typedef struct {
   uint32_t counter;
   NameTable *table;
+  NodeID *statement_stack; // Keeps track of statements as nodes are visited in
+                           // a stack
 } Ctx;
+
+NodeID get_statement_ancestor(Ctx *ctx) {
+  if (arrlen(ctx->statement_stack) == 0)
+    return NO_NODE;
+  return arrlast(ctx->statement_stack);
+}
+
+static AST_TRAVERSAL_ACTION _enter_grammar(GrammarNode *grammar,
+                                           const NodeID node,
+                                           AstTraversalGenericContext gen_ctx,
+                                           void *ctx_void) {
+  UNUSED(gen_ctx);
+  Ctx *ctx = (Ctx *)ctx_void;
+  if (grammar->grammar == GRAMMAR_TYPE_STATEMENT) {
+    arrpush(ctx->statement_stack, node);
+  }
+  return AST_TRAVERSAL_CONTINUE;
+}
+
+static AST_TRAVERSAL_ACTION _exit_grammar(GrammarNode *grammar,
+                                          const NodeID node,
+                                          AstTraversalGenericContext gen_ctx,
+                                          void *ctx_void) {
+  UNUSED(node);
+  UNUSED(gen_ctx);
+  Ctx *ctx = (Ctx *)ctx_void;
+  if (grammar->grammar == GRAMMAR_TYPE_STATEMENT) {
+    NodeID _ = arrpop(ctx->statement_stack);
+    UNUSED(_);
+  }
+  return AST_TRAVERSAL_CONTINUE;
+}
 
 AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
                                  AstTraversalGenericContext gen_ctx,
@@ -46,7 +80,9 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
     if (shgetp_null(table->label_table, ident_token->text) != NULL)
       return AST_TRAVERSAL_CONTINUE;
     // Add label
-    IdentifierInfo new_label = {.file_pos = ident_token->file_pos};
+    IdentifierInfo new_label = {.file_pos = ident_token->file_pos,
+                                .parent_statement =
+                                    get_statement_ancestor(ctx)};
     shput(table->label_table, ident_token->text, new_label);
     return AST_TRAVERSAL_CONTINUE;
   }
@@ -63,7 +99,9 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
     if (shgetp_null(table->variable_table, ident_token->text) != NULL)
       return AST_TRAVERSAL_CONTINUE;
     // Add identifier
-    IdentifierInfo new_symbol = {.file_pos = ident_token->file_pos};
+    IdentifierInfo new_symbol = {.file_pos = ident_token->file_pos,
+                                 .parent_statement =
+                                     get_statement_ancestor(ctx)};
     shput(table->variable_table, ident_token->text, new_symbol);
     ctx->counter++;
     return AST_TRAVERSAL_CONTINUE;
@@ -72,8 +110,8 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
 }
 
 static AstTraversalVisitor variable_visitor = {
-    .visit_grammar_enter = NULL,
-    .visit_grammar_exit = NULL,
+    .visit_grammar_enter = _enter_grammar,
+    .visit_grammar_exit = _exit_grammar,
     .visit_token = visit_token,
 };
 
@@ -87,8 +125,10 @@ NameTable *name_table_collect_from_ast(AST *ast) {
   Ctx ctx = (Ctx){
       .counter = 0,
       .table = table,
+      .statement_stack = NULL,
   };
   ast_traverse(ast, ast_head(ast), &variable_visitor, &ctx);
+  arrfree(ctx.statement_stack);
   return table;
 }
 
