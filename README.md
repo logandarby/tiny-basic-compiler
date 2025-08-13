@@ -14,6 +14,7 @@ TINY BASIC is a simplified version of the BASIC programming language, designed t
 - Labels and jumps (`GOTO`)
 - Arithmetic and logical operators
 - String and numeric literals
+- Comments (`REM`)
 
 ## System Requirements
 

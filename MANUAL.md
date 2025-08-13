@@ -158,6 +158,17 @@ IF x <= 5 THEN
 ENDIF
 ```
 
+## Comments 
+
+Comments start with the `REM` keyword, and continue until the end of line.
+
+Example:
+```
+LET x = 1 REM This is an assignment 
+REM Increment x
+LET x = x + 1
+```
+
 ## Error Handling
 
 This compiler offers comprehensive error handling for Lexical and Semantic errors.

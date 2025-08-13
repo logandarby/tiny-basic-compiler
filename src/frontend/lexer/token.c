@@ -184,6 +184,8 @@ const char *token_type_to_string(enum TOKEN type) {
     return "REPEAT";
   case TOKEN_ENDWHILE:
     return "ENDWHILE";
+  case TOKEN_REM:
+    return "REM";
   }
   return "";
 }

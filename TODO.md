@@ -1,23 +1,23 @@
-- [ ] *IMPORTANT:* Looks like the next step is that we need proper semantic analysis for better error handling. We need:
-    - Variable analysis (avoid use before defined)
-    - Valid expression Analysis (for this, we need static typing)
-    - Type analysis (variables will be statically typed to avoid overhead at runtime)
+- [ ] implement middleend w/ some basic optimizations (tail end recursion, constexpr with constant folding, etc.)
 - [ ] I got a big file now, we should use perf for optimization
 - [ ] Come up with black box testing methodology for testing emitter
 
-- [ ] Create basic semantic analyzer for variables
-    - Also need it for labels:
-- [ ] add comments to lexer
 - [ ] right now, the contiguous array of nodes doesn't support deletion without collecting garbage. Depending on the optimizations I do, I might need to clean this up
   - This means implementing something like a freelist (set) of holes in the contiguous array
 - [ ] string pool (arena) should be interned using a hashmap inside the lexer to avoid duplicate identifiers being used
     - Make sure the API has const pointers and crap
 - [ ] maybe come up with better way to handle token array shared memory
   - really, its a problem of ownership of memory-- right now the architecture works fine so long as the ownership doesn't get more complicated
-- [ ] implement some basic optimizations (tail end recursion, constexpr with constant folding, etc.)
 - [ ] optimize hot paths w/ compiler attributes perchance
 - [ ] USE GPERF -- seems to be the standard for compiler hash tables
 
+- [x] add comments to lexer
+- [x] Create basic semantic analyzer for variables
+    - Also need it for labels:
+- [x] *IMPORTANT:* Looks like the next step is that we need proper semantic analysis for better error handling. We need:
+    - Variable analysis (avoid use before defined)
+    - Valid expression Analysis (for this, we need static typing)
+    - Type analysis (variables will be statically typed to avoid overhead at runtime)
 - [x] Add proper argument parsing for verbose option, and for outfile naming
 - [x] maybe integrate gcc right in there idk
 - [x] test on windows architecture

@@ -27,6 +27,9 @@ term ::= unary {( "/" | "*" ) unary}
 unary ::= ["+" | "-"] primary
 primary ::= number | ident
 nl ::= '\n'+
+
+comment ::= "REM" {.}* nl
+Comments are ignored.
 */
 
 // Initializes an AST and parses the TokenArray according to the

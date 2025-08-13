@@ -29,6 +29,7 @@ const char *const KEYWORD_MAP[] = {
     [_index_of(TOKEN_WHILE)] = "WHILE",
     [_index_of(TOKEN_REPEAT)] = "REPEAT",
     [_index_of(TOKEN_ENDWHILE)] = "ENDWHILE",
+    [_index_of(TOKEN_REM)] = "REM",
 };
 
 const char *const OPERATOR_MAP[] = {
@@ -214,7 +215,10 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
       const enum TOKEN token =
           get_token_from_string(line + pos, word_length, KEYWORD_MAP,
                                 array_size(KEYWORD_MAP), KEYWORD_START);
-      if (token != TOKEN_UNKNOWN) {
+      // if token is REM, then skip rest of line
+      if (token == TOKEN_REM) {
+        pos = line_length - 1;
+      } else if (token != TOKEN_UNKNOWN) {
         // It's a keyword
         token_array_push_simple(ta, token, file_location);
       } else {

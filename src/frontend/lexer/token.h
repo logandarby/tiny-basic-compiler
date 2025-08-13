@@ -51,6 +51,7 @@ enum TOKEN {
   TOKEN_WHILE,
   TOKEN_REPEAT,
   TOKEN_ENDWHILE,
+  TOKEN_REM,
 };
 
 typedef struct FileLocation {
