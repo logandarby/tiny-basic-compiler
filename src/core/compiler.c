@@ -49,7 +49,7 @@ CompilerConfig compiler_config_init(ParseResult *result) {
       .verbose = argparse_has_flag(result, "v"),
       .out_file = out_file,
       .target = target,
-      .target_is_host = (memcmp(&target, &HOST_INFO, sizeof(target)) == 0),
+      .target_is_host = platform_info_eq(&target, &HOST_INFO),
       .triple = triple,
       .filename_or_code_literal = filename_or_code_literal,
       .is_code_literal = argparse_has_flag(result, "c"),

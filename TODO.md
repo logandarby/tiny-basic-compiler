@@ -1,6 +1,10 @@
+Next Steps:
+
 - [ ] implement middleend w/ some basic optimizations (tail end recursion, constexpr with constant folding, etc.)
 - [ ] I got a big file now, we should use perf for optimization
 - [ ] Come up with black box testing methodology for testing emitter
+
+Future Items:
 
 - [ ] right now, the contiguous array of nodes doesn't support deletion without collecting garbage. Depending on the optimizations I do, I might need to clean this up
   - This means implementing something like a freelist (set) of holes in the contiguous array

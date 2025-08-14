@@ -74,6 +74,13 @@ get_calling_convention(const PlatformInfo *PlatformInfo);
 // Returns NULL on error or if any component is UNKNOWN
 char *platform_info_to_triple(const PlatformInfo *info);
 
+// Returns if two platform infos are equal
+static inline bool platform_info_eq(const PlatformInfo *info1,
+                                    const PlatformInfo *info2) {
+  return info1->abi == info2->abi && info1->arch == info2->arch &&
+         info1->os == info2->os;
+}
+
 // Parse target triple in format: arch-os
 // Example: "x86_64-linux"
 // Returns PlatformInfo with parsed components inside the "info" variable

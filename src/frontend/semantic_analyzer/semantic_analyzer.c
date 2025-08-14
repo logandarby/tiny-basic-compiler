@@ -85,7 +85,7 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
     if (shgeti(ctx->table->label_table, ident_token->text) != -1) {
       IdentifierInfo info = shget(ctx->table->label_table, ident_token->text);
       // If the file positions are equal, then they refer to the same identifier
-      if (memcmp(&info.file_pos, &filepos, sizeof(FileLocation)) == 0)
+      if (filelocation_equals(info.file_pos, filepos))
         return AST_TRAVERSAL_CONTINUE;
       er_add_error(
           ERROR_SEMANTIC, ast_filename(ast), filepos.line, filepos.col,

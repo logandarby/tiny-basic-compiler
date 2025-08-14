@@ -59,6 +59,10 @@ typedef struct FileLocation {
   uint32_t col;
 } FileLocation;
 
+static inline bool filelocation_equals(FileLocation fl1, FileLocation fl2) {
+  return fl1.col == fl2.col && fl1.line == fl2.line;
+}
+
 typedef struct {
   enum TOKEN type;
   char *text; // Optionally stores the actual text for this token (numbers,

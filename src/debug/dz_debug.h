@@ -42,10 +42,6 @@ extern const char *KCYN;
 // More readable strcmp == 0 call
 extern bool str_eq(const char *s1, const char *s2, uint32_t n);
 
-// More readable memvmp == 0
-extern bool mem_eq(const void *s1, const void *s2, uint32_t s1_size,
-                   uint32_t s2_size);
-
 // Util Macros
 #define DZ_EXPAND_MACRO(x) x
 #define DZ_STRINGIFY(x) #x
