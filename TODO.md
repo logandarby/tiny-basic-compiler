@@ -58,4 +58,10 @@ PERFORMANCE HISTORY:
 BIGGEST ISSUE:
 - hash table re-allocations-- stbds_hm_find_slot
     - stb_ds is not good for this, we are trying khash
+- 95M file
 
+HASH TABLE IMPL COMPARISON:
+KHASH:
+    - 6.67s
+STB 
+    - 5.7s
