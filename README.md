@@ -146,7 +146,6 @@ src/                # Source code organized by compiler phases
 │   ├── lexer/          # Lexical analysis (tokenization)
 │   └── parser/         # Syntax analysis (parsing)
 ├── ast/            # Abstract Syntax Tree & utilities
-├── middleend/      # Middle-end: AST analysis & optimization
 ├── backend/        # Backend compilation phases (AST → target code)
 └── debug/          # Debugging macros and diagnostic utilities
 hooks/              # Contains pre-push and pre-commit hooks, as well as an installation script for them

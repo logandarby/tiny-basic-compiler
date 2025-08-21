@@ -1,0 +1,5 @@
+LET G = 1
+LET H = 0
+LET I = G / H
+PRINT I
+REM Division by zero
