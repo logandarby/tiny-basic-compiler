@@ -15,7 +15,8 @@
 #include <string.h>
 
 #include "../debug/dz_debug.h"
-#include <stb_ds.h>
+
+extern size_t TOTAL_MALLOCS;
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <io.h>

@@ -95,7 +95,7 @@ ArgParserHandle *argparse_create(const ParserSpec *spec) {
   if (!spec)
     return NULL;
 
-  ArgParserHandle *parser = calloc(1, sizeof(ArgParserHandle));
+  ArgParserHandle *parser = xcalloc(1, sizeof(ArgParserHandle));
   if (!parser)
     return NULL;
 
@@ -105,7 +105,7 @@ ArgParserHandle *argparse_create(const ParserSpec *spec) {
 
   // Copy flags
   if (spec->flags && spec->flag_count > 0) {
-    parser->flags = calloc(spec->flag_count, sizeof(FlagDef));
+    parser->flags = xcalloc(spec->flag_count, sizeof(FlagDef));
     if (!parser->flags) {
       argparse_free_parser(parser);
       return NULL;
@@ -123,7 +123,7 @@ ArgParserHandle *argparse_create(const ParserSpec *spec) {
 
   // Copy args
   if (spec->args && spec->arg_count > 0) {
-    parser->args = calloc(spec->arg_count, sizeof(ArgDef));
+    parser->args = xcalloc(spec->arg_count, sizeof(ArgDef));
     if (!parser->args) {
       argparse_free_parser(parser);
       return NULL;
@@ -145,13 +145,13 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
   if (!parser)
     return NULL;
 
-  ParseResultHandle *result = calloc(1, sizeof(ParseResultHandle));
+  ParseResultHandle *result = xcalloc(1, sizeof(ParseResultHandle));
   if (!result)
     return NULL;
 
   // Initialize flag results
   if (parser->flag_count > 0) {
-    result->flags = calloc(parser->flag_count, sizeof(ParsedFlag));
+    result->flags = xcalloc(parser->flag_count, sizeof(ParsedFlag));
     if (!result->flags) {
       argparse_free_result(result);
       return NULL;
@@ -167,7 +167,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
 
   // Initialize arg results
   if (parser->arg_count > 0) {
-    result->args = calloc(parser->arg_count, sizeof(ParsedArg));
+    result->args = xcalloc(parser->arg_count, sizeof(ParsedArg));
     if (!result->args) {
       argparse_free_result(result);
       return NULL;
@@ -217,7 +217,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
         if (!flag_def) {
           result->success = false;
           size_t msg_len = strlen("Unknown flag: ") + strlen(arg) + 1;
-          result->error_message = malloc(msg_len);
+          result->error_message = xmalloc(msg_len);
           if (result->error_message) {
             sprintf(result->error_message, "Unknown flag: %s", arg);
           }
@@ -228,7 +228,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
         if (!parsed_flag) {
           result->success = false;
           const char *msg = "Internal error: flag not found";
-          result->error_message = malloc(strlen(msg) + 1);
+          result->error_message = xmalloc(strlen(msg) + 1);
           if (result->error_message) {
             sprintf(result->error_message, "%s", msg);
           }
@@ -241,7 +241,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
           if (i + 1 >= argc || argv[i + 1][0] == '-') {
             result->success = false;
             size_t msg_len = strlen("Flag  requires a value") + strlen(arg) + 1;
-            result->error_message = malloc(msg_len);
+            result->error_message = xmalloc(msg_len);
             if (result->error_message) {
               sprintf(result->error_message, "Flag %s requires a value", arg);
             }
@@ -261,7 +261,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
           if (!flag_def) {
             result->success = false;
             size_t msg_len = strlen("Unknown flag: -") + 2;
-            result->error_message = malloc(msg_len);
+            result->error_message = xmalloc(msg_len);
             if (result->error_message) {
               sprintf(result->error_message, "Unknown flag: -%c", current_flag);
             }
@@ -272,7 +272,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
           if (!parsed_flag) {
             result->success = false;
             const char *msg = "Internal error: flag not found";
-            result->error_message = malloc(strlen(msg) + 1);
+            result->error_message = xmalloc(strlen(msg) + 1);
             if (result->error_message) {
               sprintf(result->error_message, "%s", msg);
             }
@@ -287,7 +287,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
               result->success = false;
               size_t msg_len = strlen("Flag -%c requires a value and must be "
                                       "last in compound flags");
-              result->error_message = malloc(msg_len + 1);
+              result->error_message = xmalloc(msg_len + 1);
               if (result->error_message) {
                 sprintf(result->error_message,
                         "Flag -%c requires a value and must be last in "
@@ -300,7 +300,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
             if (i + 1 >= argc || argv[i + 1][0] == '-') {
               result->success = false;
               size_t msg_len = strlen("Flag -%c requires a value");
-              result->error_message = malloc(msg_len + 1);
+              result->error_message = xmalloc(msg_len + 1);
               if (result->error_message) {
                 sprintf(result->error_message, "Flag -%c requires a value",
                         current_flag);
@@ -324,7 +324,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
         if (!result->remaining_args) {
           result->success = false;
           const char *msg = "Out of memory";
-          result->error_message = malloc(strlen(msg) + 1);
+          result->error_message = xmalloc(strlen(msg) + 1);
           if (result->error_message) {
             sprintf(result->error_message, "%s", msg);
           }
@@ -345,7 +345,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
       const char *prefix = result->flags[i].def->long_name ? "--" : "-";
       size_t msg_len =
           strlen("Required flag missing: ") + strlen(prefix) + strlen(name) + 1;
-      result->error_message = malloc(msg_len);
+      result->error_message = xmalloc(msg_len);
       if (result->error_message) {
         sprintf(result->error_message, "Required flag missing: %s%s", prefix,
                 name);
@@ -360,7 +360,7 @@ ParseResultHandle *argparse_parse(ArgParserHandle *parser, int argc,
       result->success = false;
       size_t msg_len = strlen("Required argument missing: ") +
                        strlen(result->args[i].def->name) + 1;
-      result->error_message = malloc(msg_len);
+      result->error_message = xmalloc(msg_len);
       if (result->error_message) {
         sprintf(result->error_message, "Required argument missing: %s",
                 result->args[i].def->name);

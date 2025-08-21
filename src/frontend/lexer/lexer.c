@@ -129,7 +129,7 @@ void _lexer_parse_line(const char *const line, const FileReader fr,
         current_pos += strcspn(line + current_pos, delimiter_check);
         if (current_pos >= line_length) {
           // ERROR: Unterminated string
-          char *bad_string = malloc(line_length + 1);
+          char *bad_string = xmalloc(line_length + 1);
           strip_newline(line + pos, bad_string, line_length + 1);
           er_add_error(ERROR_LEXICAL, filename, line_number, pos,
                        "Unterminated string \"%s\". Make sure to end your "

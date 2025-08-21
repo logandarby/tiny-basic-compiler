@@ -116,7 +116,7 @@ static AstTraversalVisitor variable_visitor = {
 };
 
 NameTable *name_table_collect_from_ast(AST *ast) {
-  NameTable *table = malloc(sizeof(NameTable));
+  NameTable *table = xmalloc(sizeof(NameTable));
   *table = (NameTable){
       .literal_table = NULL,
       .variable_table = NULL,

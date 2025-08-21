@@ -11,6 +11,8 @@
 #include "arg_parse.h"
 #include "compiler.h"
 #include "config.h"
+#include "core.h"
+#include "dz_debug.h"
 #include "platform.h"
 #include <stdlib.h>
 

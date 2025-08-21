@@ -195,7 +195,7 @@ char *platform_info_to_triple(const PlatformInfo *info) {
   // Allocate and format the result string
   size_t len =
       strlen(arch_str) + strlen(os_str) + 2; // +1 for dash, +1 for null
-  char *result = malloc(len);
+  char *result = xmalloc(len);
   if (result == NULL) {
     return NULL;
   }

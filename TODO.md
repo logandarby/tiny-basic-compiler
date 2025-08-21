@@ -32,3 +32,30 @@ Future Items:
   - I don't necessarily need pointers, since I already have nodeIDs.
   - This means I can store the first_child and next_siblings of a node as NodeIDs
 - [x] Reorganize directory structure for better maintainability
+
+
+
+PERFORMANCE HISTORY:
+- Quick test, if we malloc each node, we go from 3s to 5.7s. We save almost 50% of the time
+- In current implementation, there are only 176 mallocs for the big file
+- malloc is not the problem
+
+- Init run:
+    - Had 23% cache-miss rate 
+    - 3.1s user, 2.5 sys
+- After capacity-fix: 
+    - Had 24% cache-miss rate
+    - 3.2 user, 2.5 sys 
+    - Makes no difference
+- DYNAMIC ARRAY SIZING IS NOT THE PROBLEM
+
+- breadth-first traversal:
+    - user time up to 5.1s with 20% cache-miss rate
+- array-order traversal
+    - did speed up the application by .5s, and slightly reduced cache misses
+
+
+BIGGEST ISSUE:
+- hash table re-allocations-- stbds_hm_find_slot
+    - stb_ds is not good for this, we are trying khash
+

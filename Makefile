@@ -2,16 +2,20 @@
 
 TARGET_EXEC ?= teeny
 DEBUG_EXEC ?= teeny-debug
+PERF_EXEC ?= teeny-perf
 
 BUILD_DIR ?= ./builds/release
 DEBUG_BUILD_DIR ?= ./builds/debug
+PERF_BUILD_DIR ?= ./builds/perf
 SRC_DIRS ?= ./src ./extern
 
 SRCS := $(shell find $(SRC_DIRS) -name *.c -or -name *.s)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEBUG_OBJS := $(SRCS:%=$(DEBUG_BUILD_DIR)/%.o)
+PERF_OBJS := $(SRCS:%=$(PERF_BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 DEBUG_DEPS := $(DEBUG_OBJS:.o=.d)
+PERF_DEPS := $(PERF_OBJS:.o=.d)
 
 INC_DIRS := $(shell find $(SRC_DIRS) -type d) 
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
@@ -30,12 +34,17 @@ C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
 DEBUG_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
 	-MMD -MP -fsanitize=undefined,address -g -O0 -fno-omit-frame-pointer -DDZ_DEBUG                          # Enable debug macros
 
+# Performance build flags (optimized with debug symbols for perf)
+PERF_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
+	-MMD -MP -O3 -g -fno-omit-frame-pointer
+
 # Test build flags
 TEST_C_FLAGS := $(DEBUG_C_FLAGS) -DDZ_TESTING=1  # Debug flags + testing macros
 
 # Linker flags
 LD_FLAGS := -fsanitize=undefined,address                   # Link AddressSanitizer
 DEBUG_LD_FLAGS := -fsanitize=undefined,address -rdynamic   # AddressSanitizer + export symbols for backtraces
+PERF_LD_FLAGS :=                                           # No sanitizers for performance profiling
 
 
 # =========================
@@ -60,6 +69,18 @@ $(DEBUG_BUILD_DIR)/$(DEBUG_EXEC): $(DEBUG_OBJS)
 $(DEBUG_BUILD_DIR)/%.c.o: %.c
 	$(MKDIR_P) $(dir $@)
 	$(CC) $(DEBUG_C_FLAGS) -c $< -o $@
+
+
+# =========================
+# Performance Build Targets
+# =========================
+
+$(PERF_BUILD_DIR)/$(PERF_EXEC): $(PERF_OBJS)
+	$(CC) $(PERF_OBJS) -o $@ $(PERF_LD_FLAGS)
+
+$(PERF_BUILD_DIR)/%.c.o: %.c
+	$(MKDIR_P) $(dir $@)
+	$(CC) $(PERF_C_FLAGS) -c $< -o $@
 
 # =========================
 # Criterion tests
@@ -88,12 +109,14 @@ test: $(TEST_BUILD_DIR)/$(TEST_EXEC)
 # Phony Targets
 # =========================
 
-.PHONY: clean debug test format setup
+.PHONY: clean debug test format setup perf
 
 debug: $(DEBUG_BUILD_DIR)/$(DEBUG_EXEC)
 
+perf: $(PERF_BUILD_DIR)/$(PERF_EXEC)
+
 clean:
-	$(RM) -r $(BUILD_DIR) $(DEBUG_BUILD_DIR) $(TEST_BUILD_DIR)
+	$(RM) -r $(BUILD_DIR) $(DEBUG_BUILD_DIR) $(PERF_BUILD_DIR) $(TEST_BUILD_DIR)
 
 format:
 	find src/ -name '*.c' -o -name '*.h' | xargs clang-format -i
@@ -103,6 +126,7 @@ setup:
 
 -include $(DEPS)
 -include $(DEBUG_DEPS)
+-include $(PERF_DEPS)
 
 MKDIR_P ?= mkdir -p
 
