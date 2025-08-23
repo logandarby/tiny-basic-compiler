@@ -109,6 +109,19 @@ KHASH:
 STB 
     - 5.7s
 
+### Using diff hash tables (hot swap version):
+
+https://jacksonallan.github.io/c_cpp_hash_tables_benchmark/
+
+This takes the avg of 10 runs with the appropriate hash table
+
+- STB: 8.01s
+- KHASH: 9.03s
+- VERSTABLE: 8.2s
+- MLIB DICT: 8.21s   
+
+STB IS THE CLEAR WINNER!
+
 ### Getting rid of hash table 
 
 Getting rid of the name table all together saved about .2-.3s. Pretty marginal honestly. Might not be the place to do optimizations
@@ -138,3 +151,5 @@ Children:
 +    8.30%     0.52%  teeny-perf  [.] _parse_statement_star_internal
 +    7.68%     0.95%  teeny-perf  [.] _parse_statement
 +    6.44%     0.46%  teeny-perf  [.] visit_token
+
+
