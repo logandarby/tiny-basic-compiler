@@ -96,16 +96,48 @@ Average is pretty similar. This cache coherency isn't the issue
 
 Using a dynamically allocated stack and avoiding recursion actually made it take ~1s longer. The recursive option is the best approach
 
-## Hash Table Performance
+## Hash Table performance
+
 - hash table re-allocations-- stbds_hm_find_slot
     - stb_ds is not good for this, we are trying khash
-- 95M file
+
+### Using diff hash tables
 
 HASH TABLE IMPL COMPARISON:
 KHASH:
     - 6.67s
 STB 
     - 5.7s
+
+### Using diff hash tables (hot swap version):
+
+https://jacksonallan.github.io/c_cpp_hash_tables_benchmark/
+
+This takes the avg of 10 runs with the appropriate hash table
+
+- STB: 8.01s
+- KHASH: 9.03s
+- VERSTABLE: 8.2s
+- MLIB DICT: 8.21s   
+
+STB IS THE CLEAR WINNER!
+
+### Using diff hash functions (STB)
+
+- STB Default: 8.01s 
+- Stack overflow: 7.9s
+- FNV1: 7.9s
+- FNV1a: 7.96s
+- FNV1a XOR: 7.8s 
+
+https://stackoverflow.com/questions/2351087/what-is-the-best-32bit-hash-function-for-short-strings-tag-names
+https://softwareengineering.stackexchange.com/questions/49550/which-hashing-algorithm-is-best-for-uniqueness-and-speed
+
+Difference is pretty marginal. We can keep FNV1a XOR
+
+### Getting rid of hash table 
+
+Getting rid of the name table all together saved about .2-.3s. Pretty marginal honestly. Might not be the place to do optimizations
 
 
 ## CPU Time
@@ -132,3 +164,5 @@ Children:
 +    8.30%     0.52%  teeny-perf  [.] _parse_statement_star_internal
 +    7.68%     0.95%  teeny-perf  [.] _parse_statement
 +    6.44%     0.46%  teeny-perf  [.] visit_token
+
+

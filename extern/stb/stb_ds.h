@@ -1102,19 +1102,25 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count,
   (((val) >> (n)) | ((val) << (STBDS_SIZE_T_BITS - (n))))
 
 size_t stbds_hash_string(char *str, size_t seed) {
-  size_t hash = seed;
-  while (*str)
-    hash = STBDS_ROTATE_LEFT(hash, 9) + (unsigned char)*str++;
+  uint64_t h = 14695981039346656037U;
+  for (unsigned char *p = (unsigned char *)str; *p != '\0'; p++) {
+    h = (h ^ *p) * 1099511628211;
+  }
+  return h ^ seed;
 
-  // Thomas Wang 64-to-32 bit mix function, hopefully also works in 32 bits
-  hash ^= seed;
-  hash = (~hash) + (hash << 18);
-  hash ^= hash ^ STBDS_ROTATE_RIGHT(hash, 31);
-  hash = hash * 21;
-  hash ^= hash ^ STBDS_ROTATE_RIGHT(hash, 11);
-  hash += (hash << 6);
-  hash ^= STBDS_ROTATE_RIGHT(hash, 22);
-  return hash + seed;
+  // size_t hash = seed;
+  // while (*str)
+  //   hash = STBDS_ROTATE_LEFT(hash, 9) + (unsigned char)*str++;
+  //
+  // // Thomas Wang 64-to-32 bit mix function, hopefully also works in 32 bits
+  // hash ^= seed;
+  // hash = (~hash) + (hash << 18);
+  // hash ^= hash ^ STBDS_ROTATE_RIGHT(hash, 31);
+  // hash = hash * 21;
+  // hash ^= hash ^ STBDS_ROTATE_RIGHT(hash, 11);
+  // hash += (hash << 6);
+  // hash ^= STBDS_ROTATE_RIGHT(hash, 22);
+  // return hash + seed;
 }
 
 #ifdef STBDS_SIPHASH_2_4

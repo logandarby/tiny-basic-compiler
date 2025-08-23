@@ -28,7 +28,7 @@ COMP_FLAGS := -Werror -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcas
 
 # Release build flags
 C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
-	-MMD -MP -O3
+	-MMD -MP -O3 -flto -fomit-frame-pointer -ffast-math -funroll-loops
 
 # Debug build flags  
 DEBUG_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
@@ -36,7 +36,8 @@ DEBUG_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
 
 # Performance build flags (optimized with debug symbols for perf)
 PERF_C_FLAGS := $(INC_FLAGS) $(COMP_FLAGS) \
-	-MMD -MP -O3 -g -fno-omit-frame-pointer
+	-MMD -MP -O3 -g -fno-omit-frame-pointer -flto -ffast-math -funroll-loops
+
 
 # Test build flags
 TEST_C_FLAGS := $(DEBUG_C_FLAGS) -DDZ_TESTING=1  # Debug flags + testing macros
