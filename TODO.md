@@ -83,6 +83,8 @@ If we emit to C, it takes upwards of a minute-- we will not compare against this
 
 ## AST traversal hotspot
 
+### Array order traversal
+
 In a quick test between the proper depth-first ordering of ast_traversal, and the array-order traversal:
 
 - Proper Depth-first: 5.57, 5.56, 5.9, 5.9, 5.7, 5.8, 5.4, 5.5
@@ -90,7 +92,11 @@ In a quick test between the proper depth-first ordering of ast_traversal, and th
 
 Average is pretty similar. This cache coherency isn't the issue
 
-## BIGGEST ISSUE:
+### Recursion
+
+Using a dynamically allocated stack and avoiding recursion actually made it take ~1s longer. The recursive option is the best approach
+
+## Hash Table Performance
 - hash table re-allocations-- stbds_hm_find_slot
     - stb_ds is not good for this, we are trying khash
 - 95M file
@@ -102,105 +108,27 @@ STB
     - 5.7s
 
 
-Looks like most of the time in the CPU is spend inside the ast methods-- specifically ast_traverse:
-```
-#
-# dso: teeny-perf
-#
-# Total Lost Samples: 0
-#
-# Samples: 24K of event 'cycles:P'
-# Event count (approx.): 20985064890
-#
-# Children      Self  Command     Symbol
-# ........  ........  ..........  ......................................
-#
-    20.25%     0.61%  teeny-perf  [.] ast_traverse
-            |
-            |--19.64%--ast_traverse
-            |          |
-            |           --19.09%--_ast_traverse_with_context
-            |                     |
-            |                      --16.18%--_ast_traverse_with_context
-            |                                |
-            |                                |--6.87%--_ast_traverse_with_context
-            |                                |          |
-            |                                |          |--4.19%--_ast_traverse_with_context
-            |                                |          |          |
-            |                                |          |           --3.19%--_ast_traverse_with_context
-            |                                |          |                     |
-            |                                |          |                      --2.25%--_ast_traverse_with_context
-            |                                |          |                                |
-            |                                |          |                                |--0.91%--_visit_token
-            |                                |          |                                |          |
-            |                                |          |                                |           --0.78%--stbds_hmget_key
-            |                                |          |                                |                     |
-            |                                |          |                                |                      --0.58%--stbds_hm_find_slot
-            |                                |          |                                |
-            |                                |          |                                 --0.77%--_ast_traverse_with_context
-            |                                |          |                                           |
-            |                                |          |                                            --0.57%--_visit_token
-            |                                |          |                                                      |
-            |                                |          |                                                       --0.51%--stbds_hmget_key
-            |                                |          |
-            |                                |          |--0.82%--_visit_token
-            |                                |          |          |
-            |                                |          |           --0.71%--stbds_hmget_key
-            |                                |          |
-            |                                |           --0.56%--visit_token
-            |                                |
-            |                                |--4.38%--visit_token
-            |                                |          |
-            |                                |          |--2.58%--stbds_hmget_key
-            |                                |          |          |
-            |                                |          |           --2.34%--stbds_hm_find_slot
-            |                                |          |
-            |                                |           --1.47%--stbds_hmput_key
-            |                                |                     |
-            |                                |                      --0.77%--stbds_make_hash_index
-            |                                |                                |
-            |                                |                                 --0.52%--asm_exc_page_fault
-            |                                |
-            |                                 --2.73%--_visit_token
-            |                                           |
-            |                                            --2.44%--stbds_hmget_key
-            |                                                      |
-            |                                                       --2.19%--stbds_hm_find_slot
-            |
-             --0.61%--_start
-                       __libc_start_main@@GLIBC_2.34
-                       __libc_start_call_main
-                       main
-                       compiler_execute
+## CPU Time
 
-    19.10%     7.05%  teeny-perf  [.] _ast_traverse_with_context
-            |
-            |--12.05%--_ast_traverse_with_context
-            |          |
-            |           --11.37%--_ast_traverse_with_context
-            |                     |
-            |                     |--4.38%--visit_token
-            |                     |          |
-            |                     |          |--2.58%--stbds_hmget_key
-            |                     |          |          |
-            |                     |          |           --2.34%--stbds_hm_find_slot
-            |                     |          |
-            |                     |           --1.47%--stbds_hmput_key
-            |                     |                     |
-            |                     |                      --0.77%--stbds_make_hash_index
-            |                     |                                |
-            |                     |                                 --0.52%--asm_exc_page_fault
-            |                     |
-            |                     |--3.74%--_ast_traverse_with_context
-            |                     |          |
-            |                     |          |--2.07%--_ast_traverse_with_context
-            |                     |          |          |
-            |                     |          |           --1.84%--_ast_traverse_with_context
-            |                     |          |                     |
-            |                     |          |                      --1.68%--_ast_traverse_with_context
-            |                     |          |                                |
-            |                     |          |                                |--0.91%--_visit_token
-            |                     |          |                                |          |
-            |                     |          |                                |           --0.78%--stbds_hmget_key
-            |                     |          |                                |                     |
-```
+Looks like most of the time in the CPU is spend inside the ast methods-- specifically ast_traverse.
+
+The self time is mostly septn in stbds_hm_find_slot and _ast_traverse_with_context. Time including children happens mostly in the semantic analyzer, the name table collect, etc.
+
+To be more efficient, perhaps we do less passes of the tree. We can collect the name table as we parse the ast
+
+Self: 
++   14.06%  teeny-perf  [.] stbds_hm_find_slot
++   11.11%  teeny-perf  [.] _ast_traverse_with_context
+
+Children:
++   30.69%     0.95%  teeny-perf  [.] ast_traverse
++   28.90%    11.11%  teeny-perf  [.] _ast_traverse_with_context
++   25.24%     1.15%  teeny-perf  [.] _emit_statement
++   16.53%     0.00%  teeny-perf  [.] semantic_analyzer_check
++   14.32%     0.00%  teeny-perf  [.] name_table_collect_from_ast
++   14.06%    14.06%  teeny-perf  [.] stbds_hm_find_slot
++    8.55%     0.00%  teeny-perf  [.] ast_parse
++    8.37%     1.02%  teeny-perf  [.] _visit_token
++    8.30%     0.52%  teeny-perf  [.] _parse_statement_star_internal
++    7.68%     0.95%  teeny-perf  [.] _parse_statement
++    6.44%     0.46%  teeny-perf  [.] visit_token
