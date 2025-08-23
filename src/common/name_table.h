@@ -12,6 +12,7 @@
 
 #include "../ast/ast.h"
 #include "../core/core.h"
+#include "strhash.h"
 #include "token.h"
 
 // -----------
@@ -25,13 +26,8 @@ typedef struct IdentifierInfo {
   NodeID parent_statement;
 } IdentifierInfo;
 
-typedef struct IdentifierHash {
-  char *key;
-  IdentifierInfo value;
-} IdentifierHash;
-
-typedef IdentifierHash *VariableTable;
-typedef IdentifierHash *LabelTable;
+typedef StrHash VariableTable;
+typedef StrHash LabelTable;
 
 // -----------
 // Literal Table
@@ -44,12 +40,7 @@ typedef struct LiteralInfo {
   FileLocation file_pos;
 } LiteralInfo;
 
-typedef struct LiteralHash {
-  char *key; // Keyed by the string value. Supports interning
-  LiteralInfo value;
-} LiteralHash;
-
-typedef LiteralHash *LiteralTable;
+typedef StrHash LiteralTable;
 
 // -----------
 // API

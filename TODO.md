@@ -96,16 +96,22 @@ Average is pretty similar. This cache coherency isn't the issue
 
 Using a dynamically allocated stack and avoiding recursion actually made it take ~1s longer. The recursive option is the best approach
 
-## Hash Table Performance
+## Hash Table performance
+
 - hash table re-allocations-- stbds_hm_find_slot
     - stb_ds is not good for this, we are trying khash
-- 95M file
+
+### Using diff hash tables
 
 HASH TABLE IMPL COMPARISON:
 KHASH:
     - 6.67s
 STB 
     - 5.7s
+
+### Getting rid of hash table 
+
+Getting rid of the name table all together saved about .2-.3s. Pretty marginal honestly. Might not be the place to do optimizations
 
 
 ## CPU Time

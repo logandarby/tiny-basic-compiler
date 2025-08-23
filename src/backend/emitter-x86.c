@@ -66,11 +66,13 @@ uint32_t emitter_get_label(Emitter *emit) { return emit->control_flow_label++; }
 
 void _emit_literals(Emitter *emit) {
   const LiteralTable literals = emit->table->literal_table;
-  const uint32_t literal_len = shlenu(literals);
-  for (uint32_t i = 0; i < literal_len; i++) {
-    const LiteralHash lit = literals[i];
+  StrHashIter iter = strhash_iter_start(literals);
+  while (!strhash_iter_end(iter)) {
+    const char *key = strhash_iter_key(iter);
+    LiteralInfo *info = (LiteralInfo *)strhash_iter_value(iter);
     fprintf(emit->output, "\t%s%" PRIu32 ": .string \"%s\"\n",
-            LITERAL_DELIMITER, lit.value.label, lit.key);
+            LITERAL_DELIMITER, info->label, key);
+    strhash_iter_next(&iter);
   }
 }
 
@@ -248,10 +250,11 @@ void _emit_input_int(Emitter *emit) {
 // using mov QWORD PTR var_name[rip], 10
 void _emit_symbols(Emitter *emit) {
   const VariableTable symbol_table = emit->table->variable_table;
-  const size_t symbol_len = shlenu(symbol_table);
-  for (size_t i = 0; i < symbol_len; i++) {
-    const IdentifierHash sym = symbol_table[i];
-    _emit_instr(emit, "%s%s: .skip 8", SYMBOL_DELIMITER, sym.key);
+  StrHashIter iter = strhash_iter_start(symbol_table);
+  while (!strhash_iter_end(iter)) {
+    const char *key = strhash_iter_key(iter);
+    _emit_instr(emit, "%s%s: .skip 8", SYMBOL_DELIMITER, key);
+    strhash_iter_next(&iter);
   }
 }
 
@@ -422,7 +425,9 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     if (ast_node_is_token(ast, expr_or_str) &&
         ast_node_get_token(ast, expr_or_str)->type == TOKEN_STRING) {
       const Token *string = ast_node_get_token(ast, expr_or_str);
-      LiteralInfo literal = shget(emit->table->literal_table, string->text);
+      LiteralInfo *literal_ptr =
+          (LiteralInfo *)strhash_get(emit->table->literal_table, string->text);
+      LiteralInfo literal = *literal_ptr;
       _emit_instr(emit, "lea %s, %s%" PRIu32 "[%s]", cc->arg_r[0],
                   LITERAL_DELIMITER, literal.label, cc->rip);
       _emit_instr(emit, "call %s", PRINT_STRING);

@@ -64,7 +64,7 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
       return AST_TRAVERSAL_STOP;
     FileLocation ident_filepos = ident_token->file_pos;
     // Error if label doesn't exist
-    if (shgeti(ctx->table->label_table, ident_token->text) == -1) {
+    if (!strhash_exists(ctx->table->label_table, ident_token->text)) {
       er_add_error(ERROR_SEMANTIC, ast_filename(ast), ident_filepos.line,
                    ident_filepos.col,
                    "The label %s does not exist in the codebase",
@@ -82,8 +82,10 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
     if (ident_token->type != TOKEN_IDENT)
       return AST_TRAVERSAL_STOP;
     FileLocation filepos = ident_token->file_pos;
-    if (shgeti(ctx->table->label_table, ident_token->text) != -1) {
-      IdentifierInfo info = shget(ctx->table->label_table, ident_token->text);
+    if (strhash_exists(ctx->table->label_table, ident_token->text)) {
+      IdentifierInfo *info_ptr = (IdentifierInfo *)strhash_get(
+          ctx->table->label_table, ident_token->text);
+      IdentifierInfo info = *info_ptr;
       // If the file positions are equal, then they refer to the same identifier
       if (filelocation_equals(info.file_pos, filepos))
         return AST_TRAVERSAL_CONTINUE;
@@ -100,7 +102,7 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
   // use
   if (token->type == TOKEN_IDENT) {
     // Make sure the identifier is not a label
-    if (shgeti(ctx->table->label_table, token->text) != -1) {
+    if (strhash_exists(ctx->table->label_table, token->text)) {
       return AST_TRAVERSAL_CONTINUE;
     }
     // Also make sure the identifier is not a label
@@ -118,15 +120,16 @@ AST_TRAVERSAL_ACTION _visit_token(const Token *token, const NodeID node,
       }
     }
     // Check if exists
-    if (shgeti(ctx->table->variable_table, token->text) == -1) {
+    if (!strhash_exists(ctx->table->variable_table, token->text)) {
       er_add_error(ERROR_SEMANTIC, ast_filename(ast), token->file_pos.line,
                    token->file_pos.col, "Variable %s has not been defined yet!",
                    token->text);
       return AST_TRAVERSAL_CONTINUE;
     }
     // If it exists, make sure its declared before
-    IdentifierInfo decl_ident_info =
-        shget(ctx->table->variable_table, token->text);
+    IdentifierInfo *decl_ident_info_ptr =
+        (IdentifierInfo *)strhash_get(ctx->table->variable_table, token->text);
+    IdentifierInfo decl_ident_info = *decl_ident_info_ptr;
     FileLocation decl_filepos = decl_ident_info.file_pos;
     FileLocation current_filepos = token->file_pos;
     if (current_filepos.line < decl_filepos.line ||

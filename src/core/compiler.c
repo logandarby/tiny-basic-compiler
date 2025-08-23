@@ -182,31 +182,40 @@ bool compiler_execute(const CompilerConfig *config) {
   semantic_analyzer_check(&ast, vars);
 
   // Report errors
-  if (er_has_errors()) {
-    er_print_all_errors();
-    name_table_destroy(vars);
-    exit_code = false;
-    goto cleanup;
-  }
+  // if (er_has_errors()) {
+  //   er_print_all_errors();
+  //   name_table_destroy(vars);
+  //   exit_code = false;
+  //   goto cleanup;
+  // }
 
   // Debug print symbol tables
   if (config->verbose) {
     printf("%s SYMBOL TABLE %s\n", SEP, SEP);
-    for (size_t i = 0; i < shlenu(vars->variable_table); i++) {
-      IdentifierHash sym = vars->variable_table[i];
-      printf("Key: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", sym.key,
-             sym.value.file_pos.line, sym.value.file_pos.col);
+    StrHashIter iter = strhash_iter_start(vars->variable_table);
+    while (!strhash_iter_end(iter)) {
+      const char *key = strhash_iter_key(iter);
+      IdentifierInfo *info = (IdentifierInfo *)strhash_iter_value(iter);
+      printf("Key: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", key,
+             info->file_pos.line, info->file_pos.col);
+      strhash_iter_next(&iter);
     }
     printf("%s LABEL TABLE %s\n", SEP, SEP);
-    for (size_t i = 0; i < shlenu(vars->label_table); i++) {
-      IdentifierHash label = vars->label_table[i];
-      printf("Label: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", label.key,
-             label.value.file_pos.line, label.value.file_pos.col);
+    iter = strhash_iter_start(vars->label_table);
+    while (!strhash_iter_end(iter)) {
+      const char *key = strhash_iter_key(iter);
+      IdentifierInfo *info = (IdentifierInfo *)strhash_iter_value(iter);
+      printf("Label: %s,\tPos: %" PRIu32 ":%" PRIu32 "\n", key,
+             info->file_pos.line, info->file_pos.col);
+      strhash_iter_next(&iter);
     }
     printf("%s LITERAL TABLE %s\n", SEP, SEP);
-    for (size_t i = 0; i < shlenu(vars->literal_table); i++) {
-      LiteralHash lit = vars->literal_table[i];
-      printf("Key: %s,\tValue: %" PRIu32 "\n", lit.key, lit.value.label);
+    iter = strhash_iter_start(vars->literal_table);
+    while (!strhash_iter_end(iter)) {
+      const char *key = strhash_iter_key(iter);
+      LiteralInfo *info = (LiteralInfo *)strhash_iter_value(iter);
+      printf("Key: %s,\tValue: %" PRIu32 "\n", key, info->label);
+      strhash_iter_next(&iter);
     }
 
     // Debug print generated ASM

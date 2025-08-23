@@ -56,13 +56,14 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
   // Add string token
   if (token->type == TOKEN_STRING) {
     // Check if it exists already
-    if (shgetp_null(table->literal_table, token->text) != NULL)
+    if (strhash_exists(table->literal_table, token->text))
       return AST_TRAVERSAL_CONTINUE;
-    LiteralInfo str_info = {
+    LiteralInfo *str_info = xmalloc(sizeof(LiteralInfo));
+    *str_info = (LiteralInfo){
         .label = ctx->counter,
         .file_pos = token->file_pos,
     };
-    shput(table->literal_table, token->text, str_info);
+    strhash_put(&table->literal_table, token->text, str_info);
     ctx->counter++;
     return AST_TRAVERSAL_CONTINUE;
   }
@@ -77,13 +78,14 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
     if (ident_token->type != TOKEN_IDENT)
       return AST_TRAVERSAL_CONTINUE;
     // Check if it exists already
-    if (shgetp_null(table->label_table, ident_token->text) != NULL)
+    if (strhash_exists(table->label_table, ident_token->text))
       return AST_TRAVERSAL_CONTINUE;
     // Add label
-    IdentifierInfo new_label = {.file_pos = ident_token->file_pos,
-                                .parent_statement =
-                                    get_statement_ancestor(ctx)};
-    shput(table->label_table, ident_token->text, new_label);
+    IdentifierInfo *new_label = xmalloc(sizeof(IdentifierInfo));
+    *new_label =
+        (IdentifierInfo){.file_pos = ident_token->file_pos,
+                         .parent_statement = get_statement_ancestor(ctx)};
+    strhash_put(&table->label_table, ident_token->text, new_label);
     return AST_TRAVERSAL_CONTINUE;
   }
   // ADD VARIABLE DECLARATION
@@ -96,13 +98,14 @@ AST_TRAVERSAL_ACTION visit_token(const Token *token, NodeID node_id,
     if (ident_token->type != TOKEN_IDENT)
       return AST_TRAVERSAL_CONTINUE;
     // Check if it exists already
-    if (shgetp_null(table->variable_table, ident_token->text) != NULL)
+    if (strhash_exists(table->variable_table, ident_token->text))
       return AST_TRAVERSAL_CONTINUE;
     // Add identifier
-    IdentifierInfo new_symbol = {.file_pos = ident_token->file_pos,
-                                 .parent_statement =
-                                     get_statement_ancestor(ctx)};
-    shput(table->variable_table, ident_token->text, new_symbol);
+    IdentifierInfo *new_symbol = xmalloc(sizeof(IdentifierInfo));
+    *new_symbol =
+        (IdentifierInfo){.file_pos = ident_token->file_pos,
+                         .parent_statement = get_statement_ancestor(ctx)};
+    strhash_put(&table->variable_table, ident_token->text, new_symbol);
     ctx->counter++;
     return AST_TRAVERSAL_CONTINUE;
   }
@@ -118,9 +121,9 @@ static AstTraversalVisitor variable_visitor = {
 NameTable *name_table_collect_from_ast(AST *ast) {
   NameTable *table = xmalloc(sizeof(NameTable));
   *table = (NameTable){
-      .literal_table = NULL,
-      .variable_table = NULL,
-      .label_table = NULL,
+      .literal_table = strhash_init(16),
+      .variable_table = strhash_init(16),
+      .label_table = strhash_init(16),
   };
   Ctx ctx = (Ctx){
       .counter = 0,
@@ -135,8 +138,30 @@ NameTable *name_table_collect_from_ast(AST *ast) {
 void name_table_destroy(NameTable *var_table) {
   if (!var_table)
     return;
-  shfree(var_table->variable_table);
-  shfree(var_table->label_table);
-  shfree(var_table->literal_table);
+
+  // Free all allocated IdentifierInfo structs in variable_table
+  StrHashIter iter = strhash_iter_start(var_table->variable_table);
+  while (!strhash_iter_end(iter)) {
+    free(strhash_iter_value(iter));
+    strhash_iter_next(&iter);
+  }
+
+  // Free all allocated IdentifierInfo structs in label_table
+  iter = strhash_iter_start(var_table->label_table);
+  while (!strhash_iter_end(iter)) {
+    free(strhash_iter_value(iter));
+    strhash_iter_next(&iter);
+  }
+
+  // Free all allocated LiteralInfo structs in literal_table
+  iter = strhash_iter_start(var_table->literal_table);
+  while (!strhash_iter_end(iter)) {
+    free(strhash_iter_value(iter));
+    strhash_iter_next(&iter);
+  }
+
+  strhash_free(var_table->variable_table);
+  strhash_free(var_table->label_table);
+  strhash_free(var_table->literal_table);
   free(var_table);
 }
