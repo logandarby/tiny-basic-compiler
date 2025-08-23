@@ -171,4 +171,27 @@ Children:
 +    7.68%     0.95%  teeny-perf  [.] _parse_statement
 +    6.44%     0.46%  teeny-perf  [.] visit_token
 
+## NEW TOP CONSUMERS:
+
++   17.07%  teeny-perf  teeny-perf               [.] stbds_hmget_key.constprop.0
++   13.62%  teeny-perf  teeny-perf               [.] _ast_traverse_with_context
++    9.08%  teeny-perf  teeny-perf               [.] compiler_execute
++    7.66%  teeny-perf  libc.so.6                [.] __strlen_avx2
++    6.92%  teeny-perf  libc.so.6                [.] __printf_buffer
++    4.02%  teeny-perf  libc.so.6                [.] __printf_buffer_write
++    3.85%  teeny-perf  teeny-perf               [.] pc_add_token_and_advance
++    3.43%  teeny-perf  libc.so.6                [.] __memmove_avx_unaligned_erms
++    2.91%  teeny-perf  libc.so.6                [.] __strchrnul_avx2
++    2.83%  teeny-perf  teeny-perf               [.] batched_writer_vprintf
++    2.24%  teeny-perf  libc.so.6                [.] __strcmp_avx2
+
+We already reduced printf calls from ~70% down to this ~20%
+
+## Hash table lookups 
+
+After removing the shget in the emitter (which seemed like a hotspot), we were reduced from 
+- SHGET: 4.33
+- NO_GET: 4.17
+
+It looks like it has pretty similar timing-- this could instead be baked right into the asm instead of using a lookup
 
