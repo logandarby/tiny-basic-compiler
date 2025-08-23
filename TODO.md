@@ -81,7 +81,16 @@ If we emit to C, it takes upwards of a minute-- we will not compare against this
     - did speed up the application by .5s, and slightly reduced cache misses
 
 
-BIGGEST ISSUE:
+## AST traversal hotspot
+
+In a quick test between the proper depth-first ordering of ast_traversal, and the array-order traversal:
+
+- Proper Depth-first: 5.57, 5.56, 5.9, 5.9, 5.7, 5.8, 5.4, 5.5
+- Array order (wrong): 5.61, 6.03, 5.51, 5.42, 5.2, 5.5
+
+Average is pretty similar. This cache coherency isn't the issue
+
+## BIGGEST ISSUE:
 - hash table re-allocations-- stbds_hm_find_slot
     - stb_ds is not good for this, we are trying khash
 - 95M file

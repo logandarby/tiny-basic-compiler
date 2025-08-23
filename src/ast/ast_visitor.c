@@ -72,43 +72,6 @@ _ast_traverse_with_context(AST *ast, NodeID current_node,
   return true;
 }
 
-// Simple array order traversal
-
-// static bool
-// _ast_traverse_with_context(AST *ast, NodeID current_node,
-//                            AstTraversalGenericContext generic_context,
-//                            AstTraversalVisitor *visitor, void *context) {
-//   UNUSED(generic_context);
-//   if (current_node == NO_NODE)
-//     return true;
-//
-//   for (NodeID node_id = 0; node_id < ast->node_array_size; node_id++) {
-//     AstTraversalGenericContext node_context = {
-//         .ast = ast,
-//         .parent_id = NO_NODE,
-//         .node_id = node_id
-//     };
-//
-//     AST_TRAVERSAL_ACTION action = AST_TRAVERSAL_CONTINUE;
-//
-//     if (ast_node_is_token(ast, node_id) && visitor->visit_token != NULL) {
-//       action = visitor->visit_token(ast_node_get_token(ast, node_id),
-//                                     node_id, node_context, context);
-//     } else if (ast_node_is_grammar(ast, node_id) &&
-//                visitor->visit_grammar_enter != NULL) {
-//       action = visitor->visit_grammar_enter(
-//           ast_node_get_grammar_mut(ast, node_id), node_id,
-//           node_context, context);
-//     }
-//
-//     if (action == AST_TRAVERSAL_STOP) {
-//       return false;
-//     }
-//   }
-//
-//   return true;
-// }
-
 bool ast_traverse(AST *ast, NodeID start, AstTraversalVisitor *visitor,
                   void *context) {
   DZ_ASSERT(ast, "AST pointer is null");
