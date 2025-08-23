@@ -1,5 +1,6 @@
 #include "emitter-x86.h"
 #include "ast.h"
+#include "batched_writer.h"
 #include "compiler_compatibility.h"
 #include "dz_debug.h"
 #include "name_table.h"
@@ -41,7 +42,7 @@ const char *LINUX_POSTAMBLE = ".section .note.GNU-stack,\"\",@progbits\n";
 // ----------------------
 
 typedef struct {
-  FILE *output;
+  BatchedWriter writer;
   const PlatformInfo *platform_info;
   const CallingConvention *cc;
   uint32_t control_flow_label; // Used to create unique labels for IF and WHILE
@@ -54,7 +55,7 @@ Emitter emitter_init(const PlatformInfo *platform_info, FILE *file, AST *ast,
                      NameTable *table) {
   return (Emitter){
       .ast = ast,
-      .output = file,
+      .writer = batched_writer_init(file),
       .table = table,
       .control_flow_label = 0,
       .platform_info = platform_info,
@@ -69,8 +70,8 @@ void _emit_literals(Emitter *emit) {
   const uint32_t literal_len = shlenu(literals);
   for (uint32_t i = 0; i < literal_len; i++) {
     const LiteralHash lit = literals[i];
-    fprintf(emit->output, "\t%s%" PRIu32 ": .string \"%s\"\n",
-            LITERAL_DELIMITER, lit.value.label, lit.key);
+    batched_writer_printf(&emit->writer, "\t%s%" PRIu32 ": .string \"%s\"\n",
+                          LITERAL_DELIMITER, lit.value.label, lit.key);
   }
 }
 
@@ -79,14 +80,14 @@ void _emit_instr(Emitter *emit, const char *msg, ...) FORMAT_PRINTF(2, 3);
 void _emit_instr(Emitter *emit, const char *msg, ...) {
   va_list args;
   va_start(args, msg);
-  fprintf(emit->output, "\t");
-  vfprintf(emit->output, msg, args);
-  fprintf(emit->output, "\n");
+  batched_writer_write(&emit->writer, "\t");
+  batched_writer_vprintf(&emit->writer, msg, args);
+  batched_writer_write(&emit->writer, "\n");
   va_end(args);
 }
 
 void _emit_label(Emitter *emit, const char *msg) {
-  fprintf(emit->output, "%s:\n", msg);
+  batched_writer_printf(&emit->writer, "%s:\n", msg);
 }
 
 void _emit_mov(Emitter *emit, const char *dest, const char *src) {
@@ -449,7 +450,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     const Token *ident_token = ast_node_get_token(ast, ident_node);
     // Get identifier name and write value
     _emit_expression(emit, expr_node);
-    _emit_instr(emit, "mov QWORD PTR %s%s[%s], %s\n", SYMBOL_DELIMITER,
+    _emit_instr(emit, "mov QWORD PTR %s%s[%s], %s", SYMBOL_DELIMITER,
                 ident_token->text, cc->rip, cc->ret_r);
     return;
   } else if (token->type == TOKEN_INPUT) {
@@ -460,7 +461,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     const Token *ident_token = ast_node_get_token(ast, ident_node);
     DZ_ASSERT(ident_token->type == TOKEN_IDENT);
     _emit_instr(emit, "call %s", INPUT_INTEGER);
-    _emit_instr(emit, "mov QWORD PTR %s%s[%s], %s\n", SYMBOL_DELIMITER,
+    _emit_instr(emit, "mov QWORD PTR %s%s[%s], %s", SYMBOL_DELIMITER,
                 ident_token->text, cc->rip, cc->ret_r);
     return;
   } else if (token->type == TOKEN_LABEL) {
@@ -470,7 +471,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
       return;
     const Token *ident_token = ast_node_get_token(ast, label_ident_node);
     DZ_ASSERT(ident_token->type == TOKEN_IDENT);
-    _emit_instr(emit, "%s%s:\n", LABEL_DELIMITER, ident_token->text);
+    _emit_instr(emit, "%s%s:", LABEL_DELIMITER, ident_token->text);
     return;
   } else if (token->type == TOKEN_GOTO) {
     const NodeID label_ident_node = ast_get_next_sibling(ast, first_child);
@@ -478,7 +479,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
       return;
     const Token *ident_token = ast_node_get_token(ast, label_ident_node);
     DZ_ASSERT(ident_token->type == TOKEN_IDENT);
-    _emit_instr(emit, "jmp %s%s\n", LABEL_DELIMITER, ident_token->text);
+    _emit_instr(emit, "jmp %s%s", LABEL_DELIMITER, ident_token->text);
     return;
   } else if (token->type == TOKEN_IF) {
     // "IF" comparison "THEN" nl {statement}* "ENDIF" nl
@@ -489,7 +490,7 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
     const char *jmp_inst = _get_jump_instruction_from_operation(
         ast_node_get_token(ast, op_node)->type);
     const uint32_t label_number = emitter_get_label(emit);
-    _emit_instr(emit, "%s %s%" PRIu32 "\n", jmp_inst, INTERNAL_LABEL_DELIMITER,
+    _emit_instr(emit, "%s %s%" PRIu32, jmp_inst, INTERNAL_LABEL_DELIMITER,
                 label_number);
     // Emit THEN body
     const NodeID then_node = ast_get_next_sibling(ast, comp_node);
@@ -507,23 +508,23 @@ void _emit_statement(Emitter *emit, NodeID statement_node) {
       return;
     const uint32_t loop_start_label = emitter_get_label(emit);
     const uint32_t loop_end_label = emitter_get_label(emit);
-    _emit_instr(emit, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
+    _emit_instr(emit, "%s%" PRIu32 ":", INTERNAL_LABEL_DELIMITER,
                 loop_start_label);
     NodeID op_node = _emit_comparison(emit, comp_node);
     const char *jmp_inst = _get_jump_instruction_from_operation(
         ast_node_get_token(ast, op_node)->type);
-    _emit_instr(emit, "%s %s%" PRIu32 "\n", jmp_inst, INTERNAL_LABEL_DELIMITER,
+    _emit_instr(emit, "%s %s%" PRIu32, jmp_inst, INTERNAL_LABEL_DELIMITER,
                 loop_end_label);
 
     const NodeID repeat_node = ast_get_next_sibling(ast, comp_node);
     DZ_ASSERT(ast_node_get_token(ast, repeat_node)->type == TOKEN_REPEAT);
     const NodeID endwhile_node =
         _emit_statement_block(emit, ast_get_next_sibling(ast, repeat_node));
-    _emit_instr(emit, "jmp %s%" PRIu32 "\n", INTERNAL_LABEL_DELIMITER,
+    _emit_instr(emit, "jmp %s%" PRIu32, INTERNAL_LABEL_DELIMITER,
                 loop_start_label);
     UNUSED(endwhile_node);
     DZ_ASSERT(ast_node_get_token(ast, endwhile_node)->type == TOKEN_ENDWHILE);
-    _emit_instr(emit, "%s%" PRIu32 ":\n", INTERNAL_LABEL_DELIMITER,
+    _emit_instr(emit, "%s%" PRIu32 ":", INTERNAL_LABEL_DELIMITER,
                 loop_end_label);
   }
 }
@@ -557,11 +558,11 @@ void _emit_program(Emitter *emit, NodeID program_node) {
 void emit_x86(const PlatformInfo *plat_info, FILE *file, AST *ast,
               NameTable *table) {
   Emitter emit = emitter_init(plat_info, file, ast, table);
-  fprintf(emit.output, "%s", PREAMBLE);
+  batched_writer_write(&emit.writer, PREAMBLE);
   // Here's where the static vars should go
   _emit_literals(&emit);
   _emit_symbols(&emit);
-  fprintf(emit.output, "%s", MAIN_PREAMBLE);
+  batched_writer_write(&emit.writer, MAIN_PREAMBLE);
   _emit_func_preamble(&emit);
   NodeID head = ast_head(ast);
   if (head != NO_NODE) {
@@ -573,7 +574,8 @@ void emit_x86(const PlatformInfo *plat_info, FILE *file, AST *ast,
   _emit_print_string(&emit);
   _emit_input_int(&emit);
   if (plat_info->os == OS_LINUX) {
-    fprintf(emit.output, "%s", LINUX_POSTAMBLE);
+    batched_writer_write(&emit.writer, LINUX_POSTAMBLE);
   }
+  batched_writer_close(&emit.writer);
   return;
 }

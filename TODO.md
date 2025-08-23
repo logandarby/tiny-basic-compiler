@@ -80,6 +80,10 @@ If we emit to C, it takes upwards of a minute-- we will not compare against this
 - array-order traversal
     - did speed up the application by .5s, and slightly reduced cache misses
 
+## PRINTF CALLS
+
+- Individual printf calls caused way too many times had something liek a 50% overhead 
+- By batching printf calls, we reduced the runtime from ~8s to ~4s, resulting in about a 41% runtime improvement.
 
 ## AST traversal hotspot
 
@@ -132,6 +136,8 @@ STB IS THE CLEAR WINNER!
 
 https://stackoverflow.com/questions/2351087/what-is-the-best-32bit-hash-function-for-short-strings-tag-names
 https://softwareengineering.stackexchange.com/questions/49550/which-hashing-algorithm-is-best-for-uniqueness-and-speed
+
+This resulted in a couple hundred milliseconds shaved off the time.
 
 Difference is pretty marginal. We can keep FNV1a XOR
 
