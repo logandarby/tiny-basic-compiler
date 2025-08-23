@@ -1,0 +1,370 @@
+PRINT "===================="
+PRINT "    WELCOME TO TINY BANK SIMULATOR"
+PRINT "===================="
+PRINT ""
+
+LET B = 1000
+LET T = 0
+LET D = 0
+LET W = 0
+LET R = 5
+
+LET C = 0
+LET X = 0
+LET A = 0
+LET F = 0
+LET M = 0
+LET I = 0
+LET E = 0
+LET Y = 0
+LET N = 0
+LET Q = 0
+LET U = 0
+LET V = 0
+LET G = 0
+LET H = 0
+LET J = 0
+LET K = 0
+LET L = 0
+
+PRINT "Your starting balance is $1000"
+PRINT ""
+
+100 PRINT "===== MAIN MENU ====="
+PRINT "1. Check Balance"
+PRINT "2. Make Deposit" 
+PRINT "3. Make Withdrawal"
+PRINT "4. Calculate Interest"
+PRINT "5. View Account Summary"
+PRINT "6. Transfer Money"
+PRINT "7. Account History"
+PRINT "0. Exit"
+PRINT ""
+PRINT "Enter your choice (0-7): "
+INPUT C
+
+IF C = 1 THEN
+    GOTO 200
+ENDIF
+
+IF C = 2 THEN
+    GOTO 300
+ENDIF
+
+IF C = 3 THEN
+    GOTO 400
+ENDIF
+
+IF C = 4 THEN
+    GOTO 500
+ENDIF
+
+IF C = 5 THEN
+    GOTO 600
+ENDIF
+
+IF C = 6 THEN
+    GOTO 700
+ENDIF
+
+IF C = 7 THEN
+    GOTO 800
+ENDIF
+
+IF C = 0 THEN
+    GOTO 900
+ENDIF
+
+PRINT "Invalid choice! Please try again."
+PRINT ""
+GOTO 100
+
+200 PRINT ""
+PRINT "=== BALANCE INQUIRY ==="
+PRINT "Current Balance: $"
+PRINT B
+PRINT ""
+PRINT "Press any key to continue..."
+INPUT X
+GOTO 100
+
+300 PRINT ""
+PRINT "==== MAKE DEPOSIT ===="
+PRINT "Enter deposit amount: $"
+INPUT A
+
+IF A <= 0 THEN
+    PRINT "Invalid amount! Deposit must be positive."
+    PRINT ""
+    GOTO 100
+ENDIF
+
+LET B = B + A
+LET T = T + 1
+LET D = D + A
+
+PRINT ""
+PRINT "Deposit successful!"
+PRINT "Amount deposited: $"
+PRINT A
+PRINT "New balance: $" 
+PRINT B
+PRINT ""
+PRINT "Press any key to continue..."
+INPUT X
+GOTO 100
+
+400 PRINT ""
+PRINT "=== MAKE WITHDRAWAL ==="
+PRINT "Current balance: $"
+PRINT B
+PRINT "Enter withdrawal amount: $"
+INPUT A
+
+IF A <= 0 THEN
+    PRINT "Invalid amount! Withdrawal must be positive."
+    PRINT ""
+    GOTO 100
+ENDIF
+
+IF A > B THEN
+    PRINT "Insufficient funds!"
+    PRINT "Available balance: $"
+    PRINT B
+    PRINT "Would you like to withdraw your full balance?"
+    PRINT "Enter 1 for Yes, 0 for No: "
+    INPUT F
+    
+    IF F = 1 THEN
+        LET A = B
+        GOTO 450
+    ENDIF
+    
+    PRINT ""
+    GOTO 100
+ENDIF
+
+450 LET B = B - A
+LET T = T + 1
+LET W = W + A
+
+PRINT ""
+PRINT "Withdrawal successful!"
+PRINT "Amount withdrawn: $"
+PRINT A
+PRINT "New balance: $"
+PRINT B
+PRINT ""
+PRINT "Press any key to continue..."
+INPUT X
+GOTO 100
+
+500 PRINT ""
+PRINT "=== INTEREST CALCULATOR ==="
+PRINT "Current balance: $"
+PRINT B
+PRINT "Interest rate: "
+PRINT R
+PRINT "%"
+PRINT ""
+PRINT "Enter number of months: "
+INPUT M
+
+IF M <= 0 THEN
+    PRINT "Invalid number of months!"
+    PRINT ""
+    GOTO 100
+ENDIF
+
+LET I = B * R * M
+LET I = I / 1200
+LET E = B + I
+
+PRINT ""
+PRINT "=== INTEREST CALCULATION ==="
+PRINT "Principal: $"
+PRINT B
+PRINT "Interest rate: "
+PRINT R
+PRINT "% per year"
+PRINT "Time period: "
+PRINT M
+PRINT " months"
+PRINT "Interest earned: $"
+PRINT I  
+PRINT "Final balance: $"
+PRINT E
+PRINT ""
+PRINT "Would you like to apply this interest?"
+PRINT "Enter 1 for Yes, 0 for No: "
+INPUT Y
+
+IF Y = 1 THEN
+    LET B = E
+    LET T = T + 1
+    PRINT "Interest applied to account!"
+ENDIF
+
+PRINT ""
+PRINT "Press any key to continue..."
+INPUT X
+GOTO 100
+
+600 PRINT ""
+PRINT "=== ACCOUNT SUMMARY ==="
+PRINT "Current Balance: $"
+PRINT B
+PRINT "Total Transactions: "
+PRINT T
+PRINT "Total Deposits: $"
+PRINT D
+PRINT "Total Withdrawals: $"
+PRINT W
+
+LET N = D - W
+PRINT "Net Change: $"
+PRINT N
+
+IF B >= 1000 THEN
+    PRINT "Account Status: GOLD"
+ENDIF
+IF B >= 500 THEN
+    IF B < 1000 THEN
+        PRINT "Account Status: SILVER"
+    ENDIF
+ENDIF
+IF B < 500 THEN
+    PRINT "Account Status: STANDARD"
+ENDIF
+
+PRINT ""
+PRINT "Press any key to continue..."
+INPUT X
+GOTO 100
+
+700 PRINT ""
+PRINT "=== MONEY TRANSFER ==="
+PRINT "Current balance: $"
+PRINT B
+PRINT "Enter recipient account number: "
+INPUT Q
+PRINT "Enter transfer amount: $"
+INPUT U
+
+IF U <= 0 THEN
+    PRINT "Invalid amount! Transfer must be positive."
+    PRINT ""
+    GOTO 100
+ENDIF
+
+IF U > B THEN
+    PRINT "Insufficient funds for transfer!"
+    PRINT ""
+    GOTO 100
+ENDIF
+
+LET V = 0
+IF U > 100 THEN
+    LET V = 2
+    PRINT "Transfer fee: $2 for amounts over $100"
+ENDIF
+
+LET G = U + V
+
+IF G > B THEN
+    PRINT "Insufficient funds including transfer fee!"
+    PRINT ""
+    GOTO 100
+ENDIF
+
+LET B = B - G
+LET T = T + 1
+LET W = W + G
+
+PRINT ""
+PRINT "Transfer successful!"
+PRINT "Transferred to account: "
+PRINT Q
+PRINT "Amount: $"
+PRINT U
+PRINT "Fee: $"
+PRINT V
+PRINT "New balance: $"
+PRINT B
+PRINT ""
+PRINT "Press any key to continue..."
+INPUT X
+GOTO 100
+
+800 PRINT ""
+PRINT "=== ACCOUNT HISTORY ==="
+PRINT "Starting Balance: $1000"
+PRINT "Current Balance: $"
+PRINT B
+PRINT "Number of Transactions: "
+PRINT T
+
+IF T = 0 THEN
+    PRINT "No transactions recorded."
+    PRINT ""
+    PRINT "Press any key to continue..."
+    INPUT X
+    GOTO 100
+ENDIF
+
+PRINT ""
+PRINT "Transaction Summary:"
+PRINT "- Total Deposits: $"
+PRINT D
+PRINT "- Total Withdrawals: $" 
+PRINT W
+
+LET H = 0
+IF T > 0 THEN
+    LET J = D + W
+    LET H = J / T
+ENDIF
+
+PRINT "- Average Transaction: $"
+PRINT H
+
+LET K = T * 2
+PRINT "- Estimated Days Active: "
+PRINT K
+
+PRINT ""
+PRINT "Press any key to continue..."
+INPUT X
+GOTO 100
+
+900 PRINT ""
+PRINT "=== FINAL ACCOUNT STATEMENT ==="
+PRINT "Final Balance: $"
+PRINT B
+
+IF B > 1000 THEN
+    PRINT "Congratulations! You grew your account!"
+    LET L = B - 1000
+    PRINT "Profit: $"
+    PRINT L
+ENDIF
+
+IF B < 1000 THEN
+    PRINT "Your account balance decreased."
+    LET L = 1000 - B
+    PRINT "Amount lost: $"
+    PRINT L
+ENDIF
+
+IF B = 1000 THEN
+    PRINT "You maintained your original balance."
+ENDIF
+
+PRINT ""
+PRINT "Total Transactions: "
+PRINT T
+PRINT ""
+PRINT "Thank you for using Tiny Bank Simulator!"
+PRINT "===================="
+
+

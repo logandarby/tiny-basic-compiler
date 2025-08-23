@@ -68,3 +68,10 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Data files 
+*.data
+*.data.old
+
+# Benchmarking
+/examples/tinybasic*
