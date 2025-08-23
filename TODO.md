@@ -195,8 +195,6 @@ After removing the shget in the emitter (which seemed like a hotspot), we were r
 
 It looks like it has pretty similar timing-- this could instead be baked right into the asm instead of using a lookup
 
-<<<<<<< Updated upstream
-=======
 When baking the label into the token array, we get 
 - BAKED: 4.7s
 - UNBAKED: 4.1
@@ -206,5 +204,3 @@ When baking the label into the AST node, we get
 
 Looks like this is as fast as we'll get
 
-
->>>>>>> Stashed changes
