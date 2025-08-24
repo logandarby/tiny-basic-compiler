@@ -1,6 +1,31 @@
 # Teeny Tiny BASIC Compiler
 
-A compiler for the TINY BASIC language specification with some additional features. This project implements a lexical analyzer and file processing system for parsing BASIC programs.
+This ain't your grandpappy's Tiny BASIC compiler!
+
+This is a fun, couple-month long project to implement the Tiny BASIC programming language spec with some additional features. Compile the source code with `make`, and get started by reading [the programming spec manual](./MANUAL.md) to begin coding.
+
+## Features 
+
+### Performant
+
+This compiler is overengineered to be blazingly fast. It can prase, error check, and emit x86 assembly for a 100MB file in a bit above 4s. This is leagues above other implementatons online. It's optimized for memory efficiency, cache locality, and reduced system call overhead. Some key performance features are:
+- Cache/Memory optimized tree structures for AST parsing-- reducing `malloc` calls and page faults, resulting in 2x speedup
+- Batched file I/O for large files write operations to reduce syscall overhead, resulting in 1.8x speedup
+- Efficient hashing and hash algorithms (FNV1a) for 3% speedup
+- Smart memory allocation-- mostly using chunked Arena allocation and out-of-band dynamic array allocation to avoid `malloc` overhead at all costs. Emitting an assembly file for a 100MB source code only invokes `malloc` ~100 times.
+- Small data structures with proper data layout, helping cache locality
+
+### Error Handling -- Absolutely no UB
+
+This compiler has comprehensive grammar and semantic error checking when writing programs. The only UB that can result from a compiled program are divide by 0 operations.
+
+### Multi-Target
+
+This compiler can emit binaries targeting both x64 Linux and Windows, as well as cross-compilation. It automatically invokes the necessary GCC toolchain to get a binary right out of the gate. See the section on compilation targets for more details.
+
+### Tested to Death
+
+This compiler is unit-tested to death with over 500+ unit tests, address and UB sanitization, as well as (soon) fuzzing to discern bad inputs. Any Tiny BASIC program running through this is sure to be rock solid.
 
 ## What is TINY BASIC?
 
@@ -62,7 +87,7 @@ make format
 
 ## Running the Compiler
 
-The compiler reads BASIC source files and emits x86-64 assembly code targeting Windows and Linux systems. The output is ready-to-assemble code that doesn't require additional gcc processing.
+The compiler reads Tiny BASIC source files and emits x86-64 assembly code targeting Windows and Linux systems. The output is ready-to-assemble code that doesn't require additional gcc processing.
 
 ### Basic Usage
 
